@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 502da20ed55950e4c9f51dedfc14f6b3, type: 3}
+  m_Name: StealthGuardActions
+  m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Actions.ActionConfig
+  validActions:
+  - actionName: HoldPosition
+    description: Stand still and keep watching the area.
+    parameterType: 0
+    exampleArgument: 
+    allowedArguments: []
+  - actionName: Patrol
+    description: Walk to a named patrol route point and keep watch there.
+    parameterType: 1
+    exampleArgument: Route_North
+    allowedArguments: []
+  - actionName: Investigate
+    description: Go to a named location to check on something suspicious.
+    parameterType: 1
+    exampleArgument: Warehouse
+    allowedArguments: []
+  - actionName: Chase
+    description: Pursue a visible intruder to catch them.
+    parameterType: 1
+    exampleArgument: Intruder
+    allowedArguments: []
+  - actionName: Retreat
+    description: Fall back to a named safe zone to recover.
+    parameterType: 1
+    exampleArgument: SafeZone_A
+    allowedArguments: []
+  modelInstructions: 'Choose exactly one action per turn.
+
+    If you can see an
+    intruder, deal with it rather than continuing your routine.
+
+    If you cannot
+    see anyone but something was reported, go and look.
+
+    Otherwise keep patrolling.
+    Prefer patrolling over standing still.'

@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91546ea0ba09f07428b3d5ff2d9d576e, type: 3}
+  m_Name: Model_Qwen3.5-4B-Q4_K_M
+  m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Config.BehaviorLLMModelConfig
+  displayName: Qwen3.5 4B (Q4_K_M)
+  modelFileName: Qwen3.5-4B-Q4_K_M.gguf
+  sourceUrl: 
+  license: Apache-2.0
+  parametersB: 4.2
+  quantisation: Q4_K_M
+  contextSize: 8192
+  gpuLayers: 99
+  maxTokens: 256
+  temperature: 0.2
+  topP: 0.95
+  topK: 40
+  repeatPenalty: 1
+  recommendedProfile: 1
+  nativeThinkingUsable: 0
+  measuredValidActionRate: 1
+  measuredExpectedActionRate: 0.94
+  measuredP50LatencyMs: 574
+  measurementNotes: 'Measured 2026-09-04 on a Radeon RX 6650 XT (Vulkan) with llama.cpp
+    build 10775, over 16 labelled guard scenarios in the Reactive profile with structured
+    output on. Valid-action rate is the share of decisions the package could dispatch;
+    expected-action rate is the share that matched the hand-labelled correct action.
+    Reproduce with Docs/Experiments/run_matrix.py.
+
+
+    Highest decision quality
+    measured, and the only model that clearly benefits from deliberation (81% Reactive
+    to 94% with a 120-character reason field; the p50 above is the Deliberative figure,
+    Reactive was 382 ms). Good for low-frequency deciders such as a director or squad
+    commander. Native thinking still degrades it, so use the reason field rather
+    than a thinking budget.'

@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4b511b3ce7287f40bead898b1d8152f, type: 3}
+  m_Name: Readme
+  m_EditorClassIdentifier: BehaviorLLM.Editor::BehaviorLLM.Editor.Readme.BehaviorLLMReadme
+  title: BehaviorLLM
+  subtitle: 'Local-LLM decision making for Unity characters and game systems. Everything
+    runs on this machine: no cloud API, no account, no per-call cost.'
+  sections:
+  - heading: What it does
+    text: A Decision Maker senses the scene through observation modules, sends what
+      it saw to a local language model, and gets back one action from a list you
+      wrote. The model's reply is constrained to that list while it is being generated,
+      so it cannot name an action that does not exist or an argument the action will
+      not take. Each action is a UnityEvent, so the model chooses and your code executes.
+    linkText: 
+    linkTarget: 
+  - heading: Getting a model running
+    text: Open Tools > BehaviorLLM > Model Catalog and download one of the listed
+      GGUF models, then Tools > BehaviorLLM > Llama Server to start the inference
+      server. Both windows write into StreamingAssets and remember what you chose.
+      Nothing else in the package needs configuring before a character can think.
+    linkText: 
+    linkTarget: 
+  - heading: The two samples
+    text: 'StealthGuard is the one to read first: three guards patrol a compound,
+      each with its own persona and patrol beat, all sharing one action set and one
+      model. PrisonYard is the larger one: eight decision makers of three kinds,
+      custom senses, and a warden that has no body at all and decides for the prison
+      as a system.'
+    linkText: Open the StealthGuard scene
+    linkTarget: Assets/BehaviorLLM/Samples/StealthGuard/Scenes/StealthGuard.unity
+  - heading: Watching a decision happen
+    text: 'Tools > BehaviorLLM > Prompt Inspector records every exchange between
+      a decision maker and the model while the game runs: the prompt as it was sent,
+      split into the half that is cached and the half that changes, the schema, and
+      the reply. It is the fastest way to understand why a character chose what it
+      chose.'
+    linkText: 
+    linkTarget: 
+  - heading: What the samples need
+    text: 'The package core has no package dependencies at all. The two samples do:
+      AI Navigation for movement and the Input System for the player character. If
+      either is missing the sample assemblies are skipped rather than broken, so
+      the package still installs and works; install both from the Package Manager
+      if you want to play them.'
+    linkText: 
+    linkTarget: 
+  - heading: Documentation
+    text: The package README covers installation and the first character end to end.
+      The user guide under Documentation~ goes through observation modules, argument
+      providers, decision profiles and the configuration assets.
+    linkText: Open README.md
+    linkTarget: Assets/BehaviorLLM/README.md
+  removableFolders:
+  - displayName: StealthGuard sample
+    folderPath: Assets/BehaviorLLM/Samples/StealthGuard
+    whatItCosts: The three-guard compound scene, its scripts and its art. Nothing
+      else references it.
+  - displayName: PrisonYard sample
+    folderPath: Assets/BehaviorLLM/Samples/PrisonYard
+    whatItCosts: The eight-character prison scene, its scripts, its art and its editor
+      tests. Nothing else references it.
+  - displayName: Experiment data
+    folderPath: Assets/BehaviorLLM/Experiments~
+    whatItCosts: The measurement harness and the recorded runs behind the numbers in
+      the README. Unity never imports this folder; nothing references it.

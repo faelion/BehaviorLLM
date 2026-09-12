@@ -1,0 +1,29 @@
+{
+    "name": "Project.Samples.StealthGuard.Editor",
+    "rootNamespace": "Project.Samples.StealthGuard.Editor",
+    "references": [
+        "Project.Samples.StealthGuard",
+        "BehaviorLLM.Runtime",
+        "Unity.AI.Navigation",
+        "Unity.AI.Navigation.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "BEHAVIORLLM_HAS_AI_NAVIGATION"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.ai.navigation",
+            "expression": "1.0.0",
+            "define": "BEHAVIORLLM_HAS_AI_NAVIGATION"
+        }
+    ],
+    "noEngineReferences": false
+}

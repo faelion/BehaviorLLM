@@ -1,0 +1,33 @@
+{
+  "name": "com.faelion.behaviorllm",
+  "version": "0.5.0",
+  "displayName": "BehaviorLLM",
+  "description": "Open-source Unity package for creating decision-making game characters and systems driven by local Large Language Models. Define agents with discrete action sets and modular input pipelines that translate game state into textual observations.",
+  "unity": "6000.0",
+  "author": {
+    "name": "Alex Delgado Linde (faelion)",
+    "url": "https://github.com/faelion"
+  },
+  "license": "MIT",
+  "documentationUrl": "https://github.com/faelion/BehaviorLLM/blob/main/README.md",
+  "changelogUrl": "https://github.com/faelion/BehaviorLLM/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/faelion/BehaviorLLM/blob/main/LICENSE.md",
+  "keywords": [
+    "llm",
+    "ai",
+    "agents",
+    "behavior",
+    "npc",
+    "local-inference"
+  ],
+  "samples": [
+    {
+      "displayName": "Smoke Test",
+      "description": "Minimal scene + tester component to verify the configured backend is reachable and responds to a prompt.",
+      "path": "Samples~/SmokeTest"
+    }
+  ],
+  "testables": [
+    "com.faelion.behaviorllm"
+  ]
+}

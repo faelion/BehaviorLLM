@@ -1,0 +1,9 @@
+﻿source_id,total_decisions,model_actions,fallback_actions,no_actions,backend_errors,parse_failures,policy_rejected,policy_normalized,valid_action_rate,fallback_rate,mean_latency_ms,p50_latency_ms,p95_latency_ms,mean_prompt_chars,mean_prompt_tokens,mean_completion_tokens,cache_hit_rate,last_action,last_argument
+Prisoner_01,58,58,0,0,0,0,0,0,1,0,1707.793,1570.824,3148.667,2286.638,605.1724,10.069,0.6439,FollowSchedule,
+Prisoner_03,53,53,0,0,0,0,0,0,1,0,1869.459,1638.535,3290.726,2338.962,627.3774,12.566,0.7322,Talk,Prisoner_02
+Prisoner_04,54,54,0,0,0,0,0,0,1,0,1823.49,1632.553,3348.343,2326.815,620.2037,10.2778,0.6376,FollowSchedule,
+Prisoner_02,50,50,0,0,0,0,0,0,1,0,1966.442,1763.153,3353.783,2238.24,596.7,12.7,0.7252,Talk,Prisoner_03
+Guard_03,68,68,0,0,0,0,0,0,1,0,1892.465,1685.944,3478.844,2282.677,589.7059,15.8529,0.742,Patrol,Workshop_Patrol_N
+Guard_01,71,71,0,0,0,0,0,0,1,0,1816.122,1686.127,3227.013,2294.76,606.6761,15.5775,0.7415,Patrol,Yard_Patrol_N
+Guard_02,68,68,0,0,0,0,0,0,1,0,1882.616,1721.283,3492.699,2290.132,595,16,0.7543,Patrol,CellBlock_Patrol_N
+Warden,22,21,1,0,0,1,0,0,0.9545,0.0455,1875.15,1500.763,3230.606,2297.636,611.5,21.0455,0.6386,Observe,

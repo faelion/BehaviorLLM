@@ -1,0 +1,29 @@
+{
+    "name": "Project.Samples.PrisonYard.Editor",
+    "rootNamespace": "Project.Samples.PrisonYard.Editor",
+    "references": [
+        "Project.Samples.PrisonYard",
+        "BehaviorLLM.Runtime",
+        "Unity.AI.Navigation",
+        "Unity.AI.Navigation.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "BEHAVIORLLM_HAS_AI_NAVIGATION"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.ai.navigation",
+            "expression": "1.0.0",
+            "define": "BEHAVIORLLM_HAS_AI_NAVIGATION"
+        }
+    ],
+    "noEngineReferences": false
+}

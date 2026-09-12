@@ -1,0 +1,193 @@
+model,profile,structured_output,scenario,raw_output,status,parsed,valid,expected_match,latency_ms
+Qwen3.5-2B,Reactive,True,intruder_healthy_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,159.5
+Qwen3.5-2B,Reactive,True,intruder_healthy_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,225.1
+Qwen3.5-2B,Reactive,True,intruder_healthy_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,225.5
+Qwen3.5-2B,Reactive,True,intruder_healthy_4,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,214.1
+Qwen3.5-2B,Reactive,True,quiet_1,"{""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,183.1
+Qwen3.5-2B,Reactive,True,quiet_2,"{""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,164.1
+Qwen3.5-2B,Reactive,True,quiet_3,"{""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,181.1
+Qwen3.5-2B,Reactive,True,report_warehouse,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,171.9
+Qwen3.5-2B,Reactive,True,report_courtyard,"{""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,196.4
+Qwen3.5-2B,Reactive,True,report_gate,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,184.2
+Qwen3.5-2B,Reactive,True,report_hurt_no_intruder,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,188.8
+Qwen3.5-2B,Reactive,True,report_gate_hurt,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,186.6
+Qwen3.5-2B,Reactive,True,hurt_intruder_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,209.9
+Qwen3.5-2B,Reactive,True,hurt_intruder_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,0,232.4
+Qwen3.5-2B,Reactive,True,hurt_intruder_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,208.6
+Qwen3.5-2B,Reactive,True,borderline_healthy,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,209.9
+Qwen3.5-2B,Reactive,False,intruder_healthy_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,140.9
+Qwen3.5-2B,Reactive,False,intruder_healthy_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,204.2
+Qwen3.5-2B,Reactive,False,intruder_healthy_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,230.9
+Qwen3.5-2B,Reactive,False,intruder_healthy_4,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,206.0
+Qwen3.5-2B,Reactive,False,quiet_1,"{""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,158.9
+Qwen3.5-2B,Reactive,False,quiet_2,"{""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,161.5
+Qwen3.5-2B,Reactive,False,quiet_3,"{""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,159.5
+Qwen3.5-2B,Reactive,False,report_warehouse,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,170.4
+Qwen3.5-2B,Reactive,False,report_courtyard,"{""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,177.2
+Qwen3.5-2B,Reactive,False,report_gate,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,178.2
+Qwen3.5-2B,Reactive,False,report_hurt_no_intruder,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,189.1
+Qwen3.5-2B,Reactive,False,report_gate_hurt,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,183.5
+Qwen3.5-2B,Reactive,False,hurt_intruder_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,209.8
+Qwen3.5-2B,Reactive,False,hurt_intruder_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,0,221.5
+Qwen3.5-2B,Reactive,False,hurt_intruder_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,225.5
+Qwen3.5-2B,Reactive,False,borderline_healthy,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,226.0
+Qwen3.5-2B,Deliberative,True,intruder_healthy_1,"{""reason"":""Intruder_01 is visible and hostile."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,266.8
+Qwen3.5-2B,Deliberative,True,intruder_healthy_2,"{""reason"":""Intruder_02 is visible and hostile."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,336.9
+Qwen3.5-2B,Deliberative,True,intruder_healthy_3,"{""reason"":""Intruder_01 is visible within 2.1m range."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,360.8
+Qwen3.5-2B,Deliberative,True,intruder_healthy_4,"{""reason"":""A hostile intruder is visible within 5.5m."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,331.0
+Qwen3.5-2B,Deliberative,True,quiet_1,"{""reason"":""Patrol route is ongoing, no new targets detected."",""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,279.9
+Qwen3.5-2B,Deliberative,True,quiet_2,"{""reason"":""Patrol route is ongoing, no new targets detected."",""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,255.8
+Qwen3.5-2B,Deliberative,True,quiet_3,"{""reason"":""Patrol route completed, no threats detected."",""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,235.0
+Qwen3.5-2B,Deliberative,True,report_warehouse,"{""reason"":""Radio disturbance reported at Warehouse, but no visual target confirmed."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,264.0
+Qwen3.5-2B,Deliberative,True,report_courtyard,"{""reason"":""Radio disturbance reported at Courtyard, need to investigate."",""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,360.5
+Qwen3.5-2B,Deliberative,True,report_gate,"{""reason"":""Radio disturbance at Gate reported in memory."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,277.1
+Qwen3.5-2B,Deliberative,True,report_hurt_no_intruder,"{""reason"":""Radio disturbance reported at Warehouse, but no visual target confirmed."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,279.1
+Qwen3.5-2B,Deliberative,True,report_gate_hurt,"{""reason"":""Radio disturbance at Gate reported in memory."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,260.7
+Qwen3.5-2B,Deliberative,True,hurt_intruder_1,"{""reason"":""Intruder_01 is visible and I am chasing them."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,357.5
+Qwen3.5-2B,Deliberative,True,hurt_intruder_2,"{""reason"":""Intruder_02 is visible and the guard is damaged below half health."",""action"":""Retreat"",""arg"":""SafeZone_A""}",ok,1,1,1,342.3
+Qwen3.5-2B,Deliberative,True,hurt_intruder_3,"{""reason"":""Intruder_01 is visible within 2.8m range."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,333.1
+Qwen3.5-2B,Deliberative,True,borderline_healthy,"{""reason"":""Intruder_01 is visible at 4.9m range."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,333.8
+Qwen3.5-2B,Deliberative,False,intruder_healthy_1,"{""reason"":""Intruder_01 is visible and hostile."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,231.5
+Qwen3.5-2B,Deliberative,False,intruder_healthy_2,"{""reason"":""Intruder_02 visible at 7.5m with hostile type."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,337.7
+Qwen3.5-2B,Deliberative,False,intruder_healthy_3,"{""reason"":""Intruder_01 is visible within 2.1m range."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,350.8
+Qwen3.5-2B,Deliberative,False,intruder_healthy_4,"{""reason"":""Intruder_02 is visible within 5.5m range."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,332.7
+Qwen3.5-2B,Deliberative,False,quiet_1,"{""reason"":""Patrol route completed, no threats detected."",""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,237.4
+Qwen3.5-2B,Deliberative,False,quiet_2,"{""reason"":""No intruder visible, continuing patrol routine."",""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,246.3
+Qwen3.5-2B,Deliberative,False,quiet_3,"{""reason"":""Patrol route completed, no new threats detected."",""action"":""HoldPosition"",""arg"":""""}",ok,1,1,0,243.4
+Qwen3.5-2B,Deliberative,False,report_warehouse,"{""reason"":""Radio disturbance reported at Warehouse, so investigate the area."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,268.2
+Qwen3.5-2B,Deliberative,False,report_courtyard,"{""reason"":""Radio disturbance reported at Courtyard, but no visible intruder."",""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,279.7
+Qwen3.5-2B,Deliberative,False,report_gate,"{""reason"":""Radio disturbance at Gate reported in memory."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,251.0
+Qwen3.5-2B,Deliberative,False,report_hurt_no_intruder,"{""reason"":""Radio disturbance reported at Warehouse, but no visual target confirmed."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,284.5
+Qwen3.5-2B,Deliberative,False,report_gate_hurt,"{""reason"":""Radio disturbance reported at Gate, need to check for intruder."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,271.0
+Qwen3.5-2B,Deliberative,False,hurt_intruder_1,"{""reason"":""Intruder_01 is visible and I am chasing them."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,333.6
+Qwen3.5-2B,Deliberative,False,hurt_intruder_2,"{""reason"":""Chased intruder successfully, but health is critically low."",""action"":""Retreat"",""arg"":""SafeZone_A""}",ok,1,1,1,282.4
+Qwen3.5-2B,Deliberative,False,hurt_intruder_3,"{""reason"":""Intruder_01 is visible within 2.8m range."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,333.2
+Qwen3.5-2B,Deliberative,False,borderline_healthy,"{""reason"":""Intruder_01 is visible and hostile."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,314.5
+Granite-4.1-3B,Reactive,True,intruder_healthy_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,238.4
+Granite-4.1-3B,Reactive,True,intruder_healthy_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,439.1
+Granite-4.1-3B,Reactive,True,intruder_healthy_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,362.3
+Granite-4.1-3B,Reactive,True,intruder_healthy_4,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,306.7
+Granite-4.1-3B,Reactive,True,quiet_1,"{""action"":""Patrol"",""arg"":""Route_North""}",ok,1,1,1,287.2
+Granite-4.1-3B,Reactive,True,quiet_2,"{""action"":""Patrol"",""arg"":""Route_Perimeter""}",ok,1,1,1,422.9
+Granite-4.1-3B,Reactive,True,quiet_3,"{""action"":""Patrol"",""arg"":""Route_Perimeter""}",ok,1,1,1,275.1
+Granite-4.1-3B,Reactive,True,report_warehouse,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,220.5
+Granite-4.1-3B,Reactive,True,report_courtyard,"{""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,233.5
+Granite-4.1-3B,Reactive,True,report_gate,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,218.9
+Granite-4.1-3B,Reactive,True,report_hurt_no_intruder,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,236.3
+Granite-4.1-3B,Reactive,True,report_gate_hurt,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,220.6
+Granite-4.1-3B,Reactive,True,hurt_intruder_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,300.0
+Granite-4.1-3B,Reactive,True,hurt_intruder_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,0,278.5
+Granite-4.1-3B,Reactive,True,hurt_intruder_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,328.5
+Granite-4.1-3B,Reactive,True,borderline_healthy,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,280.0
+Granite-4.1-3B,Reactive,False,intruder_healthy_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,223.8
+Granite-4.1-3B,Reactive,False,intruder_healthy_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,296.9
+Granite-4.1-3B,Reactive,False,intruder_healthy_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,319.7
+Granite-4.1-3B,Reactive,False,intruder_healthy_4,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,282.5
+Granite-4.1-3B,Reactive,False,quiet_1,"{""action"":""Patrol"",""arg"":""Route_North""}",ok,1,1,1,283.8
+Granite-4.1-3B,Reactive,False,quiet_2,"{""action"":""Patrol"",""arg"":""Route_Perimeter""}",ok,1,1,1,239.5
+Granite-4.1-3B,Reactive,False,quiet_3,"{""action"":""Patrol"",""arg"":""Route_Perimeter""}",ok,1,1,1,261.3
+Granite-4.1-3B,Reactive,False,report_warehouse,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,272.6
+Granite-4.1-3B,Reactive,False,report_courtyard,"{""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,264.2
+Granite-4.1-3B,Reactive,False,report_gate,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,230.6
+Granite-4.1-3B,Reactive,False,report_hurt_no_intruder,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,230.8
+Granite-4.1-3B,Reactive,False,report_gate_hurt,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,239.6
+Granite-4.1-3B,Reactive,False,hurt_intruder_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,305.4
+Granite-4.1-3B,Reactive,False,hurt_intruder_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,0,302.7
+Granite-4.1-3B,Reactive,False,hurt_intruder_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,296.1
+Granite-4.1-3B,Reactive,False,borderline_healthy,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,334.5
+Granite-4.1-3B,Deliberative,True,intruder_healthy_1,"{""reason"":""Hostile detected, follow protocol."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,357.1
+Granite-4.1-3B,Deliberative,True,intruder_healthy_2,"{""reason"":""Hostile detected, not damaged, need to investigate."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,0,432.2
+Granite-4.1-3B,Deliberative,True,intruder_healthy_3,"{""reason"":""Hostile detected, pursue before health drops below 50%"",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,569.7
+Granite-4.1-3B,Deliberative,True,intruder_healthy_4,"{""reason"":""Hostile detected, not injured, should chase."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,469.6
+Granite-4.1-3B,Deliberative,True,quiet_1,"{""reason"":""Following patrol route as instructed."",""action"":""Patrol"",""arg"":""Route_North""}",ok,1,1,1,358.4
+Granite-4.1-3B,Deliberative,True,quiet_2,"{""reason"":""No threats detected, continue patrol."",""action"":""Patrol"",""arg"":""Route_South""}",ok,1,1,1,360.6
+Granite-4.1-3B,Deliberative,True,quiet_3,"{""reason"":""No intruder visible, continue patrol as per routine."",""action"":""Patrol"",""arg"":""Route_Perimeter""}",ok,1,1,1,431.9
+Granite-4.1-3B,Deliberative,True,report_warehouse,"{""reason"":""Disturbance reported, investigate before chasing."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,390.9
+Granite-4.1-3B,Deliberative,True,report_courtyard,"{""reason"":""Disturbance reported, investigate before chasing."",""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,384.2
+Granite-4.1-3B,Deliberative,True,report_gate,"{""reason"":""Disturbance reported at Gate, investigate before chasing."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,429.1
+Granite-4.1-3B,Deliberative,True,report_hurt_no_intruder,"{""reason"":""Disturbance reported, need to investigate."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,468.3
+Granite-4.1-3B,Deliberative,True,report_gate_hurt,"{""reason"":""Disturbance reported at Gate, investigate before chasing."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,416.3
+Granite-4.1-3B,Deliberative,True,hurt_intruder_1,"{""reason"":""Hostile is within range, need to engage."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,464.0
+Granite-4.1-3B,Deliberative,True,hurt_intruder_2,"{""reason"":""Hostile detected, not damaged, should chase."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,0,496.2
+Granite-4.1-3B,Deliberative,True,hurt_intruder_3,"{""reason"":""Hostile detected, not low health, proceed with chase."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,526.1
+Granite-4.1-3B,Deliberative,True,borderline_healthy,"{""reason"":""Hostile detected, not injured, need to chase."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,479.2
+Granite-4.1-3B,Deliberative,False,intruder_healthy_1,"{""reason"":""Hostile detected, follow protocol."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,334.9
+Granite-4.1-3B,Deliberative,False,intruder_healthy_2,"{""reason"":""Hostile detected, not injured, need to chase."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,446.8
+Granite-4.1-3B,Deliberative,False,intruder_healthy_3,"{""reason"":""Hostile detected, not injured, need to investigate per guide."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,0,451.6
+Granite-4.1-3B,Deliberative,False,intruder_healthy_4,"{""reason"":""Hostile detected, not injured, should chase."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,515.0
+Granite-4.1-3B,Deliberative,False,quiet_1,"{""reason"":""Following patrol route as instructed."",""action"":""Patrol"",""arg"":""Route_North""}",ok,1,1,1,398.6
+Granite-4.1-3B,Deliberative,False,quiet_2,"{""reason"":""No threats detected, continue patrol."",""action"":""Patrol"",""arg"":""Route_Perimeter""}",ok,1,1,1,374.1
+Granite-4.1-3B,Deliberative,False,quiet_3,"{""reason"":""No intruder visible, continue patrol as per routine."",""action"":""Patrol"",""arg"":""Route_Perimeter""}",ok,1,1,1,450.8
+Granite-4.1-3B,Deliberative,False,report_warehouse,"{""reason"":""Disturbance reported, need to investigate."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,386.2
+Granite-4.1-3B,Deliberative,False,report_courtyard,"{""reason"":""Disturbance reported, investigate before chasing."",""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,430.9
+Granite-4.1-3B,Deliberative,False,report_gate,"{""reason"":""Disturbance reported at Gate, investigate before chasing."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,441.5
+Granite-4.1-3B,Deliberative,False,report_hurt_no_intruder,"{""reason"":""Disturbance reported, need to investigate."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,391.6
+Granite-4.1-3B,Deliberative,False,report_gate_hurt,"{""reason"":""Disturbance reported at Gate, investigate before chasing."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,433.8
+Granite-4.1-3B,Deliberative,False,hurt_intruder_1,"{""reason"":""Hostile detected, not damaged, should chase."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,448.0
+Granite-4.1-3B,Deliberative,False,hurt_intruder_2,"{""reason"":""Hostile is within range, need to engage."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,0,440.4
+Granite-4.1-3B,Deliberative,False,hurt_intruder_3,"{""reason"":""Hostile detected, not injured, need to chase."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,465.8
+Granite-4.1-3B,Deliberative,False,borderline_healthy,"{""reason"":""Hostile detected, not injured, need to chase."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,484.8
+Qwen3.5-4B,Reactive,True,intruder_healthy_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,280.2
+Qwen3.5-4B,Reactive,True,intruder_healthy_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,429.4
+Qwen3.5-4B,Reactive,True,intruder_healthy_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,430.1
+Qwen3.5-4B,Reactive,True,intruder_healthy_4,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,412.3
+Qwen3.5-4B,Reactive,True,quiet_1,"{""action"":""Patrol"",""arg"":""Route_North""}",ok,1,1,1,382.1
+Qwen3.5-4B,Reactive,True,quiet_2,"{""action"":""Patrol"",""arg"":""Route_South""}",ok,1,1,1,364.4
+Qwen3.5-4B,Reactive,True,quiet_3,"{""action"":""Patrol"",""arg"":""Route_Perimeter""}",ok,1,1,1,388.4
+Qwen3.5-4B,Reactive,True,report_warehouse,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,335.4
+Qwen3.5-4B,Reactive,True,report_courtyard,"{""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,362.6
+Qwen3.5-4B,Reactive,True,report_gate,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,353.8
+Qwen3.5-4B,Reactive,True,report_hurt_no_intruder,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,344.7
+Qwen3.5-4B,Reactive,True,report_gate_hurt,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,332.9
+Qwen3.5-4B,Reactive,True,hurt_intruder_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,410.0
+Qwen3.5-4B,Reactive,True,hurt_intruder_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,0,431.5
+Qwen3.5-4B,Reactive,True,hurt_intruder_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,424.4
+Qwen3.5-4B,Reactive,True,borderline_healthy,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,462.2
+Qwen3.5-4B,Reactive,False,intruder_healthy_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,282.6
+Qwen3.5-4B,Reactive,False,intruder_healthy_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,445.0
+Qwen3.5-4B,Reactive,False,intruder_healthy_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,462.1
+Qwen3.5-4B,Reactive,False,intruder_healthy_4,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,430.8
+Qwen3.5-4B,Reactive,False,quiet_1,"{""action"":""Patrol"",""arg"":""Route_North""}",ok,1,1,1,375.3
+Qwen3.5-4B,Reactive,False,quiet_2,"{""action"":""Patrol"",""arg"":""Route_South""}",ok,1,1,1,387.4
+Qwen3.5-4B,Reactive,False,quiet_3,"{""action"":""Patrol"",""arg"":""Route_Perimeter""}",ok,1,1,1,368.7
+Qwen3.5-4B,Reactive,False,report_warehouse,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,333.8
+Qwen3.5-4B,Reactive,False,report_courtyard,"{""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,347.8
+Qwen3.5-4B,Reactive,False,report_gate,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,345.0
+Qwen3.5-4B,Reactive,False,report_hurt_no_intruder,"{""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,355.0
+Qwen3.5-4B,Reactive,False,report_gate_hurt,"{""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,349.9
+Qwen3.5-4B,Reactive,False,hurt_intruder_1,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,426.1
+Qwen3.5-4B,Reactive,False,hurt_intruder_2,"{""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,0,426.1
+Qwen3.5-4B,Reactive,False,hurt_intruder_3,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,409.7
+Qwen3.5-4B,Reactive,False,borderline_healthy,"{""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,423.8
+Qwen3.5-4B,Deliberative,True,intruder_healthy_1,"{""reason"":""Intruder_01 is visible and hostile."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,469.7
+Qwen3.5-4B,Deliberative,True,intruder_healthy_2,"{""reason"":""Intruder_02 spotted at 7.5m."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,648.1
+Qwen3.5-4B,Deliberative,True,intruder_healthy_3,"{""reason"":""Intruder_01 is visible and hostile."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,619.3
+Qwen3.5-4B,Deliberative,True,intruder_healthy_4,"{""reason"":""Intruder_02 is visible and hostile."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,636.5
+Qwen3.5-4B,Deliberative,True,quiet_1,"{""reason"":""No intruders or disturbances detected. Continuing patrol."",""action"":""Patrol"",""arg"":""Route_North""}",ok,1,1,1,602.4
+Qwen3.5-4B,Deliberative,True,quiet_2,"{""reason"":""No intruder visible, continuing scheduled patrol."",""action"":""Patrol"",""arg"":""Route_South""}",ok,1,1,1,572.5
+Qwen3.5-4B,Deliberative,True,quiet_3,"{""reason"":""Continuing the perimeter patrol as per current status."",""action"":""Patrol"",""arg"":""Route_Perimeter""}",ok,1,1,1,574.3
+Qwen3.5-4B,Deliberative,True,report_warehouse,"{""reason"":""Disturbance reported at Warehouse."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,504.0
+Qwen3.5-4B,Deliberative,True,report_courtyard,"{""reason"":""Disturbance reported at Courtyard."",""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,534.5
+Qwen3.5-4B,Deliberative,True,report_gate,"{""reason"":""Disturbance reported at Gate."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,488.3
+Qwen3.5-4B,Deliberative,True,report_hurt_no_intruder,"{""reason"":""Disturbance reported at Warehouse."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,490.1
+Qwen3.5-4B,Deliberative,True,report_gate_hurt,"{""reason"":""Disturbance reported at Gate, investigate."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,535.2
+Qwen3.5-4B,Deliberative,True,hurt_intruder_1,"{""reason"":""Intruder_01 is visible but I am low on health (30/100). Per guidelines, I must retreat to a safe zone instead of chasing"",""action"":""Retreat"",""arg"":""S",ok,1,1,1,1046.0
+Qwen3.5-4B,Deliberative,True,hurt_intruder_2,"{""reason"":""Intruder_02 is visible but I am critically low on health (20/100). Per guidelines, I must retreat to a safe zone instead"",""action"":""Retreat"",""arg"":""S",ok,1,1,1,989.8
+Qwen3.5-4B,Deliberative,True,hurt_intruder_3,"{""reason"":""Intruder_01 is visible and hostile."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,0,613.9
+Qwen3.5-4B,Deliberative,True,borderline_healthy,"{""reason"":""Intruder_01 is visible and hostile."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,622.1
+Qwen3.5-4B,Deliberative,False,intruder_healthy_1,"{""reason"":""Intruder_01 spotted at 4.2m. Immediate threat requires pursuit."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,595.7
+Qwen3.5-4B,Deliberative,False,intruder_healthy_2,"{""reason"":""Intruder_02 spotted at 7.5m. Health is high. Initiating pursuit."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,830.6
+Qwen3.5-4B,Deliberative,False,intruder_healthy_3,"{""reason"":""Intruder_01 is visible and hostile."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,633.5
+Qwen3.5-4B,Deliberative,False,intruder_healthy_4,"{""reason"":""Hostile target Intruder_02 visible."",""action"":""Chase"",""arg"":""Intruder_02""}",ok,1,1,1,619.6
+Qwen3.5-4B,Deliberative,False,quiet_1,"{""reason"":""Nothing visible, continuing patrol."",""action"":""Patrol"",""arg"":""Route_North""}",ok,1,1,1,500.9
+Qwen3.5-4B,Deliberative,False,quiet_2,"{""reason"":""No intruders or disturbances detected. Continuing routine patrol."",""action"":""Patrol"",""arg"":""Route_South""}",ok,1,1,1,578.5
+Qwen3.5-4B,Deliberative,False,quiet_3,"{""reason"":""No intruder or disturbance detected; continuing scheduled patrol."",""action"":""Patrol"",""arg"":""Route_Perimeter""}",ok,1,1,1,584.0
+Qwen3.5-4B,Deliberative,False,report_warehouse,"{""reason"":""Disturbance reported at Warehouse."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,475.5
+Qwen3.5-4B,Deliberative,False,report_courtyard,"{""reason"":""Disturbance reported at Courtyard."",""action"":""Investigate"",""arg"":""Courtyard""}",ok,1,1,1,515.6
+Qwen3.5-4B,Deliberative,False,report_gate,"{""reason"":""Disturbance reported at Gate."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,484.6
+Qwen3.5-4B,Deliberative,False,report_hurt_no_intruder,"{""reason"":""Disturbance reported at Warehouse."",""action"":""Investigate"",""arg"":""Warehouse""}",ok,1,1,1,492.7
+Qwen3.5-4B,Deliberative,False,report_gate_hurt,"{""reason"":""Disturbance reported at Gate."",""action"":""Investigate"",""arg"":""Gate""}",ok,1,1,1,492.4
+Qwen3.5-4B,Deliberative,False,hurt_intruder_1,"{""reason"":""Intruder_01 is visible but I am critically injured (30/100). Per guidelines, I must retreat to a safe zone instead of chasing."",""action"":""Retreat"",""a",ok,1,1,1,990.1
+Qwen3.5-4B,Deliberative,False,hurt_intruder_2,"{""reason"":""Intruder_02 is visible but I am critically injured (20/100 health). Per guidelines, I must retreat to a safe zone instead of chasing."",""action"":""Retr",ok,1,1,1,968.0
+Qwen3.5-4B,Deliberative,False,hurt_intruder_3,"{""reason"":""Intruder_01 is visible and I am below half health, so I must retreat to a safe zone instead of chasing."",""action"":""Retreat"",""arg"":""SafeZone_A""}",ok,1,1,1,834.5
+Qwen3.5-4B,Deliberative,False,borderline_healthy,"{""reason"":""Intruder_01 is visible and hostile."",""action"":""Chase"",""arg"":""Intruder_01""}",ok,1,1,1,648.1

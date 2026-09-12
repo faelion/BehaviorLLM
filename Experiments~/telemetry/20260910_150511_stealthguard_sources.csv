@@ -1,0 +1,4 @@
+﻿source_id,total_decisions,model_actions,fallback_actions,no_actions,backend_errors,parse_failures,policy_rejected,policy_normalized,valid_action_rate,fallback_rate,mean_latency_ms,p50_latency_ms,p95_latency_ms,mean_prompt_chars,mean_prompt_tokens,mean_completion_tokens,cache_hit_rate,last_action,last_argument
+Guard_01,105,105,0,0,0,0,0,0,1,0,671.0383,641.2582,960.968,2214.267,569.1334,13,0.7695,Patrol,Route_North
+Guard_03,100,100,0,0,0,0,0,0,1,0,719.6833,724.6857,967.1936,2291.99,584.32,13.48,0.7726,Investigate,Courtyard
+Guard_02,101,101,0,0,0,0,0,0,1,0,708.6722,718.3533,949.8291,2267.317,569.3466,12.6139,0.7701,Investigate,NorthStore

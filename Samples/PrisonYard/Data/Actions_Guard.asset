@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 502da20ed55950e4c9f51dedfc14f6b3, type: 3}
+  m_Name: Actions_Guard
+  m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Actions.ActionConfig
+  validActions:
+  - actionName: HoldPosition
+    description: Stand still and keep watch where you are.
+    parameterType: 0
+    exampleArgument: 
+    allowedArguments: []
+  - actionName: Patrol
+    description: Walk to a patrol point in your section and watch from there.
+    parameterType: 1
+    exampleArgument: Yard_Patrol_N
+    allowedArguments: []
+  - actionName: Respond
+    description: Go to a section where something is happening.
+    parameterType: 1
+    exampleArgument: Yard
+    allowedArguments: []
+  - actionName: Escort
+    description: Take a prisoner where they are supposed to be.
+    parameterType: 1
+    exampleArgument: Prisoner_01
+    allowedArguments: []
+  - actionName: Search
+    description: Search a prisoner for contraband.
+    parameterType: 1
+    exampleArgument: Prisoner_04
+    allowedArguments: []
+  - actionName: Report
+    description: Call in what you can see in a section over the radio.
+    parameterType: 1
+    exampleArgument: Yard
+    allowedArguments: []
+  - actionName: Retreat
+    description: Fall back to the infirmary to recover.
+    parameterType: 1
+    exampleArgument: Infirmary
+    allowedArguments: []
+  modelInstructions: 'Choose exactly one action per turn.
+
+    Deal with what you
+    can see before going back to your routine.
+
+    If the radio reports trouble,
+    respond to it.
+
+    Otherwise keep patrolling. Prefer patrolling over standing
+    still.'

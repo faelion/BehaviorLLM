@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a9ee3fa873ed824083c1ab2668c5fd0, type: 3}
+  m_Name: Server_LocalLlama
+  m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Config.BehaviorLLMServerConfig
+  baseUrl: http://localhost:8080
+  transport: 0
+  followManagedServerEndpoint: 1
+  autoStartServerOnFirstRequest: 1
+  autoStartOnAwake: 0
+  executableName: llama-server
+  port: 8080
+  parallelSlots: 4
+  cacheReuse: 256
+  useJinja: 1
+  extraArguments: 
+  useStreamingConfig: 1
+  configFileName: behaviorllm_backend_config.json
+  preferConfigModel: 1
+  requestTimeoutSeconds: 30
+  startupRetryDelayMs: 350
+  modelLoadingRetryCount: 20
+  extraStop: []
+  showTerminal: 0
+  verboseServerLogs: 0
+  logServerRequestTraffic: 0
+  errorLogCooldownSeconds: 5

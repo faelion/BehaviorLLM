@@ -1,0 +1,30 @@
+# BehaviorLLM samples
+
+Two runnable samples ship inside the package. Each is self-contained: its scenes, scripts, config
+assets and art all live in its own folder, with the art licence beside the art, and neither
+references anything outside itself and the package.
+
+| Sample | What it shows | Size |
+|---|---|---|
+| [StealthGuard](StealthGuard/README.md) | Three guards patrolling a compound. Cone vision with real line of sight, reflex interrupts, per-guard argument lists, and the lesson that a condition the game already knows should gate the action menu rather than be written into the prompt. | ~5 MB |
+| [PrisonYard](PrisonYard/README.md) | Eight decision makers on one server: three guards, four prisoners and a warden. Custom observation modules (a radio and a status board), decision makers changing each other's world, and a decision maker with no body at all. | ~21 MB |
+
+Build either scene from its menu item (`Tools > StealthGuard > Build Scene`,
+`Tools > PrisonYard > Build Scene`); both regenerate the scene, the animator controllers and the
+dressing from source.
+
+## Requirements
+
+The package core has no package dependencies. These samples have two:
+
+- `com.unity.ai.navigation` for movement
+- `com.unity.inputsystem` for the player character
+
+Both sample assemblies are gated on those packages being present, so a project without them still
+installs and uses BehaviorLLM normally; the samples are simply not compiled.
+
+## Removing them
+
+The samples exist to be read once. `Assets/BehaviorLLM/Readme.asset` has a button for deleting either
+one, and a button for deleting both along with the readme itself. Nothing in the package references
+them, so removing them cannot break a project.
