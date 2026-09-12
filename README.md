@@ -1,9 +1,6 @@
 <!--
-  TODO before the next release: add the two remaining images under .github/ and uncomment their
-  blocks below.
+  TODO before the next release: add the logo under .github/ and uncomment its block below.
     .github/logo.png / .github/logo_dark.png   wordmark, ~600x150, transparent background
-    .github/hero.gif                           ~10 s of StealthGuard: a guard leaves its route to
-                                               investigate a theft, vision fans visible, ~800 px wide
 -->
 
 <!--
@@ -35,11 +32,9 @@
   <a href="https://github.com/faelion/BehaviorLLM/discussions">Discussions</a>
 </p>
 
-<!--
 <p align="center">
-  <img src=".github/hero.gif" width="800" alt="Three guards patrolling a compound; one leaves its route to investigate a reported theft">
+  <img src=".github/hero.gif" width="800" alt="Three guards patrolling a compound at night; Guard_03 spots the intruder in its vision cone and gives chase">
 </p>
--->
 
 **BehaviorLLM** is an open-source Unity package that lets a game object decide for itself, using a **local** language model. You describe what it can *do* (a discrete action set) and what it can *perceive* (observation modules that turn game state into text); the package builds the prompt, constrains the model to a valid JSON decision, and dispatches the chosen action to your UnityEvents.
 
