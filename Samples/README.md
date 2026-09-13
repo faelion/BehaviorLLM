@@ -25,6 +25,12 @@ installs and uses BehaviorLLM normally; the samples are simply not compiled.
 
 ## Removing them
 
-The samples exist to be read once. `Assets/BehaviorLLM/Readme.asset` has a button for deleting either
-one, and a button for deleting both along with the readme itself. Nothing in the package references
-them, so removing them cannot break a project.
+The samples exist to be read once. `Tools > BehaviorLLM > Readme` measures each one and has a
+button for deleting it, and a button for deleting both along with the readme itself. Nothing in the
+package references them, so removing them cannot break a project.
+
+Those buttons delete in place, which works where the package is writable: copied into your own
+`Assets` folder, or embedded in `Packages/`. Installed from the git URL it is immutable and sits
+under `Library/PackageCache`, which Unity rebuilds from your manifest, so a deletion there would
+come straight back. The page says so and shows the sizes anyway; to drop the samples for good,
+remove the dependency from `Packages/manifest.json`.

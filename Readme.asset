@@ -38,7 +38,7 @@ MonoBehaviour:
       custom senses, and a warden that has no body at all and decides for the prison
       as a system.'
     linkText: Open the StealthGuard scene
-    linkTarget: Assets/BehaviorLLM/Samples/StealthGuard/Scenes/StealthGuard.unity
+    linkTarget: Samples/StealthGuard/Scenes/StealthGuard.unity
   - heading: Watching a decision happen
     text: 'Tools > BehaviorLLM > Prompt Inspector records every exchange between
       a decision maker and the model while the game runs: the prompt as it was sent,
@@ -60,17 +60,17 @@ MonoBehaviour:
       The user guide under Documentation~ goes through observation modules, argument
       providers, decision profiles and the configuration assets.
     linkText: Open README.md
-    linkTarget: Assets/BehaviorLLM/README.md
+    linkTarget: README.md
   removableFolders:
   - displayName: StealthGuard sample
-    folderPath: Assets/BehaviorLLM/Samples/StealthGuard
+    folderPath: Samples/StealthGuard
     whatItCosts: The three-guard compound scene, its scripts and its art. Nothing
       else references it.
   - displayName: PrisonYard sample
-    folderPath: Assets/BehaviorLLM/Samples/PrisonYard
+    folderPath: Samples/PrisonYard
     whatItCosts: The eight-character prison scene, its scripts, its art and its editor
       tests. Nothing else references it.
   - displayName: Experiment data
-    folderPath: Assets/BehaviorLLM/Experiments~
+    folderPath: Experiments~
     whatItCosts: The measurement harness and the recorded runs behind the numbers in
       the README. Unity never imports this folder; nothing references it.

@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **The readme's delete buttons and links did nothing unless the package sat at
+  `Assets/BehaviorLLM/`.** Every path in `Readme.asset` was stored project-relative and resolved
+  against the project root, so on the installation the README recommends - the git URL, which the
+  Package Manager resolves into its own cache - all three entries reported themselves as *"Already
+  removed"* while the samples were still there taking 26 MB, and both links logged *"Readme link
+  points at nothing"*. Copying the package into `Packages/`, or renaming the folder under
+  `Assets/`, broke it the same way. Paths are now stored relative to the package root and resolved
+  against wherever the readme asset actually is, so every installation shape works; a path still
+  written as `Assets/…` or `Packages/…` is honoured unchanged, so an edited readme keeps working.
+- `Tests/Editor/ReadmePathResolutionTests.cs`: nine tests pinning the path resolution, including
+  that a package-relative path survives the folder being renamed, that `Experiments~` keeps its
+  trailing tilde so the System.IO fallback can still find it, and that a legacy `Assets/…` path is
+  left alone rather than being re-rooted into `Assets/BehaviorLLM/Assets/BehaviorLLM/…`.
+- **The same page now says when deletion is impossible rather than offering it.** A package
+  resolved from a registry or a git URL is immutable, unpacked under `Library/PackageCache` which
+  Unity rebuilds from the manifest, so a deletion there comes back on the next resolve. The page
+  explains that, keeps showing the folder sizes, and points at removing the dependency or
+  installing into `Assets/` instead. Embedded and local packages stay deletable.
 - **The StealthGuard telemetry run was credited to the wrong model.** `Experiments~/README.md`
   described it as three guards on Qwen3.5-2B; `runs_summary.csv`, written by the package's own
   recorder, records `granite-4.1-3b-Q4_K_M.gguf` for all three shipped runs. The decision count,

@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://github.com/faelion/BehaviorLLM/releases/latest"><img alt="release" src="https://img.shields.io/github/v/tag/faelion/BehaviorLLM?label=release&color=2F5FA6"></a>
   <img alt="unity" src="https://img.shields.io/badge/unity-6000.0%2B-2F5FA6?logo=unity&logoColor=white">
-  <img alt="tests" src="https://img.shields.io/badge/tests-144%20passing-3A8A5E">
+  <img alt="tests" src="https://img.shields.io/badge/tests-153%20passing-3A8A5E">
   <a href="LICENSE.md"><img alt="license" src="https://img.shields.io/badge/license-MIT-3A8A5E"></a>
   <a href="https://github.com/faelion/BehaviorLLM/stargazers"><img alt="stars" src="https://img.shields.io/github/stars/faelion/BehaviorLLM?color=C8701E"></a>
 </p>
@@ -157,7 +157,7 @@ Two runnable samples ship inside the package under `Samples/`. Each is self-cont
 
 They need `com.unity.ai.navigation` and `com.unity.inputsystem`; the package core needs neither, and the sample assemblies are gated on those packages so a project without them still installs and works normally.
 
-Open `Tools > BehaviorLLM > Readme` to delete either sample, the experiment data, or all of them plus the readme itself, once you have finished with them. Nothing in the package references them.
+Open `Tools > BehaviorLLM > Readme` to delete either sample, the experiment data, or all of them plus the readme itself, once you have finished with them. Nothing in the package references them. Deleting in place needs the package to be writable, so the buttons work for a package copied into your `Assets` folder; installed from the git URL it is read-only, and the page says so and points at the manifest instead.
 
 ## How it works
 

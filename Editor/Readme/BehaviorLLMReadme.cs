@@ -33,8 +33,9 @@ namespace BehaviorLLM.Editor.Readme
         public List<Section> sections = new List<Section>();
 
         [Tooltip("Folders this readme offers to delete, each with the label shown on its button. " +
-                 "Paths are relative to the project and are checked before anything is removed, so " +
-                 "an entry that no longer exists is shown as already removed rather than failing.")]
+                 "Paths are relative to the package root, so they keep working wherever the package " +
+                 "is installed, and are checked before anything is removed: an entry that no longer " +
+                 "exists is shown as already removed rather than failing.")]
         public List<RemovableFolder> removableFolders = new List<RemovableFolder>();
 
         [Serializable]
@@ -50,8 +51,9 @@ namespace BehaviorLLM.Editor.Readme
             [Tooltip("Optional label for a link button under the text. Leave empty for no link.")]
             public string linkText = "";
 
-            [Tooltip("Where the link button goes. A URL opens in a browser; a path inside the " +
-                     "project selects that asset in the Project window instead.")]
+            [Tooltip("Where the link button goes. A URL opens in a browser; a path selects that " +
+                     "asset in the Project window instead. Paths are relative to the package root, " +
+                     "e.g. Samples/StealthGuard/Scenes/StealthGuard.unity.")]
             public string linkTarget = "";
         }
 
@@ -61,9 +63,11 @@ namespace BehaviorLLM.Editor.Readme
             [Tooltip("Label on the delete button, e.g. \"StealthGuard sample\".")]
             public string displayName = "";
 
-            [Tooltip("Project-relative folder to delete, e.g. " +
-                     "Assets/BehaviorLLM/Samples/StealthGuard. Deleting it is permanent unless the " +
-                     "project is under version control, and the inspector says so before it acts.")]
+            [Tooltip("Folder to delete, relative to the package root, e.g. " +
+                     "Samples/StealthGuard. Deleting it is permanent unless the project is under " +
+                     "version control, and the inspector says so before it acts. A path starting " +
+                     "with Assets/ or Packages/ is still honoured as-is, for readmes authored " +
+                     "before paths became relative.")]
             public string folderPath = "";
 
             [Tooltip("One line explaining what is lost, shown next to the button and in the " +
