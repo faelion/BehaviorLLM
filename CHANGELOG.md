@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **The StealthGuard telemetry run was credited to the wrong model.** `Experiments~/README.md`
+  described it as three guards on Qwen3.5-2B; `runs_summary.csv`, written by the package's own
+  recorder, records `granite-4.1-3b-Q4_K_M.gguf` for all three shipped runs. The decision count,
+  the duration and the cache figure in that row were already right.
+- **`CONTRIBUTING.md` was written for the development harness and shipped unchanged.** The copy
+  people fork pointed at `Docs/Experiments/run_matrix.py`, at `PLAN.md`, and at an absolute path
+  on the author's machine, none of which exist in the package repository; the paths are now
+  relative to the package root (`Experiments~/run_matrix.py`, `Experiments~/matrix_results.csv`).
+  Its issue template asked for an `OutputFormat` setting and a `useGrammar` flag that no longer
+  exist, and
+  for `[Agent] Thought:` log lines the runtime has never printed, and it named
+  `BehaviorLLMClient.url` rather than **Base Url** on the server config. It now asks for a Prompt
+  Inspector exchange instead. The PR checklist gained the three rules the README already said it
+  carried: a tooltip on every inspector field, no bare `Debug.Log*` in `Runtime/`, and a changelog
+  entry for anything a consumer sees.
+- **The architecture document predated the settings asset.** It still said four ScriptableObject
+  types hold everything that changes behaviour and never mentioned `BehaviorLLMSettings` or
+  `BehaviorLLMLog`, both of which landed the day after it was written. A new section 2.G covers
+  the project-wide settings asset, why it is a ceiling rather than an override, and the log gate
+  that enforces it.
+
 ## [0.5.0] - 2026-09-12
 
 First release published as a package in its own right, at

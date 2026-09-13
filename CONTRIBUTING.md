@@ -16,7 +16,7 @@ Assets/
     Editor/                             Editor-only tooling (asset menus, builders)
     Editor/Readme/                      The Readme asset's type and inspector
     Tests/
-      Runtime/                          EditMode + PlayMode tests
+      Runtime/                          PlayMode tests (pure helpers)
       Editor/                           Editor-only tests
     Samples/StealthGuard/               Three decision makers, start here
     Samples/PrisonYard/                 Eight decision makers, three roles
@@ -25,6 +25,11 @@ Assets/
   !Project/                             Harness scratch: a test scene, a demo navigator,
                                         and two unimplemented sample placeholders
 ```
+
+`Assets/BehaviorLLM/` is itself the package repository, <https://github.com/faelion/BehaviorLLM>,
+so a fork of the package sees that subtree as its root: `Runtime/`, `Samples/StealthGuard/` and
+`Experiments~/` with no `Assets/` in front of them. Every path in this file below the tree is
+written that way, relative to the package root.
 
 Anything outside `Assets/BehaviorLLM/` is *not* shipped in the UPM package, so keep
 package code self-contained. The two samples moved inside it on 2026-09-10 for exactly
@@ -40,10 +45,14 @@ working package with the samples simply not compiled.
 - **llama-server binary + a GGUF model.** Drop both under
   `Assets/StreamingAssets/models/` and point
   `Assets/StreamingAssets/behaviorllm_backend_config.json` (or the inspector fields on
-  `BehaviorLLMServer`) at them. Without a model, the agent runs but every call fails the
-  retry budget and the smoke sample logs a clear error.
+  `BehaviorLLMServer`) at them. Without a model, a decision maker runs but every call fails
+  the retry budget and the smoke sample logs a clear error.
 - Add a `BehaviorLLMServer` component to a scene if you want BehaviorLLM to manage the
-  process; otherwise launch llama-server yourself and point `BehaviorLLMClient.url` at it.
+  process; otherwise launch llama-server yourself and point **Base Url** on the server
+  config asset at it.
+- The package on its own is not a Unity project. Working from a clone of the package
+  repository means putting it inside one, either at `Assets/BehaviorLLM/` or as an
+  embedded package under `Packages/`.
 
 ## Branch + commit conventions
 
@@ -57,9 +66,10 @@ working package with the samples simply not compiled.
 
 ## Tests
 
-Open `Window > General > Test Runner`, or use the Unity CLI (`unity test D:\repos\TFG --mode
-EditMode`, `unity test D:\repos\TFG --mode PlayMode --filter BehaviorLLM.Tests.Runtime`; with
-the Editor open, `unity command run_tests --mode ...`). The package ships two test assemblies:
+Open `Window > General > Test Runner`, or use the Unity CLI against the Unity project that
+contains the package (`unity test <project> --mode EditMode`, `unity test <project> --mode
+PlayMode --filter BehaviorLLM.Tests.Runtime`; with the Editor open, `unity command run_tests
+--mode ...`). The package ships two test assemblies:
 
 - `BehaviorLLM.Tests.Runtime` - PlayMode (the assembly has no platform restriction, so the
   runner lists it under PlayMode only). Covers the pure helpers: `ActionSchemaBuilder`,
@@ -77,20 +87,22 @@ unit tests, because the failure modes that matter live in the model output.
 
 ## Measured acceptance bar
 
-`Docs/Experiments/run_matrix.py` drives llama-server over 16 hand-labelled guard scenarios,
+`Experiments~/run_matrix.py` drives llama-server over 16 hand-labelled guard scenarios,
 across three models and both decision profiles, with and without the schema. It uses the
 prompts and JSON Schemas the package's own `PromptBuilder` and `ActionSchemaBuilder`
 produce, so it measures what actually ships.
 
 The 2026-09-04 baseline is **100% structurally valid actions everywhere**, with
 expected-action rates of 62% (Qwen3.5-2B), 81% (Granite 4.1-3B) and 81% Reactive / 94%
-Deliberative (Qwen3.5-4B), at p50 latencies of 189, 278 and 382 ms. The full table and what
-it means is in `PLAN.md` section 8.
+Deliberative (Qwen3.5-4B), at p50 latencies of 189, 278 and 382 ms. Every configuration is a
+row in `Experiments~/matrix_results.csv`, every individual decision a row in
+`Experiments~/matrix_decisions.csv`, and `Experiments~/README.md` explains each file and how
+to re-run it.
 
 A PR that changes prompt construction, output format, argument policy or the schema must
 hold those numbers: re-run the matrix and put the affected rows in the PR description.
 
-For a change you want to see rather than measure, play `BehaviorLLM/Samples/StealthGuard` and
+For a change you want to see rather than measure, play `Samples/StealthGuard` and
 let `DecisionTelemetryRecorder` write a run summary.
 
 If you do not have the models, say so in the PR and a maintainer will run it for you.
@@ -105,15 +117,28 @@ If you do not have the models, say so in the PR and a maintainer will run it for
       the pattern we settled on in phase 3).
 - [ ] No regressions on the telemetry baseline (or explicit rationale + new baseline).
 - [ ] Public API additions documented with a `<summary>` XML doc.
-- [ ] `package.json` `version` bumped if the change is consumer-visible.
+- [ ] Every field a user sees in the inspector has a `[Tooltip]`, and every field on a
+      config ScriptableObject without exception. Write it for someone who has never read
+      the code, and where a number was measured, say the number.
+- [ ] No bare `Debug.Log*` anywhere in `Runtime/`. Console output goes through
+      `BehaviorLLMLog.Error/Warn/Requested/Info`, which take a `Func<string>` so a
+      suppressed line costs nothing to build. A bare call is a line the project cannot
+      turn off.
+- [ ] `package.json` `version` bumped and a `CHANGELOG.md` entry added under
+      `[Unreleased]` if the change is consumer-visible. Breaking changes are marked
+      `**BREAKING -**` as the existing entries do.
 
 ## Filing issues
 
-When reporting an agent-behavior bug, include:
+When reporting a bad decision, include:
 - The model GGUF name + quant.
-- The agent's `OutputFormat` setting and whether `useGrammar` is on.
-- A `runs_summary.csv` row from the failing run.
-- The relevant `[Agent] Thought:` log lines that demonstrate the failure mode.
+- The decision profile and whether **Use Structured Output** is on, both from the
+  `DecisionMakerConfig` asset.
+- One exchange from `Tools > BehaviorLLM > Prompt Inspector`, using its **Copy** button:
+  that carries the system prompt, the state block, the applied schema and the raw reply
+  in a form that replays against `llama-cli`.
+- A `runs_summary.csv` row from the failing run, or the `parseFailureReason` from the
+  telemetry record when the decision was rejected rather than merely wrong.
 
 That triple - model + config + decision sample - is what we need to reproduce the bug;
 without it we can usually only guess.

@@ -78,7 +78,7 @@ The package ships three **model config** assets under `Runtime/Defaults/Models`,
 | Granite 4.1 3B (Q4_K_M) | Reactive | 100% | 81% | 278 ms |
 | Qwen3.5 4B (Q4_K_M) | Deliberative | 100% | 94% | 574 ms |
 
-Measured on a Radeon RX 6650 XT over 16 labelled scenarios; reproduce with `Docs/Experiments/run_matrix.py` in the repository. Choose by what the object is: Granite 4.1 3B gives the best quality per millisecond for reactive NPCs, Qwen3.5 2B is the fastest, and Qwen3.5 4B suits low-frequency deciders such as a director or a squad commander.
+Measured on a Radeon RX 6650 XT over 16 labelled scenarios; reproduce with `Experiments~/run_matrix.py`, which ships with the package. Choose by what the object is: Granite 4.1 3B gives the best quality per millisecond for reactive NPCs, Qwen3.5 2B is the fastest, and Qwen3.5 4B suits low-frequency deciders such as a director or a squad commander.
 
 Assign the asset to **both** `BehaviorLLMServer > Model Config` (which model to launch, with what context and GPU layers) and `BehaviorLLMClient > Model Config` (sampling settings). It wins over the StreamingAssets config, so swapping models is one reference change. Use `Create > BehaviorLLM > Model Config` for your own; copy a preset as a starting point, since assets inside a package are read-only.
 

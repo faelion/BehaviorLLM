@@ -38,7 +38,7 @@ per decision plus a per-run summary row in `runs_summary.csv`:
 
 | Run | What it measures |
 |---|---|
-| `20260910_150511_stealthguard` | StealthGuard, three guards on Qwen3.5-2B, four and a half minutes: 306 decisions, 77% of prompt tokens served from the cache |
+| `20260910_150511_stealthguard` | StealthGuard, three guards on Granite 4.1-3B, four and a half minutes: 306 decisions, 77% of prompt tokens served from the cache |
 | `20260909_191742_argsinline` | PrisonYard, eight characters on Granite 4.1-3B, five minutes, world-dependent argument values printed **in the action menu** |
 | `20260909_192323_argsinstate` | the same scene, same build, same disturbances, with those values printed **in the state block** (the package default) |
 

@@ -4,7 +4,7 @@
 
 **BehaviorLLM** is a Unity framework for game objects whose decisions are made by a local language model. It implements a **Sense-Think-Act** loop tuned for on-device inference: a cached prompt prefix, schema-constrained output, per-object latency profiles and reflex interrupts.
 
-The deciding component is called `DecisionMaker` rather than an agent, because nothing about it is specific to characters: the same component drives an enemy, a companion, or a game system such as a director. Everything that tunes it lives in config assets, listed in section 2.F.
+The deciding component is called `DecisionMaker` rather than an agent, because nothing about it is specific to characters: the same component drives an enemy, a companion, or a game system such as a director. Everything that tunes it lives in config assets, listed in section 2.F; what belongs to the project rather than to any one object lives in the settings asset in section 2.G.
 
 ```
 +------------------+     +-------------------+     +----------------------+     +------------------+
@@ -67,7 +67,7 @@ llama-server compiles the schema to a grammar and applies it during sampling, so
 
 ### F. Configuration domains
 
-No component carries a tuning field. Four ScriptableObject types hold everything that changes behaviour, and each is shared by as many objects as the project likes:
+No component carries a tuning field. Four ScriptableObject types hold everything that tunes a decision maker, and each is shared by as many objects as the project likes:
 
 | Asset | Holds | Read by |
 |---|---|---|
@@ -77,6 +77,21 @@ No component carries a tuning field. Four ScriptableObject types hold everything
 | `PerceptionConfig` | Vision shape, range, field of view, perception and occluder layers, scan interval, sight interrupts, prompt headings, memory capacity | `ModularVisionModule`, `BasicMemory` |
 
 `BehaviorLLMDefaults` resolves them. In the Editor, `Reset()` on each component finds the preset the package ships under `Runtime/Defaults`, so a component added to a scene arrives working. At runtime a cleared reference falls back to a throwaway instance carrying the type's declared defaults, so no component ever dereferences null. Every component also exposes `ApplyConfig(...)`, which swaps the asset and rebuilds whatever depended on it; cloning a shared asset with `Instantiate` and applying the clone is how one object is varied without touching the others.
+
+### G. Project settings, and the gate every console line goes through
+
+The four assets above each tune one domain and are meant to exist in variants: a Reactive preset and a Deliberative one, a perception profile per character type. `BehaviorLLMSettings` is the fifth configuration asset and the odd one out. There is one per project, it is loaded by name from a `Resources` folder through `BehaviorLLMSettings.Current` rather than being wired into a component, and it is never null: with no asset anywhere, the declared defaults apply. It answers the questions that belong to the project rather than to any decision maker.
+
+| Setting | Default | What it decides |
+|---|---|---|
+| `editorLogLevel` / `playerLogLevel` | `Warnings` / `ErrorsOnly` | How much the package prints, separately in the Editor and in a non-development build |
+| `telemetryEnabled` / `telemetryInBuilds` | on / off | Master switch for `DecisionTelemetryRecorder`, and whether it may record outside the Editor |
+| `dumpAppliedSchema` | on | Whether the Editor writes `_last_applied_schema.json` to StreamingAssets on every schema rebuild |
+| `warnOnBindingMismatch` / `warnOnModelProfileMismatch` | on | The two advisory startup warnings |
+
+**It is a ceiling, never an override.** A decision maker whose config asks to be quiet stays quiet whatever the project level says; what the level can do is silence one that asked to be loud. That asymmetry is what makes a single switch enough to quieten a whole project before a build without visiting every config asset, and it is why the setting cannot be used to force diagnostics on.
+
+Every console line in `Runtime/` goes through `BehaviorLLMLog`, which is what enforces the ceiling. Messages are passed as `Func<string>` rather than as strings, so a suppressed line costs nothing to build; that matters because the verbose lines interpolate whole prompts and response bodies. There are four entry points. `Error` and `Warn` are the obvious two. `Requested` is a line a config asset explicitly asked for, such as `logPrompts`, and prints at the normal level, because needing a second project-wide switch before the first one works is a trap. `Info` is internal detail nobody asked for and needs `Verbose`. `BehaviorLLMLog.Allows(level)` is public for a caller that would do real work purely to log. A bare `Debug.Log*` in `Runtime/` would be a line the project cannot turn off, which is why there are none.
 
 ## 3. Step-by-step workflow
 
