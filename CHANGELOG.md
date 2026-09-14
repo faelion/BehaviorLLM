@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`DecisionMaker` has a component icon**, so it is identifiable in the inspector header and the
+  Add Component list rather than showing the default script glyph. The icon is the brain from the
+  logo rather than the whole lockup: at the 16 px Unity actually draws a component icon at, the
+  branches of the full mark collapse into a smudge, while the brain still reads. It is tinted
+  `#4E86C7` because a black glyph is nearly invisible against the dark Editor theme and Unity does
+  not supply a second icon per theme. The texture lives under `Editor/`, so it never reaches a
+  player build.
 - **A logo.** A stacked lockup: a brain at the root of a tree whose branches end in arrows, over
   the wordmark — the behaviour tree redrawn with the model where the hand-authored logic used to
   sit. `.github/logo.svg` and `logo_dark.svg` are vector and carry no font dependency; `logo.png`
