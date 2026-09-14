@@ -1,71 +1,31 @@
 {
   "models": [
     {
-      "id": "hermes2pro-llama3-8b-q4km",
-      "displayName": "Hermes 2 Pro Llama 3 8B (Q4_K_M)",
-      "description": "Strong tool/function-calling behavior for strict Action(Target) outputs.",
-      "downloadUrl": "https://huggingface.co/NousResearch/Hermes-2-Pro-Llama-3-8B-GGUF/resolve/main/Hermes-2-Pro-Llama-3-8B-Q4_K_M.gguf",
-      "fileName": "Hermes-2-Pro-Llama-3-8B-Q4_K_M.gguf",
-      "sha256": "",
-      "contextSize": 4096,
-      "gpuLayers": 99
-    },
-    {
-      "id": "qwen2.5-coder-3b-q4km",
-      "displayName": "Qwen2.5 Coder 3B Instruct (Q4_K_M)",
-      "description": "Small/fast model with reliable structured output.",
-      "downloadUrl": "https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/qwen2.5-coder-3b-instruct-q4_k_m.gguf",
-      "fileName": "qwen2.5-coder-3b-instruct-q4_k_m.gguf",
-      "sha256": "",
-      "contextSize": 8192,
-      "gpuLayers": 99
-    },
-    {
-      "id": "qwen2.5-3b-instruct-q4km",
-      "displayName": "Qwen2.5 3B Instruct (Q4_K_M)",
-      "description": "General instruct variant for stable low-latency NPC decisions.",
-      "downloadUrl": "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf",
-      "fileName": "qwen2.5-3b-instruct-q4_k_m.gguf",
-      "sha256": "",
-      "contextSize": 8192,
-      "gpuLayers": 99
-    },
-    {
       "id": "qwen3.5-2b-q4km",
       "displayName": "Qwen3.5 2B (Q4_K_M)",
-      "description": "GGUF quantized build of Qwen/Qwen3.5-2B for local llama-server workflow.",
-      "downloadUrl": "https://huggingface.co/bartowski/Qwen_Qwen3.5-2B-GGUF/resolve/main/Qwen_Qwen3.5-2B-Q4_K_M.gguf",
-      "fileName": "Qwen_Qwen3.5-2B-Q4_K_M.gguf",
+      "description": "Measured here: 100% structurally valid actions, 62% expected action, 189 ms median. The fastest of the three and the one to reach for when a character must answer within a beat. Pairs with the Model_Qwen3.5-2B-Q4_K_M preset.",
+      "downloadUrl": "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf",
+      "fileName": "Qwen3.5-2B-Q4_K_M.gguf",
       "sha256": "",
       "contextSize": 8192,
       "gpuLayers": 99
     },
     {
-      "id": "mistral-7b-v0.3-q4km",
-      "displayName": "Mistral 7B Instruct v0.3 (Q4_K_M)",
-      "description": "Instruction-following with native function-calling behavior.",
-      "downloadUrl": "https://huggingface.co/bartowski/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
-      "fileName": "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
-      "sha256": "",
-      "contextSize": 4096,
-      "gpuLayers": 99
-    },
-    {
-      "id": "phi3-mini-128k-q4km",
-      "displayName": "Phi-3 Mini 128k Instruct (Q4_K_M)",
-      "description": "Very lightweight model for low-latency reflex loops.",
-      "downloadUrl": "https://huggingface.co/rubra-ai/Phi-3-mini-128k-instruct-GGUF/resolve/main/rubra-phi-3-mini-128k-instruct.Q4_K_M.gguf",
-      "fileName": "rubra-phi-3-mini-128k-instruct.Q4_K_M.gguf",
+      "id": "granite-4.1-3b-q4km",
+      "displayName": "IBM Granite 4.1 3B (Q4_K_M)",
+      "description": "Measured here: 100% structurally valid actions, 81% expected action, 278 ms median. The best quality per millisecond of the three for reactive characters, and the model behind the recorded sample runs. Pairs with the Model_Granite-4.1-3B-Q4_K_M preset.",
+      "downloadUrl": "https://huggingface.co/ibm-granite/granite-4.1-3b-GGUF/resolve/main/granite-4.1-3b-Q4_K_M.gguf",
+      "fileName": "granite-4.1-3b-Q4_K_M.gguf",
       "sha256": "",
       "contextSize": 8192,
       "gpuLayers": 99
     },
     {
-      "id": "gemma2-9b-it-q4km",
-      "displayName": "Gemma 2 9B IT (Q4_K_M)",
-      "description": "Strong classification-style action selection from discrete action lists.",
-      "downloadUrl": "https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q4_K_M.gguf",
-      "fileName": "gemma-2-9b-it-Q4_K_M.gguf",
+      "id": "qwen3.5-4b-q4km",
+      "displayName": "Qwen3.5 4B (Q4_K_M)",
+      "description": "Measured here: 100% structurally valid actions, 94% expected action in the Deliberative profile, 574 ms median. The most accurate of the three and the only one measured to clearly benefit from deliberation; suits directors and planners on a slow tick. Pairs with the Model_Qwen3.5-4B-Q4_K_M preset.",
+      "downloadUrl": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
+      "fileName": "Qwen3.5-4B-Q4_K_M.gguf",
       "sha256": "",
       "contextSize": 8192,
       "gpuLayers": 99

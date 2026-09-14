@@ -24,6 +24,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the `<h1>` beneath it is gone because the lockup already carries the name.
 
 ### Fixed
+- **The model catalogue did not offer two of the three models the package recommends.**
+  `Resources/BehaviorLLMModelCatalog.json` listed seven models and `Runtime/Defaults/Models/` ships
+  three presets; they overlapped in exactly one. Granite 4.1-3B — the model the README calls the
+  best quality per millisecond for reactive characters, and the one behind all three recorded
+  telemetry runs — was absent, as was Qwen3.5-4B, the Deliberative recommendation. Following the
+  Quick start therefore led to a download window that could not supply what the next step assumed
+  you had. Both are now listed, from IBM's and Unsloth's own GGUF repositories.
+- **A downloaded model did not match the preset that expected it.** The catalogue fetched
+  Qwen3.5-2B as `Qwen_Qwen3.5-2B-Q4_K_M.gguf` while `Model_Qwen3.5-2B-Q4_K_M` looks for
+  `Qwen3.5-2B-Q4_K_M.gguf`, so even the one model present downloaded under a name the preset could
+  not find. All three entries now use sources whose file names match the presets exactly. The three
+  measured models are now the whole list, and their descriptions carry the figures they were
+  measured at. The six entries the project never measured (Hermes 2 Pro, Qwen2.5 Coder, Qwen2.5 3B,
+  Mistral 7B, Phi-3 Mini, Gemma 2 9B) were removed: they carried no figures, matched no shipped
+  preset, and were the reason the list had gone stale. The quick start in the README named Gemma 4
+  E2B, which the catalogue never carried either, and now names the three that ship.
 - **The readme's delete buttons and links did nothing unless the package sat at
   `Assets/BehaviorLLM/`.** Every path in `Readme.asset` was stored project-relative and resolved
   against the project root, so on the installation the README recommends - the git URL, which the

@@ -85,7 +85,7 @@ or *Window > Package Manager > Add package from git URL…* with the same URL. D
 
 ### 1. Get a model and a server
 
-1. Open `Tools > BehaviorLLM > Model Catalog`, pick a model (Qwen3.5 2B/4B, Granite 4.1 3B and Gemma 4 E2B all work well) and click **Download + Set Active**. This writes `StreamingAssets/behaviorllm_backend_config.json`.
+1. Open `Tools > BehaviorLLM > Model Catalog`, pick one of the three models listed (Granite 4.1 3B is the best starting point for reactive characters; Qwen3.5 2B is faster, Qwen3.5 4B more accurate) and click **Download + Set Active**. This writes `StreamingAssets/behaviorllm_backend_config.json`.
 2. Open `Tools > BehaviorLLM > Llama Server` and click **Download Server**, or install llama.cpp yourself (`winget install llama.cpp`, `brew install llama.cpp`); a `llama-server` on your `PATH` is picked up automatically.
 3. Add a `BehaviorLLMServer` component to the scene and tick *Auto Start On Awake* on its server config, or run `llama-server -m model.gguf --jinja -np 4` yourself.
 
