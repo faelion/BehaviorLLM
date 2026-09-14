@@ -389,7 +389,23 @@ namespace BehaviorLLM.Core.Decisions
             BehaviorLLMModelConfig model = client != null ? client.ModelConfig : null;
             if (model == null) return;
 
-            if (Cfg.UsesNativeThinking && !model.nativeThinkingUsable)
+            // A model that always reasons and cannot be told not to needs the Deliberative
+            // profile and a thinking budget, or it spends the Reactive budget thinking and
+            // never answers; the client then falls back to raw completion, where such a model
+            // gives the cheapest legal action every time. Seen on 2026-09-14 with LFM2.5-2.6B:
+            // twelve decisions, all HoldPosition, all "valid".
+            if (model.reasoningModel && (Cfg.profile != DecisionProfile.Deliberative || Cfg.thinkingBudgetTokens <= 0))
+            {
+                BehaviorLLMLog.Warn(() => $"[DecisionMaker] '{gameObject.name}': '{model.displayName}' is a reasoning model whose " +
+                                 "chat template has no thinking switch, but this decision maker runs " +
+                                 $"{Cfg.profile} with a thinking budget of {Cfg.thinkingBudgetTokens}. It will spend " +
+                                 "the token budget reasoning and return no answer, and the client's raw-completion " +
+                                 "fallback then produces the cheapest action every time. Set Profile to Deliberative " +
+                                 "and Thinking Budget Tokens to a few hundred on the decision maker config, or pick a " +
+                                 "model that does not reason first (all three shipped presets).");
+            }
+
+            if (Cfg.UsesNativeThinking && !model.nativeThinkingUsable && !model.reasoningModel)
             {
                 BehaviorLLMLog.Warn(() => $"[DecisionMaker] '{gameObject.name}': native thinking is enabled (budget {Cfg.thinkingBudgetTokens}) " +
                                  $"but '{model.displayName}' is marked as not producing usable decisions while thinking. " +

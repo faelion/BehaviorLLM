@@ -8,6 +8,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **The catalogue lists only models a decision maker can run.** The Hugging Face search now asks
+  for the text-generation task only and reads each repository's GGUF header as the site has
+  parsed it, so a speech recogniser or an embedding model - both GGUF files, both installable,
+  neither able to answer a prompt - is never offered. The header's `general.architecture` is
+  checked against the text decoders the bundled llama-server build loads (verified against the
+  strings in build b10809); a known one shows as a pill, an unknown one hides behind an
+  **unverified arch** toggle rather than being refused, since llama.cpp adds architectures every
+  few weeks. The size range filters on the header's real parameter count, not the number in the
+  name: Gemma 4 E4B reads as 7.5B, which is what it costs to run. A pasted repository id
+  bypasses the filters and shows its warnings instead.
+- **The Installed tab reads every file's GGUF header.** Each installed model shows its
+  architecture, and one that is not a text model gets a red pill, a plain explanation and a
+  disabled Set Active. This closes the gap the catalogue filters leave for files that arrived by
+  a pasted link: a 0.6B speech model was set active once, ran a whole session and was only found
+  out from the telemetry. `BehaviorLLMGgufHeader` reads the first kilobyte and skips values of
+  every type, so a file that leads with its tokenizer's vocabulary costs milliseconds.
+- **Reasoning models are named before they are downloaded.** The catalogue reads each
+  repository's chat template and the Installed tab reads the one in the file, and a model whose
+  template opens every answer with a thinking block and has no `enable_thinking` switch gets a
+  **REASONING MODEL** pill and an explanation. Such a model ignores the package's per-request "do
+  not think", spends the Reactive profile's 48-token budget reasoning and returns no answer; the
+  client then falls back to raw completion, where a model forbidden to think and stripped of its
+  template gives the cheapest legal action every time. LFM2.5-2.6B did exactly that for twelve
+  decisions, all HoldPosition, all structurally valid. `BehaviorLLMModelConfig` gains a
+  `reasoningModel` flag, set by the window from the template, and `DecisionMaker` warns at Awake
+  when such a model runs anything other than Deliberative with a thinking budget. A template that
+  honours `enable_thinking` (Qwen3) is not flagged: that is the case the package already handles.
+- **Every model says whether it fits the GPU.** The footer names the graphics device Unity sees
+  and its video memory, and every download row and installed file shows **fits GPU** or **over
+  GPU memory** against it, with the estimate in the tooltip. The failure this warns about is
+  silent: a model that does not fit is not refused, it is paged over the bus by the driver and
+  runs slower than the CPU while reporting every layer offloaded. `BehaviorLLMServer` now reads
+  llama-server's `offloaded N/M layers to GPU` line and warns when N is short of M, naming the
+  GPU Layers setting; a full offload stays at Info with the `model buffer size` line beside it.
+  It was first made an Info line "whatever the verbosity", which under the project's default log
+  level of Warnings is a line nobody sees, so a session on the CPU still looked like one on the GPU.
+- **The model catalogue searches Hugging Face.** A curated list starts ageing the day it ships, and
+  this one had: it listed seven models against three shipped presets. The Models tab now searches
+  the Hugging Face API for GGUF repositories with a parameter cap and a quantisation filter,
+  expands a repository into its individual files with their real sizes and digests, and can create
+  a `BehaviorLLMModelConfig` from any of them - filling in every field the API can answer honestly
+  and leaving the measured ones blank, with a note saying why. Search results are separated from
+  the measured models visually and in wording, because the expected-action and latency figures are
+  a claim this project makes about models it has actually run.
+
+  The window was reworked around that. The three menu items became three tabs of one window with a
+  shared status strip, since which model is active matters while installing a server too. Every
+  card states its download size before you commit to it, and every installed model can be deleted
+  with the space it reclaims named on the button - there was previously no way to remove a model
+  from the Editor at all, and a models folder quietly accumulated gigabytes nothing acknowledged.
+  Each card names the config asset it pairs with, and a download whose file name will not match any
+  preset says so before it is fetched, which is the defect above made visible rather than latent.
+  SHA256 verification was already written and always skipped, because every catalogue entry shipped
+  an empty digest; Hugging Face returns them, so the check now runs on anything found online.
 - **BREAKING - an action can take more than one value.** `ActionDefinition` now holds a list of
   named `ActionParameter`s instead of a single unnamed argument, each with its own type, example
   and allowed values. The schema emits one property per parameter, the parser reads them by name,
@@ -50,7 +104,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   outline with the ink inverted, so they cannot drift apart. The README header now shows it, and
   the `<h1>` beneath it is gone because the lockup already carries the name.
 
+### Added
+- **An Installed tab.** The Models tab answers "what could I use"; this one answers "what am I
+  carrying", which is the question you have when a project folder has grown by gigabytes and you
+  cannot remember why. It lists every GGUF on disk largest first, whatever it came from - the
+  curated list, a search result or a pasted link - with its size, whether it is active, and whether
+  any model config actually points at it. A file nothing references is called out as taking up
+  space that nothing will load.
+
+### Changed
+- **The transport-switch warning says what raw completion cannot fix.** It used to promise that
+  the schema "constrains the reply from the first token", which is true and, for a reasoning
+  model, is the problem: forbidden to think and sent the prompt without its template, a small
+  reasoning model answers with the first action and no argument, decision after decision. The
+  warning now separates the two cases, an out-of-date template that only needed the switch and a
+  model that always reasons, and points the second at Deliberative with a thinking budget.
+- **The Catalog tab downloads and nothing else.** Setting a model active, creating a config for
+  it, and deleting it now live only in the Installed tab, because those are things you do to a
+  file you have. The tab is named Catalog to say so. Every model on a card still states its size
+  before you commit to it.
+- **Configs created from the window go to `Assets/BehaviorLLMConfigs/Models`,** in the project,
+  not next to the shipped presets inside the package. Two configs made for a five-minute test
+  were sitting in `Runtime/Defaults/Models` as though the project vouched for them, one of them
+  for a speech model, and the test that counts the shipped presets failed until somebody noticed.
+  Deleting a file whose config was made this way offers to delete the config with it.
+- **The status strip shows two models, not one.** "In scene" is what the open scene will run:
+  the config its server carries, or "uses config file" when it carries none. "Config file" is
+  what `StreamingAssets/behaviorllm_backend_config.json` names. They can differ, and the old
+  single "Active model" fact read green through a whole session on the wrong model.
+
 ### Fixed
+- **"Set active" did nothing in any scene built by the samples.** It wrote only the StreamingAssets
+  file, and a server that carries a Model Config - which both sample builders assign - runs that
+  one instead, so the button changed nothing and reported success. It is now **Set active in
+  current scene**: it finds or creates the config that names the file, assigns it to every
+  `BehaviorLLMServer` and `BehaviorLLMClient` in the loaded scenes through their serialized
+  fields (undoable, marks the scene dirty), and writes the file as before for scenes that leave
+  Model Config empty. The status line says how many of each it reached, or that it reached none.
+- **Downloading a large model flooded the console and could hang the importer.** The download
+  stream wrote directly into `Assets/StreamingAssets/models/`, so Unity watched a file that grew
+  for minutes: it reported `does not exist in SourceAssetDB` for the half-written asset once per
+  attempt and, on a multi-gigabyte model, ended in an infinite import loop. Downloads are now
+  assembled under `Library/BehaviorLLM/Downloads/`, verified there, and moved into place only when
+  complete - Library is not watched by Unity, is not shipped, and sits on the same volume, so the
+  move is a rename rather than a second multi-gigabyte copy. An interrupted download also no
+  longer leaves a broken asset in the project, and a resume finds its own part-file.
+- **The model search filters did not filter.** Quantisation is a property of a file, not of a
+  repository, and the search returns repositories - so the quantisation picker only ever applied
+  to the file rows inside an expanded result, and repositories with no matching file stayed in the
+  list. Every result's file list is now read in the background after a search, rows are filtered as
+  their contents arrive, and what was removed is reported rather than silently dropped. Results
+  are held behind a spinner with a running count until every list has arrived, because rendering
+  first and filtering afterwards made the list visibly reshuffle for seconds on a slow connection.
+  The size filter is also a range now, labelled and spelled out - "1B to 8B", "up to 4B" - rather
+  than a ceiling picked from four options beside two unlabelled numbers. The size
+  filter leaked for a different reason: a parameter count is read from the repository name, and a
+  repository that does not state one returned zero, which was treated as "keep" - which is exactly
+  how a 30B model slipped past a 4B filter. Unnamed sizes are now excluded unless the "unsized"
+  toggle asks for them.
+- **Search results stopped after one page.** There is now a Load more, following the cursor Hugging
+  Face returns in its `Link` header rather than an offset, so a ranking that shifts between
+  requests cannot skip or repeat a repository.
+- **The measured figures were labelled in the harness's vocabulary.** "Expected action", "valid
+  action" and "p50" mean something to whoever ran the experiments and nothing to somebody choosing
+  a model. They now read as accuracy, per-decision time and what the model is best used as, each
+  with a tooltip saying how it was measured. The always-100% validity figure moved to the section
+  heading, where it says something once instead of filling a column on every card.
+- **The window said llama-server was not installed when it was.** It checked only
+  `StreamingAssets/llama-server/`, while the runtime resolves the executable through
+  StreamingAssets, then `PATH`, then the directories package managers install into - so a machine
+  with llama.cpp from winget, brew or apt was told the server was missing by a window whose own
+  runtime would have launched it without complaint. Both now call the same
+  `BehaviorLLMServer.TryLocateExecutable`, and the tab reports where it was found rather than only
+  whether a bundled copy exists. The build selector is also renamed from "Preferred build" to
+  "Build to download", because it chooses what to fetch and never described what is already there.
+
 - **Characters sharing a config no longer decide in lockstep.** Every decision maker counted its
   interval from the moment it was enabled, so characters enabled together asked the server on the
   same frame and stayed in step, turning a steady load into bursts of contention separated by idle

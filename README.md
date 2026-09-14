@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/faelion/BehaviorLLM/releases/latest"><img alt="release" src="https://img.shields.io/github/v/tag/faelion/BehaviorLLM?label=release&color=2F5FA6"></a>
   <img alt="unity" src="https://img.shields.io/badge/unity-6000.0%2B-2F5FA6?logo=unity&logoColor=white">
-  <img alt="tests" src="https://img.shields.io/badge/tests-170%20passing-3A8A5E">
+  <img alt="tests" src="https://img.shields.io/badge/tests-204%20passing-3A8A5E">
   <a href="LICENSE.md"><img alt="license" src="https://img.shields.io/badge/license-MIT-3A8A5E"></a>
   <a href="https://github.com/faelion/BehaviorLLM/stargazers"><img alt="stars" src="https://img.shields.io/github/stars/faelion/BehaviorLLM?color=C8701E"></a>
 </p>
@@ -85,7 +85,7 @@ or *Window > Package Manager > Add package from git URL…* with the same URL. D
 
 ### 1. Get a model and a server
 
-1. Open `Tools > BehaviorLLM > Model Catalog`, pick one of the three models listed (Granite 4.1 3B is the best starting point for reactive characters; Qwen3.5 2B is faster, Qwen3.5 4B more accurate) and click **Download + Set Active**. This writes `StreamingAssets/behaviorllm_backend_config.json`.
+1. Open `Tools > BehaviorLLM > Model Catalog`, pick one of the three models listed (Granite 4.1 3B is the best starting point for reactive characters; Qwen3.5 2B is faster, Qwen3.5 4B more accurate) and click **Download**. Then, in the **Installed** tab, click **Set active in current scene**: it assigns the model's config to the server and clients in the open scene and writes `StreamingAssets/behaviorllm_backend_config.json`. The Catalog also searches Hugging Face live, filtered to text-generation models whose architecture the bundled llama-server loads, with a size cap that keeps results runnable on one machine.
 2. Open `Tools > BehaviorLLM > Llama Server` and click **Download Server**, or install llama.cpp yourself (`winget install llama.cpp`, `brew install llama.cpp`); a `llama-server` on your `PATH` is picked up automatically.
 3. Add a `BehaviorLLMServer` component to the scene and tick *Auto Start On Awake* on its server config, or run `llama-server -m model.gguf --jinja -np 4` yourself.
 

@@ -264,6 +264,23 @@ namespace BehaviorLLM.Core.Backend
 
             if (IsServerRequestTrafficLine(line) && !Settings.logServerRequestTraffic) return;
 
+            // The one startup line that answers "is this running on the GPU?": "offloaded 41/41
+            // layers to GPU" or "offloaded 0/41". Without it a session on the CPU looks identical
+            // to a healthy one until the telemetry is read afterwards. Full offload is the
+            // expected case and stays at Info; anything short of it is a warning, because the
+            // project's default log level is Warnings and an Info line nobody sees answers
+            // nothing. The buffer-size line beside it says where the weights went.
+            if (IsOffloadSummaryLine(line))
+            {
+                if (TryReadOffload(line, out int offloaded, out int total) && offloaded < total)
+                    BehaviorLLMLog.Warn(() => $"[BehaviorLLMServer] Only {offloaded} of {total} layers are on the GPU " +
+                                              $"(GPU Layers is {activeGpuLayers}). The rest run on the CPU, several times slower. " +
+                                              "Raise GPU Layers on the model config, or pick a smaller model if the card is out of memory.");
+                else
+                    BehaviorLLMLog.Info(() => $"[LLM] {line}");
+                return;
+            }
+
             if (IsServerErrorLine(line))
             {
                 BehaviorLLMLog.Error(() => $"[LLM] {line}");
@@ -287,6 +304,23 @@ namespace BehaviorLLM.Core.Backend
             // warning" toggle) but currently the user opted into noise, so we treat both
             // streams the same.
             BehaviorLLMLog.Info(() => $"[LLM] {line}");
+        }
+
+        /// <summary>Reads "offloaded 12/41 layers to GPU". False for the buffer-size line and anything else.</summary>
+        internal static bool TryReadOffload(string line, out int offloaded, out int total)
+        {
+            offloaded = total = 0;
+            if (string.IsNullOrEmpty(line)) return false;
+            var m = System.Text.RegularExpressions.Regex.Match(line, @"offloaded\s+(\d+)\s*/\s*(\d+)\s+layers", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!m.Success) return false;
+            return int.TryParse(m.Groups[1].Value, out offloaded) && int.TryParse(m.Groups[2].Value, out total);
+        }
+
+        private static bool IsOffloadSummaryLine(string line)
+        {
+            return (line.IndexOf("offloaded", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    line.IndexOf("layers to GPU", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                   line.IndexOf("model buffer size", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static bool IsServerReadyLine(string line)
@@ -366,6 +400,43 @@ namespace BehaviorLLM.Core.Backend
             if (modelConfig.contextSize > 0) cfg.contextSize = modelConfig.contextSize;
             if (modelConfig.gpuLayers >= 0) cfg.gpuLayers = modelConfig.gpuLayers;
             return cfg;
+        }
+
+        /// <summary>
+        /// Where a llama-server would actually be launched from right now, and how it was found.
+        /// Public so the Editor tooling resolves it the same way the runtime does: the window used
+        /// to check only StreamingAssets and report "not installed" for a machine where the
+        /// runtime would have launched a system-wide install without complaint.
+        /// </summary>
+        /// <param name="streamingRelativePath">The configured path, usually from the backend config.</param>
+        /// <param name="absolutePath">The resolved executable, when one exists.</param>
+        /// <param name="source">"StreamingAssets", "PATH" or "system install", for the UI to show.</param>
+        public static bool TryLocateExecutable(string streamingRelativePath, out string absolutePath, out string source)
+        {
+            absolutePath = null;
+            source = null;
+
+            string basePath = ResolveStreamingRelativePath(streamingRelativePath);
+            #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
+            if (!basePath.EndsWith(".exe", System.StringComparison.OrdinalIgnoreCase)) basePath += ".exe";
+            #endif
+
+            if (File.Exists(basePath))
+            {
+                absolutePath = basePath;
+                source = "StreamingAssets";
+                return true;
+            }
+
+            string fileName = Path.GetFileName(basePath);
+
+            string onPath = FindOnPath(fileName);
+            if (onPath != null) { absolutePath = onPath; source = "PATH"; return true; }
+
+            string wellKnown = FindInWellKnownLocations(fileName);
+            if (wellKnown != null) { absolutePath = wellKnown; source = "system install"; return true; }
+
+            return false;
         }
 
         private string ResolveExecutablePath(string relativeOrAbsolute)

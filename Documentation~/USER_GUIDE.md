@@ -63,7 +63,7 @@ decisionMaker.ApplyConfig(mine);
 ### Option A: BehaviorLLM manages the server
 
 1. Create an empty GameObject named `LLMManager` and add **`BehaviorLLMServer`**.
-2. Open `Tools > BehaviorLLM > Model Catalog`, download a model and click **Download + Set Active**. This writes `Assets/StreamingAssets/behaviorllm_backend_config.json`.
+2. Open `Tools > BehaviorLLM > Model Catalog`. The **Catalog** tab downloads; the **Installed** tab is where a downloaded file is put to use. Download one of the three measured models, switch to Installed and click **Set active in current scene**. That assigns the model's config asset to every `BehaviorLLMServer` and `BehaviorLLMClient` in the open scene (creating the asset first if none exists, under `Assets/BehaviorLLMConfigs/Models`) and writes the same choice to `Assets/StreamingAssets/behaviorllm_backend_config.json` for scenes that leave Model Config empty. Save the scene to keep it. The status strip at the top says which model the open scene will run and which the config file names, because the two can differ.
 3. Open `Tools > BehaviorLLM > Llama Server` and click **Download Server** (Windows), or install llama.cpp with `winget install llama.cpp` / `brew install llama.cpp`. A `llama-server` on your `PATH` is found automatically when none is under StreamingAssets.
 4. Check `Tools > BehaviorLLM > Runtime Config` (executable path, port, context size, GPU layers). On AMD GPUs use the Vulkan or ROCm build; on NVIDIA, CUDA; otherwise CPU.
 5. Tick **Auto Start On Awake** on the server config asset, or call `StartServer()` yourself. Set **Parallel Slots** there to at least the number of decision makers that pin a slot.
@@ -84,6 +84,19 @@ Assign the asset to **both** `BehaviorLLMServer > Model Config` (which model to 
 
 `DecisionMaker` reads the measured fields and warns at Awake when its own config contradicts them, for example a thinking budget on a model whose native thinking was measured to be unusable. The warnings are advisory and never override your settings: measure your own scenarios before trusting either.
 
+### Finding more models
+
+The Catalog tab searches Hugging Face live, below the three measured models. The search asks for GGUF repositories listed under **text generation** only, and reads each repository's GGUF header as Hugging Face has parsed it, so what you see has already been filtered on three facts a decision maker depends on:
+
+- **Task.** Speech recognisers, embedding models and vision towers are GGUF files too and download without complaint, then answer nothing. They are never listed.
+- **Architecture.** The header's `general.architecture` is checked against the list of text decoders the shipped llama-server build loads. A known one shows as a blue pill; one the list has not seen is hidden until you tick **unverified arch**, since llama.cpp adds architectures every few weeks and a newer model may well work.
+- **Thinking.** A model whose chat template opens every answer with a thinking block and has no `enable_thinking` switch gets a **REASONING MODEL** pill, online and in the Installed tab. The package asks every request not to think; such a template cannot hear that, so in the Reactive profile the model spends its 48-token budget reasoning and never answers. The client then retries on raw completion, where a model forbidden to think and stripped of its template picks the cheapest legal action every time. Run a reasoning model with the **Deliberative** profile and a **Thinking Budget Tokens** of a few hundred, or use one of the measured models, none of which reason first. The config the window creates for such a model ticks **Reasoning Model** and recommends Deliberative, and the decision maker warns at start when the profile does not fit.
+- **Size.** The **Model size** range filters on the header's real parameter count, not on the number in the name. It is the cap that keeps results runnable on one machine: at Q4 a model needs roughly 0.6 GB of memory per billion parameters, plus room for context. Every file row and every installed model also says **fits GPU** or **over GPU memory** against the video memory Unity reports on this machine.
+
+A pasted `owner/repo` id or a direct `.gguf` link bypasses the filters and shows the repository with its warnings instead, because you asked for that one by name. Anything found online is unmeasured: it installs and runs, but carries none of the accuracy or latency figures the three measured models do.
+
+The Installed tab reads the header of every file on disk and disables **Set active in current scene** for one that is not a text model, so the mistake the filters prevent online cannot be made from a file that arrived another way.
+
 ### Option B: you run the server
 
 ```
@@ -95,7 +108,8 @@ Then leave the scene without a `BehaviorLLMServer` and set **Base Url** on the s
 ### Common errors
 
 - `Executable not found at ...StreamingAssets/llama-server(.exe)`: download the server in the Llama Server window, install llama.cpp system-wide, or set the executable path in Runtime Config.
-- `Model file not found at ...`: download a model in the Model Catalog and make sure it is the active one.
+- `Model file not found at ...`: download a model in the Catalog tab and set it active from the Installed tab. Check the status strip: a scene whose server carries a Model Config runs that one, whatever the config file says.
+- **Decisions take seconds on a machine that measured hundreds of milliseconds.** The server warns at start when llama-server offloads fewer layers than the model has; with the log level at Verbose it also prints the `offloaded N/N layers to GPU` line on a full offload. If every layer is offloaded and it is still slow, the card's memory is taken by something else and the driver is paging the model over the bus, which runs slower than the CPU while looking healthy. The Installed tab's **fits GPU** reading uses the card's total memory, not what is free; close other GPU-heavy programs, or sign out and back in if the desktop compositor has grown, and start again. Measured on 2026-09-14: 6.5 tokens a second on the GPU against 24 on the CPU with the card's memory oversubscribed.
 - `Server is still loading the model`: normal for the first seconds after start; the client retries automatically, as many times as **Model Loading Retry Count** on the server config allows.
 - `llama-server rejected the supplied JSON Schema`: inspect `StreamingAssets/_last_applied_schema.json`; an action or argument name outside `[A-Za-z0-9_]` is the usual cause.
 

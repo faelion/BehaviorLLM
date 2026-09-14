@@ -64,8 +64,18 @@ namespace BehaviorLLM.Core.Backend
         /// <summary>Address requests are currently sent to.</summary>
         public string BaseUrl => activeBaseUrl;
 
-        /// <summary>Transport in effect.</summary>
-        public BackendTransport ActiveTransport => Cfg.transport;
+        /// <summary>Transport in effect, after any automatic switch.</summary>
+        public BackendTransport ActiveTransport => transportOverride ?? Cfg.transport;
+
+        /// <summary>
+        /// Set once a model has been caught thinking instead of answering, after which this client
+        /// uses raw completion for the rest of the session. Null while the configured transport is
+        /// in use. Cleared by <see cref="ApplyConfig"/>, since a different model may behave.
+        /// </summary>
+        private BackendTransport? transportOverride;
+
+        /// <summary>True when the client changed transport by itself, for tooling to report.</summary>
+        public bool SwitchedTransportAutomatically => transportOverride.HasValue;
 
         /// <summary>Server configuration in effect, including the fallback when none is assigned.</summary>
         public BehaviorLLMServerConfig ServerConfig => Cfg;
@@ -84,8 +94,11 @@ namespace BehaviorLLM.Core.Backend
         };
 
         /// <summary>Full endpoint the current transport posts to.</summary>
-        public string Endpoint => (activeBaseUrl ?? string.Empty).TrimEnd('/') +
-            (Cfg.transport == BackendTransport.ChatCompletions ? "/v1/chat/completions" : "/completion");
+        public string Endpoint => EndpointFor(ActiveTransport);
+
+        private string EndpointFor(BackendTransport transport) =>
+            (activeBaseUrl ?? string.Empty).TrimEnd('/') +
+            (transport == BackendTransport.ChatCompletions ? "/v1/chat/completions" : "/completion");
 
         // Resolved lazily as well as at Awake, because editor tooling and tests read these
         // properties on a component that has never woken up.
@@ -138,6 +151,7 @@ namespace BehaviorLLM.Core.Backend
             modelConfig = newModelConfig;
             cfg = BehaviorLLMDefaults.OrTransientDefault(newServerConfig);
             model = BehaviorLLMDefaults.OrTransientDefault(newModelConfig);
+            transportOverride = null;   // a different model may honour the chat template
             activeBaseUrl = NormalizeBaseUrl(cfg.baseUrl);
             RefreshEndpointFromServer();
         }
@@ -218,10 +232,9 @@ namespace BehaviorLLM.Core.Backend
             if (!string.IsNullOrEmpty(schema) && server != null && server.GrammarLoadFailed)
                 return LLMResponse.Failed("The server rejected a JSON Schema. Correct the schema and restart the server before retrying constrained requests.");
 
-            string body = Cfg.transport == BackendTransport.ChatCompletions
-                ? LlamaRequestWriter.WriteChatCompletion(request, BuildSettings(request), schema)
-                : LlamaRequestWriter.WriteRawCompletion(request, BuildSettings(request), schema);
-            string endpoint = Endpoint;
+            BackendTransport transport = ActiveTransport;
+            string body = BuildBody(request, schema, transport);
+            string endpoint = EndpointFor(transport);
 
             int maxAttempts = server != null ? Mathf.Max(2, Cfg.modelLoadingRetryCount + 1) : 1;
             for (int attempt = 1; attempt <= maxAttempts; attempt++)
@@ -251,6 +264,34 @@ namespace BehaviorLLM.Core.Backend
                         ClearBackendFailure();
                         LLMResponse response = ParseResponseBody(raw, latencyMs);
                         response.StructuredOutput = response.Succeeded && !string.IsNullOrEmpty(schema);
+
+                        // A model whose chat template ignores the thinking switch spends the whole
+                        // budget reasoning and returns nothing to act on. Retry once without the
+                        // template: on /completion the schema constrains generation from the first
+                        // token, so a preamble is not merely discouraged but impossible.
+                        if (ShouldRetryWithoutChatTemplate(transport, response))
+                        {
+                            transportOverride = BackendTransport.RawCompletion;
+                            BehaviorLLMLog.Warn(() =>
+                                "[BehaviorLLMClient] The model spent its whole budget of " + response.CompletionTokens +
+                                " tokens reasoning and gave no answer, so its chat template ignores the " +
+                                "request not to think: either it is out of date, or this is a reasoning " +
+                                "model that always thinks first. Switching this client to raw completion, " +
+                                "which sends the prompt without the chat template and forbids thinking from " +
+                                "the first token. That fixes an out-of-date template. It does NOT fix a " +
+                                "reasoning model: forbidden to think and stripped of its template, a small " +
+                                "one gives the cheapest legal answer every time (the first action, with no " +
+                                "argument). For a reasoning model set Profile to Deliberative with a Thinking " +
+                                "Budget on the decision maker config, or use a model that does not reason " +
+                                "first. To make raw completion permanent for a template that only needed " +
+                                "the switch, set Transport to RawCompletion on the server config.", this);
+
+                            transport = BackendTransport.RawCompletion;
+                            body = BuildBody(request, schema, transport);
+                            endpoint = EndpointFor(transport);
+                            continue;
+                        }
+
                         return response;
                     }
 
@@ -291,6 +332,39 @@ namespace BehaviorLLM.Core.Backend
         }
 
         /// <summary>Parses either a chat-completions or a raw completion body into an <see cref="LLMResponse"/>.</summary>
+        private string BuildBody(LLMRequest request, string schema, BackendTransport transport)
+        {
+            return transport == BackendTransport.ChatCompletions
+                ? LlamaRequestWriter.WriteChatCompletion(request, BuildSettings(request), schema)
+                : LlamaRequestWriter.WriteRawCompletion(request, BuildSettings(request), schema);
+        }
+
+        /// <summary>
+        /// True for the one failure that a different transport actually fixes: a chat-completions
+        /// reply that generated tokens but carries no answer.
+        ///
+        /// Both halves matter. No text with no tokens is a server or cancellation problem and
+        /// switching would hide it; text that fails to parse is the model answering badly, which
+        /// raw completion does not help with. Tokens spent and nothing said is specifically a
+        /// model reasoning past its budget behind a template that ignored the request not to.
+        /// Checked once per client, because the second attempt latches the transport.
+        /// </summary>
+        internal static bool IsThinkingWithoutAnswering(BackendTransport transport, LLMResponse response)
+        {
+            return transport == BackendTransport.ChatCompletions
+                   && response != null
+                   && response.Succeeded
+                   && string.IsNullOrWhiteSpace(response.Text)
+                   && response.CompletionTokens > 0;
+        }
+
+        private bool ShouldRetryWithoutChatTemplate(BackendTransport transport, LLMResponse response)
+        {
+            return !transportOverride.HasValue
+                   && Cfg.autoSwitchTransportOnThinking
+                   && IsThinkingWithoutAnswering(transport, response);
+        }
+
         public static LLMResponse ParseResponseBody(string raw, float latencyMs)
         {
             LLMResponse r = new LLMResponse { LatencyMs = latencyMs };

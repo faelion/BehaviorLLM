@@ -42,6 +42,15 @@ namespace BehaviorLLM.Core.Config
                  "with no formatting, for base models or experiments.")]
         public BackendTransport transport = BackendTransport.ChatCompletions;
 
+        [Tooltip("If the model spends a whole decision reasoning and returns no answer, switch " +
+                 "this client to raw completion and carry on. That failure means the model's chat " +
+                 "template ignored the request to stop thinking, usually because it is out of " +
+                 "date; on raw completion no template runs and the JSON schema constrains the " +
+                 "reply from its first token, so there is no room for a preamble. The switch is " +
+                 "logged once and lasts for the session. Turn it off to see the failure instead, " +
+                 "and set Transport to RawCompletion yourself to skip the wasted first request.")]
+        public bool autoSwitchTransportOnThinking = true;
+
         [Tooltip("When a Behavior LLM Server component is in the scene, use the address " +
                  "of the server it started instead of Base Url above. Leave on; then " +
                  "changing Port below is enough.")]

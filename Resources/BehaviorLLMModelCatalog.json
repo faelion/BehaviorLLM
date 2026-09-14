@@ -7,6 +7,7 @@
       "downloadUrl": "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf",
       "fileName": "Qwen3.5-2B-Q4_K_M.gguf",
       "sha256": "",
+      "sizeBytes": 1280835840,
       "contextSize": 8192,
       "gpuLayers": 99
     },
@@ -17,6 +18,7 @@
       "downloadUrl": "https://huggingface.co/ibm-granite/granite-4.1-3b-GGUF/resolve/main/granite-4.1-3b-Q4_K_M.gguf",
       "fileName": "granite-4.1-3b-Q4_K_M.gguf",
       "sha256": "",
+      "sizeBytes": 2099501664,
       "contextSize": 8192,
       "gpuLayers": 99
     },
@@ -27,6 +29,7 @@
       "downloadUrl": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
       "fileName": "Qwen3.5-4B-Q4_K_M.gguf",
       "sha256": "",
+      "sizeBytes": 2740937888,
       "contextSize": 8192,
       "gpuLayers": 99
     }

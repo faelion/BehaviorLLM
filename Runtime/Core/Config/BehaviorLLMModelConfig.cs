@@ -82,6 +82,14 @@ namespace BehaviorLLM.Core.Config
                  "question instead. When this is off, setting a thinking budget gives a " +
                  "warning.")]
         public bool nativeThinkingUsable = false;
+        [Tooltip("Tick when the model always reasons before it answers and its chat template " +
+                 "has no switch to turn that off (LFM2.5, DeepSeek-R1 distils). The Model " +
+                 "Catalog sets this from the template. Such a model cannot run the Reactive " +
+                 "profile: it spends the 48-token budget thinking and never answers, and " +
+                 "the client's raw-completion fallback then makes it pick the cheapest " +
+                 "action every time. Use Deliberative with a Thinking Budget instead. The " +
+                 "decision maker warns at start when this is set and the profile does not fit.")]
+        public bool reasoningModel = false;
         [Tooltip("From the measurement run: the share of answers that were correctly " +
                  "formatted, from 0 to 1.")]
         [Range(0f, 1f)] public float measuredValidActionRate = 0f;
