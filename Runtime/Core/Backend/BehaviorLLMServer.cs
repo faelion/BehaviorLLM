@@ -27,7 +27,7 @@ namespace BehaviorLLM.Core.Backend
         [Tooltip("Which model file to load and how much of it to put on the graphics " +
                  "card. Pick a preset from Runtime/Defaults/Models, or create one with " +
                  "Create > BehaviorLLM > Model Config. Leave empty to use the model " +
-                 "chosen in Tools > BehaviorLLM > Model Catalog.")]
+                 "chosen in BehaviorLLM > Model Manager.")]
         [SerializeField] private BehaviorLLMModelConfig modelConfig;
 
         // Resolved at Awake; never null, so no field read needs a null check.
@@ -111,7 +111,7 @@ namespace BehaviorLLM.Core.Backend
             {
                 SetError($"llama-server not found. Looked for '{cfg.executableRelativePath}' under StreamingAssets, " +
                          $"on PATH, and in the usual install locations. Install it with " +
-                         $"Tools > BehaviorLLM > Llama Server, or with 'winget install llama.cpp' / 'brew install llama.cpp', " +
+                         $"BehaviorLLM > Model Manager (Server tab), or with 'winget install llama.cpp' / 'brew install llama.cpp', " +
                          $"or set Executable Name on the server config to the full path of the binary. " +
                          $"(If you installed it while the Editor was open, restart Unity so it picks up your PATH.)", permanent: true);
                 return;
@@ -121,7 +121,7 @@ namespace BehaviorLLM.Core.Backend
             if (!File.Exists(fullModelPath))
             {
                 SetError($"Model file not found at: {fullModelPath}. Download one with " +
-                         $"Tools > BehaviorLLM > Model Catalog, or point this component's Model Config at a " +
+                         $"BehaviorLLM > Model Manager, or point this component's Model Config at a " +
                          $"GGUF you already have.", permanent: true);
                 return;
             }

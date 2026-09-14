@@ -44,11 +44,15 @@ namespace BehaviorLLM.Core.Config
 
         [Tooltip("If the model spends a whole decision reasoning and returns no answer, switch " +
                  "this client to raw completion and carry on. That failure means the model's chat " +
-                 "template ignored the request to stop thinking, usually because it is out of " +
-                 "date; on raw completion no template runs and the JSON schema constrains the " +
-                 "reply from its first token, so there is no room for a preamble. The switch is " +
-                 "logged once and lasts for the session. Turn it off to see the failure instead, " +
-                 "and set Transport to RawCompletion yourself to skip the wasted first request.")]
+                 "template ignored the request to stop thinking. When the template is merely out " +
+                 "of date, raw completion fixes it: no template runs and the JSON schema " +
+                 "constrains the reply from its first token. When the model is a reasoning model " +
+                 "that always thinks first (the Model Manager marks these), raw completion does " +
+                 "not help: forbidden to think and stripped of its template, a small one picks the " +
+                 "cheapest action every time. Run such a model Deliberative with a Thinking " +
+                 "Budget instead. The switch is logged once and lasts for the session. Turn it off " +
+                 "to see the failure instead, and set Transport to RawCompletion yourself to skip " +
+                 "the wasted first request.")]
         public bool autoSwitchTransportOnThinking = true;
 
         [Tooltip("When a Behavior LLM Server component is in the scene, use the address " +
@@ -98,7 +102,7 @@ namespace BehaviorLLM.Core.Config
         public string extraArguments = "";
 
         [Header("Model File Source")]
-        [Tooltip("Also read the model chosen in Tools > BehaviorLLM > Model Catalog, " +
+        [Tooltip("Also read the model chosen in BehaviorLLM > Model Manager, " +
                  "which saves a small file into StreamingAssets. Turn off to use only " +
                  "the Model Config asset.")]
         public bool useStreamingConfig = true;

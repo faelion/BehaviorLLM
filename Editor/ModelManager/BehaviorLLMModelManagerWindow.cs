@@ -456,32 +456,33 @@ namespace BehaviorLLM.Editor.ModelManager
         private bool keepServerArchive = false;
         private string lastResolvedServerPackage = "";
 
-        [MenuItem("Tools/BehaviorLLM/Model Catalog")]
-        public static void OpenModelCatalog()
-        {
-            OpenWindowForView(BehaviorLLMManagerView.ModelCatalog, "BehaviorLLM Model Catalog", new Vector2(860f, 560f));
-        }
+        /// <summary>The window's name in the menu bar and the tab: one entry for four tabs.</summary>
+        public const string WindowTitle = "BehaviorLLM Model Manager";
 
-        [MenuItem("Tools/BehaviorLLM/Llama Server")]
-        public static void OpenLlamaServer()
+        /// <summary>
+        /// One menu item under a top-level BehaviorLLM menu. There used to be three under Tools,
+        /// one per tab, which opened three separate windows onto the same state; the tab bar
+        /// already is the way to move between them. One instance, reused, keeps the tab you left.
+        /// </summary>
+        [MenuItem("BehaviorLLM/Model Manager", priority = 0)]
+        public static void OpenModelManager()
         {
-            OpenWindowForView(BehaviorLLMManagerView.LlamaServer, "BehaviorLLM Llama Server", new Vector2(820f, 460f));
-        }
-
-        [MenuItem("Tools/BehaviorLLM/Runtime Config")]
-        public static void OpenRuntimeConfig()
-        {
-            OpenWindowForView(BehaviorLLMManagerView.RuntimeConfig, "BehaviorLLM Runtime Config", new Vector2(760f, 360f));
-        }
-
-        private static void OpenWindowForView(BehaviorLLMManagerView view, string title, Vector2 minSize)
-        {
-            var window = CreateInstance<BehaviorLLMModelManagerWindow>();
-            window.managerView = view;
-            window.titleContent = new GUIContent(title);
-            window.minSize = minSize;
+            var window = GetWindow<BehaviorLLMModelManagerWindow>(false, WindowTitle, true);
+            window.minSize = new Vector2(860f, 560f);
             window.Show();
         }
+
+        /// <summary>Opens the window on a given tab, for buttons elsewhere in the Editor.</summary>
+        internal static void OpenModelManager(BehaviorLLMManagerView view)
+        {
+            OpenModelManager();
+            GetWindow<BehaviorLLMModelManagerWindow>().SwitchTo(view);
+        }
+
+        /// <summary>Kept for callers that used the per-tab entry points. They all open the same window.</summary>
+        public static void OpenModelCatalog() => OpenModelManager(BehaviorLLMManagerView.ModelCatalog);
+        public static void OpenLlamaServer() => OpenModelManager(BehaviorLLMManagerView.LlamaServer);
+        public static void OpenRuntimeConfig() => OpenModelManager(BehaviorLLMManagerView.RuntimeConfig);
 
         private void OnEnable()
         {
@@ -609,16 +610,9 @@ namespace BehaviorLLM.Editor.ModelManager
             GUILayout.Space(14f);
         }
 
-        private string GetTitleForCurrentView()
-        {
-            switch (managerView)
-            {
-                case BehaviorLLMManagerView.LlamaServer: return "BehaviorLLM Server";
-                case BehaviorLLMManagerView.Installed: return "BehaviorLLM Installed";
-                case BehaviorLLMManagerView.RuntimeConfig: return "BehaviorLLM Config";
-                default: return "BehaviorLLM Catalog";
-            }
-        }
+        // One window, one name. Per-tab titles made sense when each tab had its own menu entry
+        // and could be docked separately; with one entry the tab bar says where you are.
+        private string GetTitleForCurrentView() => WindowTitle;
 
         // ------------------------------------------------------------------ models
 

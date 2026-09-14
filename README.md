@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/faelion/BehaviorLLM/releases/latest"><img alt="release" src="https://img.shields.io/github/v/tag/faelion/BehaviorLLM?label=release&color=2F5FA6"></a>
   <img alt="unity" src="https://img.shields.io/badge/unity-6000.0%2B-2F5FA6?logo=unity&logoColor=white">
-  <img alt="tests" src="https://img.shields.io/badge/tests-204%20passing-3A8A5E">
+  <img alt="tests" src="https://img.shields.io/badge/tests-256%20passing-3A8A5E">
   <a href="LICENSE.md"><img alt="license" src="https://img.shields.io/badge/license-MIT-3A8A5E"></a>
   <a href="https://github.com/faelion/BehaviorLLM/stargazers"><img alt="stars" src="https://img.shields.io/github/stars/faelion/BehaviorLLM?color=C8701E"></a>
 </p>
@@ -35,7 +35,7 @@ It is not only for characters. The same component drives an enemy, a companion, 
 ```
 observe  IObservationModule.GetObservation()  ->  "--- Vision ---\n- [3.2m] ID: Intruder | Type: Hostile"
 think    system prompt (cached) + state block ->  llama-server /v1/chat/completions + JSON Schema
-act      {"action":"Chase","arg":"Intruder"}  ->  actionBindings["Chase"].Invoke("Intruder")
+act      {"action":"Chase","arg":"Intruder"}  ->  actionBindings["Chase"].Invoke(args)   // args.First == "Intruder"
 ```
 
 ## At a glance
@@ -85,18 +85,18 @@ or *Window > Package Manager > Add package from git URL…* with the same URL. D
 
 ### 1. Get a model and a server
 
-1. Open `Tools > BehaviorLLM > Model Catalog`, pick one of the three models listed (Granite 4.1 3B is the best starting point for reactive characters; Qwen3.5 2B is faster, Qwen3.5 4B more accurate) and click **Download**. Then, in the **Installed** tab, click **Set active in current scene**: it assigns the model's config to the server and clients in the open scene and writes `StreamingAssets/behaviorllm_backend_config.json`. The Catalog also searches Hugging Face live, filtered to text-generation models whose architecture the bundled llama-server loads, with a size cap that keeps results runnable on one machine.
-2. Open `Tools > BehaviorLLM > Llama Server` and click **Download Server**, or install llama.cpp yourself (`winget install llama.cpp`, `brew install llama.cpp`); a `llama-server` on your `PATH` is picked up automatically.
+1. Open `BehaviorLLM > Model Manager`, pick one of the three models listed (Granite 4.1 3B is the best starting point for reactive characters; Qwen3.5 2B is faster, Qwen3.5 4B more accurate) and click **Download**. Then, in the **Installed** tab, click **Set active in current scene**: it assigns the model's config to the server and clients in the open scene and writes `StreamingAssets/behaviorllm_backend_config.json`. The Catalog also searches Hugging Face live, filtered to text-generation models whose architecture the bundled llama-server loads, with a size cap that keeps results runnable on one machine.
+2. Open `BehaviorLLM > Model Manager (Server tab)` and click **Download Server**, or install llama.cpp yourself (`winget install llama.cpp`, `brew install llama.cpp`); a `llama-server` on your `PATH` is picked up automatically.
 3. Add a `BehaviorLLMServer` component to the scene and tick *Auto Start On Awake* on its server config, or run `llama-server -m model.gguf --jinja -np 4` yourself.
 
-<p align="center"><img src=".github/model-catalog.png" width="720" alt="The Model Catalog window"></p>
+<p align="center"><img src=".github/model-catalog.png" width="720" alt="The Model Manager window"></p>
 
 ### 2. Create a decision maker
 
 1. Create a GameObject and add **`DecisionMaker`** and **`BehaviorLLMClient`**. Both arrive already pointing at the presets the package ships, so they work with no further setup.
 2. Add observation modules: **`ModularVisionModule`** (sees `LLMContextObject`s in a sphere or cone), **`BasicMemory`** (the last few executed actions), and for self-status an `LLMContextObject` plus **`SelfObservationModule`** on the object itself.
 3. Create an **`ActionConfig`** asset (*Create > BehaviorLLM > Action Config*) and list the actions: name, description, parameter type, optional example and **allowed arguments**.
-4. Assign that config. **Action Bindings** fills itself with one entry per action; hook a function up to each `On Execute` (`UnityEvent<string>`; the string carries the argument).
+4. Assign that config. **Action Bindings** fills itself with one entry per action; hook a function up to each `On Execute` (`UnityEvent<ActionArguments>`; `args.First` carries a single value, `args["name"]` a named one).
 5. Tag perceivable objects with `LLMContextObject` (name, type, description, live data bindings).
 6. Press Play. It observes, asks the model, and invokes your handlers.
 
@@ -108,7 +108,7 @@ or *Window > Package Manager > Add package from git URL…* with the same URL. D
 
 ### 3. Watch it think
 
-Open `Tools > BehaviorLLM > Prompt Inspector`. Every decision appears as a row with its latency and token counts; select one to see the reply, the state block that was rebuilt for it, the cached system prompt beneath, and the schema the reply was constrained to.
+Open `BehaviorLLM > Prompt Inspector`. Every decision appears as a row with its latency and token counts; select one to see the reply, the state block that was rebuilt for it, the cached system prompt beneath, and the schema the reply was constrained to.
 
 <p align="center"><img src=".github/prompt-inspector.png" width="720" alt="The Prompt Inspector during a run"></p>
 
@@ -149,7 +149,7 @@ Two runnable samples ship inside the package under `Samples/`. Each is self-cont
 
 They need `com.unity.ai.navigation` and `com.unity.inputsystem`; the package core needs neither, and the sample assemblies are gated on those packages so a project without them still installs and works normally.
 
-Open `Tools > BehaviorLLM > Readme` to delete either sample, the experiment data, or all of them plus the readme itself, once you have finished with them. Nothing in the package references them. Deleting in place needs the package to be writable, so the buttons work for a package copied into your `Assets` folder; installed from the git URL it is read-only, and the page says so and points at the manifest instead.
+Open `BehaviorLLM > Readme` to delete either sample, the experiment data, or all of them plus the readme itself, once you have finished with them. Nothing in the package references them. Deleting in place needs the package to be writable, so the buttons work for a package copied into your `Assets` folder; installed from the git URL it is read-only, and the page says so and points at the manifest instead.
 
 ## How it works
 

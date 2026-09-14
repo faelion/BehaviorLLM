@@ -25,10 +25,11 @@ MonoBehaviour:
     linkText: 
     linkTarget: 
   - heading: Getting a model running
-    text: Open Tools > BehaviorLLM > Model Catalog and download one of the listed
-      GGUF models, then Tools > BehaviorLLM > Llama Server to start the inference
-      server. Both windows write into StreamingAssets and remember what you chose.
-      Nothing else in the package needs configuring before a character can think.
+    text: Open BehaviorLLM > Model Manager. Download one of the measured GGUF models
+      in the Catalog tab, click Set active in current scene in the Installed tab, and
+      install the inference server from the Server tab. The window writes into
+      StreamingAssets and remembers what you chose. Nothing else in the package needs
+      configuring before a character can think.
     linkText: 
     linkTarget: 
   - heading: The two samples
@@ -40,7 +41,7 @@ MonoBehaviour:
     linkText: Open the StealthGuard scene
     linkTarget: Samples/StealthGuard/Scenes/StealthGuard.unity
   - heading: Watching a decision happen
-    text: 'Tools > BehaviorLLM > Prompt Inspector records every exchange between
+    text: 'BehaviorLLM > Prompt Inspector records every exchange between
       a decision maker and the model while the game runs: the prompt as it was sent,
       split into the half that is cached and the half that changes, the schema, and
       the reply. It is the fastest way to understand why a character chose what it

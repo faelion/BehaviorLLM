@@ -46,6 +46,21 @@ namespace BehaviorLLM.Tests.Runtime
         }
 
         [Test]
+        public void AnActionsFirstValueCanBePostedDirectly_SoOnExecuteBindsToTheBoard()
+        {
+            // The dispatch event carries ActionArguments, so this is the overload an action
+            // binding reaches. A single-parameter "Report" action posts its value as the note.
+            BehaviorLLMBlackboard board = MakeBoard(MakeCfg());
+            board.Post(BehaviorLLM.Core.Decisions.ActionArguments.Single("Report", "west gate is open"));
+            board.Post((BehaviorLLM.Core.Decisions.ActionArguments)null);
+            board.Post(BehaviorLLM.Core.Decisions.ActionArguments.Empty);
+
+            Assert.AreEqual(1, board.All.Count, "null and empty arguments post nothing");
+            Assert.AreEqual("west gate is open", board.All[0].Text);
+            Assert.IsEmpty(board.All[0].Author, "a direct binding cannot know who is speaking");
+        }
+
+        [Test]
         public void CapacityIsAHardCeiling_OldestNotesFallOff()
         {
             BehaviorLLMBlackboard board = MakeBoard(MakeCfg(capacity: 3));
@@ -71,7 +86,7 @@ namespace BehaviorLLM.Tests.Runtime
         public void BlankNotesAreIgnored()
         {
             BehaviorLLMBlackboard board = MakeBoard(MakeCfg());
-            board.Post(null);
+            board.Post((string)null);
             board.Post("");
             board.Post("   ");
             Assert.AreEqual(0, board.All.Count,

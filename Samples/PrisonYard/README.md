@@ -21,8 +21,8 @@ The yard has four doorways, one per wall; every other section has one. A gate si
 
 ## Running it
 
-1. **Download a model.** `Tools > BehaviorLLM > Model Catalog`, or drop a GGUF into `Assets/StreamingAssets/models/`. The scene expects `granite-4.1-3b-Q4_K_M.gguf`; to use another, edit `Data/Model_PrisonYard.asset`.
-2. **Make `llama-server` reachable.** Install it with `Tools > BehaviorLLM > Llama Server`, or install llama.cpp yourself (`winget install llama.cpp`) and put it on your `PATH`.
+1. **Download a model.** `BehaviorLLM > Model Manager`, or drop a GGUF into `Assets/StreamingAssets/models/`. The scene expects `granite-4.1-3b-Q4_K_M.gguf`; to use another, edit `Data/Model_PrisonYard.asset`.
+2. **Make `llama-server` reachable.** Install it with `BehaviorLLM > Model Manager (Server tab)`, or install llama.cpp yourself (`winget install llama.cpp`) and put it on your `PATH`.
 3. **Open `Scenes/PrisonYard.unity` and press Play.** The server starts on its own and takes a few seconds to load the model. Eight decision makers then begin deciding on their own schedules.
 
 To rebuild the scene from scratch: `Tools > PrisonYard > Build Scene`.

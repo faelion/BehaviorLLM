@@ -88,7 +88,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   characters who coordinate each have to perceive everything the other seven perceive. Retention,
   staleness and prompt shape come from a `BlackboardConfig` asset; notes are capped in length and
   count so one write cannot swallow a prompt. Interrupts are opt-in, because a board several
-  characters write to would otherwise interrupt everybody every time anybody posts.
+  characters write to would otherwise interrupt everybody every time anybody posts. `Post` has an
+  `ActionArguments` overload, which is the one an action's On Execute can bind to now that the
+  event no longer carries a string; it posts the action's first value, unsigned.
 - **`DecisionMaker` has a component icon**, so it is identifiable in the inspector header and the
   Add Component list rather than showing the default script glyph. The icon is the brain from the
   logo rather than the whole lockup: at the 16 px Unity actually draws a component icon at, the
@@ -113,6 +115,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   space that nothing will load.
 
 ### Changed
+- **One `BehaviorLLM` menu in the menu bar, one entry for the window.** `BehaviorLLM > Model
+  Manager` opens the window with its Catalog, Installed, Server and Config tabs; `Prompt
+  Inspector` and `Readme` sit beside it. The three entries under `Tools > BehaviorLLM` that each
+  opened a separate window on one of the tabs are gone, and the window is now a single reused
+  instance that keeps the tab you left, instead of a new window per click. Every tooltip, error
+  message and document that named the old paths was updated with it.
 - **The transport-switch warning says what raw completion cannot fix.** It used to promise that
   the schema "constrains the reply from the first token", which is true and, for a reasoning
   model, is the problem: forbidden to think and sent the prompt without its template, a small

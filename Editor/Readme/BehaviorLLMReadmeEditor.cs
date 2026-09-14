@@ -36,7 +36,7 @@ namespace BehaviorLLM.Editor.Readme
         private GUIStyle headingStyle;
         private GUIStyle bodyStyle;
 
-        [MenuItem("Tools/BehaviorLLM/Readme")]
+        [MenuItem("BehaviorLLM/Readme", priority = 20)]
         private static void ShowReadme()
         {
             BehaviorLLMReadme readme = FindReadme();

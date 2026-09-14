@@ -20,7 +20,7 @@ namespace BehaviorLLM.Core.Config
         public string displayName = "Unnamed model";
         [Tooltip("The model file to load, ending in .gguf. Just the file name if it is " +
                  "in StreamingAssets/models, or a full path to a file anywhere else. " +
-                 "Download one with Tools > BehaviorLLM > Model Catalog.")]
+                 "Download one with BehaviorLLM > Model Manager.")]
         public string modelFileName = "";
         [Tooltip("Where the file was downloaded from, so a teammate can get the same " +
                  "one.")]

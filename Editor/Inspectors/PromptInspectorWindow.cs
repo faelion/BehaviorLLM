@@ -58,7 +58,7 @@ namespace BehaviorLLM.Editor.Inspectors
 
         private GUIStyle rowStyle, selectedRowStyle, monoStyle, headerStyle;
 
-        [MenuItem("Tools/BehaviorLLM/Prompt Inspector")]
+        [MenuItem("BehaviorLLM/Prompt Inspector", priority = 1)]
         public static void Open()
         {
             PromptInspectorWindow window = GetWindow<PromptInspectorWindow>();

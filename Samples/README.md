@@ -25,7 +25,7 @@ installs and uses BehaviorLLM normally; the samples are simply not compiled.
 
 ## Removing them
 
-The samples exist to be read once. `Tools > BehaviorLLM > Readme` measures each one and has a
+The samples exist to be read once. `BehaviorLLM > Readme` measures each one and has a
 button for deleting it, and a button for deleting both along with the readme itself. Nothing in the
 package references them, so removing them cannot break a project.
 

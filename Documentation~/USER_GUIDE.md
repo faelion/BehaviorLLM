@@ -63,9 +63,9 @@ decisionMaker.ApplyConfig(mine);
 ### Option A: BehaviorLLM manages the server
 
 1. Create an empty GameObject named `LLMManager` and add **`BehaviorLLMServer`**.
-2. Open `Tools > BehaviorLLM > Model Catalog`. The **Catalog** tab downloads; the **Installed** tab is where a downloaded file is put to use. Download one of the three measured models, switch to Installed and click **Set active in current scene**. That assigns the model's config asset to every `BehaviorLLMServer` and `BehaviorLLMClient` in the open scene (creating the asset first if none exists, under `Assets/BehaviorLLMConfigs/Models`) and writes the same choice to `Assets/StreamingAssets/behaviorllm_backend_config.json` for scenes that leave Model Config empty. Save the scene to keep it. The status strip at the top says which model the open scene will run and which the config file names, because the two can differ.
-3. Open `Tools > BehaviorLLM > Llama Server` and click **Download Server** (Windows), or install llama.cpp with `winget install llama.cpp` / `brew install llama.cpp`. A `llama-server` on your `PATH` is found automatically when none is under StreamingAssets.
-4. Check `Tools > BehaviorLLM > Runtime Config` (executable path, port, context size, GPU layers). On AMD GPUs use the Vulkan or ROCm build; on NVIDIA, CUDA; otherwise CPU.
+2. Open `BehaviorLLM > Model Manager`. The **Catalog** tab downloads; the **Installed** tab is where a downloaded file is put to use. Download one of the three measured models, switch to Installed and click **Set active in current scene**. That assigns the model's config asset to every `BehaviorLLMServer` and `BehaviorLLMClient` in the open scene (creating the asset first if none exists, under `Assets/BehaviorLLMConfigs/Models`) and writes the same choice to `Assets/StreamingAssets/behaviorllm_backend_config.json` for scenes that leave Model Config empty. Save the scene to keep it. The status strip at the top says which model the open scene will run and which the config file names, because the two can differ.
+3. Open `BehaviorLLM > Model Manager (Server tab)` and click **Download Server** (Windows), or install llama.cpp with `winget install llama.cpp` / `brew install llama.cpp`. A `llama-server` on your `PATH` is found automatically when none is under StreamingAssets.
+4. Check `BehaviorLLM > Model Manager (Config tab)` (executable path, port, context size, GPU layers). On AMD GPUs use the Vulkan or ROCm build; on NVIDIA, CUDA; otherwise CPU.
 5. Tick **Auto Start On Awake** on the server config asset, or call `StartServer()` yourself. Set **Parallel Slots** there to at least the number of decision makers that pin a slot.
 
 ### Picking a model with a model config
@@ -105,9 +105,18 @@ llama-server -m models/my-model.gguf --port 8080 --jinja -np 4 --cache-reuse 256
 
 Then leave the scene without a `BehaviorLLMServer` and set **Base Url** on the server config asset to `http://localhost:8080`. Any server that speaks the OpenAI chat-completions API with `response_format: json_schema` should work; llama-server is the one that is tested.
 
+### Transport, and models that think first
+
+The client talks to llama-server one of two ways, chosen by **Transport** on the server config:
+
+- **ChatCompletions** (default) posts to `/v1/chat/completions`. The server applies the model's chat template, the system prompt and state block travel as proper messages, and the request carries `enable_thinking: false` so a model that can think is told not to. This is the transport every measured number was taken on.
+- **RawCompletion** posts to `/completion` with the system prompt, state block and `OUTPUT: ` concatenated as plain text. No template runs, and the JSON schema constrains the reply from its very first token, so there is no room for any preamble. Use it for a base model, for a chat template that is broken, or for experiments.
+
+**Auto Switch Transport On Thinking** (on by default) handles one specific failure: the model spends its whole token budget reasoning and returns no answer, which means its template ignored the request not to think. The client logs a warning once and switches itself to RawCompletion for the rest of the session. That is the right fix for a template that is merely out of date. It is the wrong fix for a **reasoning model**, one whose template opens every answer with a thinking block and has no `enable_thinking` switch: forbidden to think and stripped of its template, a small reasoning model answers with the first action and no argument, decision after decision, and every one of them counts as valid. The Model Manager marks such models with a **REASONING MODEL** pill and ticks **Reasoning Model** on the config it creates; the decision maker warns at start when one runs anything but Deliberative with a thinking budget. Run it that way, or use a model that does not reason first. If you know your template only needs the switch, set Transport to RawCompletion yourself and skip the wasted first request.
+
 ### Common errors
 
-- `Executable not found at ...StreamingAssets/llama-server(.exe)`: download the server in the Llama Server window, install llama.cpp system-wide, or set the executable path in Runtime Config.
+- `Executable not found at ...StreamingAssets/llama-server(.exe)`: download the server in the Model Manager's Server tab, install llama.cpp system-wide, or set the executable path in its Config tab.
 - `Model file not found at ...`: download a model in the Catalog tab and set it active from the Installed tab. Check the status strip: a scene whose server carries a Model Config runs that one, whatever the config file says.
 - **Decisions take seconds on a machine that measured hundreds of milliseconds.** The server warns at start when llama-server offloads fewer layers than the model has; with the log level at Verbose it also prints the `offloaded N/N layers to GPU` line on a full offload. If every layer is offloaded and it is still slow, the card's memory is taken by something else and the driver is paging the model over the bus, which runs slower than the CPU while looking healthy. The Installed tab's **fits GPU** reading uses the card's total memory, not what is free; close other GPU-heavy programs, or sign out and back in if the desktop compositor has grown, and start again. Measured on 2026-09-14: 6.5 tokens a second on the GPU against 24 on the CPU with the card's memory oversubscribed.
 - `Server is still loading the model`: normal for the first seconds after start; the client retries automatically, as many times as **Model Loading Retry Count** on the server config allows.
@@ -119,11 +128,46 @@ Then leave the scene without a `BehaviorLLMServer` and set **Base Url** on the s
 
 1. `Create > BehaviorLLM > Action Config` in the Project view; name it (e.g. `GuardActions`).
 2. Add actions:
-   - **Name**: `Patrol` | **Description**: "Walk the corridor" | **Parameter**: `None`
-   - **Name**: `Attack` | **Description**: "Shoot at a target" | **Parameter**: `String`
-3. For actions with a parameter, optionally fill **Example Argument** (used in the few-shot example) and **Allowed Arguments** (a closed list; the schema then restricts `arg` to these values and the prompt lists them).
+   - **Name**: `Patrol` | **Description**: "Walk the corridor" | **Parameters**: none
+   - **Name**: `Attack` | **Description**: "Shoot at a target" | **Parameters**: one, named `target`, type `String`
+3. For each parameter, optionally fill **Example Value** (used in the few-shot example) and **Allowed Values** (a closed list; the schema then restricts that field to these values and the prompt lists them). Leave the list empty to accept any single word.
 4. Write **Model Instructions** for behaviour rules ("If you see the player, Attack. Otherwise Patrol.").
 5. Assign the asset to `DecisionMaker > Action Config`.
+
+### Actions with several values
+
+An action carries a list of **Parameters**, each with a name, a type (`String` or `Int`), an example and an optional list of allowed values. Most actions take none or one. When an action needs more, add more, and name each for what it means, because the name is what the model reads:
+
+| Parameter | Type | Allowed values |
+|---|---|---|
+| `destination` | String | `Gate`, `Yard`, `Cells` |
+| `speed` | Int | (any number) |
+
+The action menu prints it as `MoveTo(destination, speed)`, the schema gets one property per parameter under the action, and the model answers with the fields by name:
+
+```json
+{"action":"MoveTo","destination":"Yard","speed":"2"}
+```
+
+An `Int` value travels as a string constrained to digits, which is why `GetInt` exists; the model is told to answer with a number and cannot answer with anything else.
+
+The handler reads them by name too:
+
+```csharp
+public void OnMoveTo(ActionArguments args)
+{
+    string where = args["destination"];
+    int speed = args.GetInt("speed", fallback: 1);
+}
+```
+
+Three things follow from the design:
+
+- **The single-parameter case is unchanged.** A parameter named `arg`, which is what every config authored before parameters existed becomes on load, prints as `Attack(String)` in the menu exactly as it always did, so the cached system prompt is byte-identical for older configs and the measured cache-reuse figures hold. `args.First` reads it. Name the parameter something better only when you are ready to lose the cached prefix once.
+- **Every parameter is validated on its own.** A value outside its allowed list, or a non-number for an `Int`, rejects the decision and runs the fallback with the reason in the telemetry record.
+- **Runtime values are per parameter.** An `IArgumentOptionsProvider` is asked for each parameter of each action by name, so `destination` can come from the scene while `speed` keeps its authored range.
+
+An action with no parameters emits no argument field at all. It used to send an empty `"arg":""`, which cost tokens and misled models into filling it.
 
 **Keep conditional logic out of Model Instructions.** Measured across Qwen3.5-2B, Granite 4.1-3B and Qwen3.5-4B on 16 labelled scenarios, single-condition rules ("if you see an intruder, chase it"; "if a disturbance was reported, investigate it") were followed almost perfectly, while a two-condition rule ("if your health is below half **and** an intruder is visible, retreat instead of chasing") failed in 15 of 18 cases. Restating the rule first and more explicitly did not help the smallest model at all and made the largest one worse. Rewording is not the fix.
 
@@ -184,6 +228,30 @@ Names must match `[A-Za-z0-9_]+`; anything else is skipped from the schema.
 
 Add **`BasicMemory`** and give it the same perception config as the vision module, so one asset describes everything this object notices. **Memory Capacity** on that asset decides how many recent actions it remembers, and **Memory Topic Name** the heading they appear under.
 
+### Shared notes: the blackboard
+
+Characters that coordinate need to know what the others know, and the expensive way to get that is for each of them to perceive everything the others perceive. The observation block is the fastest-growing part of a prompt as a scene fills up, and that approach grows it with the square of the cast. A **blackboard** is the cheap way: one character reports "the west gate is open" once, and the others read one short line.
+
+1. Put a **`BehaviorLLMBlackboard`** on any object in the scene and give it a **`BlackboardConfig`** (`Create > BehaviorLLM > Blackboard Config`, or the shipped `Blackboard_Default`). The config sets how many notes the board keeps, after how many seconds a note stops being reported, the heading the notes appear under, and how many reach a prompt.
+2. **Writing** is an ordinary action. Add an action such as `Report` with one `String` parameter to the Action Config, and bind its **On Execute** to the board's `Post (ActionArguments)`: the model's value becomes the note. Game code can also post directly with `board.Post(text, author)`, which is how a status system or a director announces something.
+3. **Reading** is a **`BlackboardObservationModule`** on every character that should hear the board. Leave **Board** empty to use the one in the scene, or point it at a specific board; a character can carry several modules, one per board, which is how a scene models a radio net every guard hears and a set of orders only officers read. Give it the same config asset as the board, so one asset describes the whole channel.
+
+The notes arrive in the state block under the config's **Topic Name**, newest first, each with its author and age when the config asks for them:
+
+```
+--- Radio ---
+- [12.0s ago] Guard_02: west gate is open
+- [40.5s ago] Control: lockdown lifted in Yard
+```
+
+Settings that matter:
+
+- **Stale After Seconds** is the one to tune. A note stays on the board but stops being reported after this long, because a character acting on old news is the same failure as a stale action menu. Set it to roughly how long it takes a character to act on something.
+- **Max Reported Entries** and **Entry Max Chars** cap what a single decision is told. Both multiply by every reader on every decision, so keep notes to headlines: the point of the board is to replace perceiving everything with being told the short version. The module implements `IBudgetedObservation`, so under **Max Prompt Chars** notes are trimmed on the same terms as vision and memory.
+- **Interrupt On New Note** is off by default and should stay off for a board many characters write to, or every post interrupts everybody, which is a decision storm. Turn it on for a channel that carries urgent calls, and set **Self Author Id** to the character's own name so it does not interrupt itself when it posts.
+
+The board is not a singleton, like everything else in the package: a scene may hold several, and a character reads whichever ones it is pointed at.
+
 ### Custom modules
 
 Implement `IObservationModule` (`GetObservation`, `TopicName`, `HasInterrupt`) on any component under the deciding object. Implement `IBudgetedObservation` too if the output is a list that may be truncated under a prompt budget.
@@ -192,7 +260,7 @@ Implement `IObservationModule` (`GetObservation`, `TopicName`, `HasInterrupt`) o
 
 ## Step 4. Wire the actions
 
-1. Assign the Action Config to the decision maker. **Action Bindings** fills itself with one entry per action, in the config's order, with the name and description shown read-only. Each action is a foldout: ones with nothing wired start open, wired ones start collapsed, and the header says how many listeners each has. Hook a function up to each **On Execute** (`Weapon.FireAt(string)`, `Mover.Patrol()`), the same way you would for a UI button.
+1. Assign the Action Config to the decision maker. **Action Bindings** fills itself with one entry per action, in the config's order, with the name and description shown read-only. Each action is a foldout: ones with nothing wired start open, wired ones start collapsed, and the header says how many listeners each has. Hook a function up to each **On Execute**, the same way you would for a UI button. The event is a `UnityEvent<ActionArguments>`, so a handler that wants the value is `void FireAt(ActionArguments args)` and reads `args.First` for a single-parameter action or `args["speed"]` / `args.GetInt("speed")` for a named one; a handler that takes nothing (`Mover.Patrol()`) can be bound as a static call. `ActionArguments.Action` names the action, so one handler can serve several bindings.
 2. Edit the Action Config at any time; the list follows it the next time the inspector draws. An entry whose action was removed disappears if nothing was wired to it, and otherwise stays flagged as orphaned with a Remove button, so a renamed action never loses its wiring without you seeing it.
 3. Optional **Fallback Action**: what to run when the model's answer cannot be used. Pick one of the config's actions from the dropdown; None means no fallback. Make it the boring, safe choice, and set one for anything you ship.
 
@@ -215,7 +283,9 @@ Other settings on the decision config:
 
 - **Use Structured Output**: keep it on. Turn it off only to measure what unconstrained output does.
 - **Include Examples In Prompt**: two worked examples in the system prompt. They cost a few hundred cached tokens once and markedly help small models get the shape right.
-- **Prompt Budget**: **Max Vision Entries** and **Max Memory Entries** keep only the nearest and most recent few, and **Max Prompt Chars** drops observation lines from the end of the state block. The system prompt is never cut. 0 means unlimited.
+- **Decision Interval** is the main cost control: every decision is one request, so 0.5 s is four times the work of 2 s. Sight interrupts still decide immediately regardless.
+- **Decision Interval Jitter** spreads decisions out in time so characters sharing one config do not all ask the model on the same frame. It is a fraction of the interval, 0.15 by default: each decision lands up to 15% early or late, and the first one is offset too. The spread is centred on zero, so the average rate is exactly the interval and jitter costs no decisions per minute; what it buys is a steady load instead of bursts of contention on the server's slots. Measured on eight characters, the slow tail shortens while the median stays put. Set it to 0 to put every character back in lockstep, which is only useful when comparing runs.
+- **Prompt Budget**: **Max Vision Entries** and **Max Memory Entries** keep only the nearest and most recent few, and **Max Prompt Chars** drops observation lines from the end of the state block. The system prompt is never cut. 0 means unlimited. **Min State Prompt Chars** (256 by default) is the floor under that: if Max Prompt Chars leaves less room than this once the persona and the action menu are accounted for, the decision maker disables itself at start with an error naming the numbers, rather than asking the character what to do while telling it almost nothing about the situation. That failure is invisible otherwise, because the reply is still a valid action and nothing in the telemetry looks wrong. Raise Max Prompt Chars above the figure in the error, lower the floor, or set Max Prompt Chars to 0.
 - **Diagnostics**: **Log Prompts** prints the whole prompt before every request, which is invaluable when wiring a scene and unreadable afterwards, so it is off by default. **Log Decisions** prints the answer and the dispatched action. **Log Fallback Usage** names the reason each time the fallback runs; keep it on, because a rising fallback rate is the first sign something broke.
 
 And on the component itself, because they cannot be shared:
@@ -234,7 +304,7 @@ Enable Log Prompts to print the full prompt in the Editor. Interrupts cancel in-
 
 ## Seeing what was actually sent
 
-`Tools > BehaviorLLM > Prompt Inspector` lists every decision as it is made and shows the exact exchange behind the one you select: the cached system prompt, the STATE block for that turn, the raw answer before parsing, the model's reasoning channel if it has one, the applied JSON Schema, and the failure reason when there is one.
+`BehaviorLLM > Prompt Inspector` lists every decision as it is made and shows the exact exchange behind the one you select: the cached system prompt, the STATE block for that turn, the raw answer before parsing, the model's reasoning channel if it has one, the applied JSON Schema, and the failure reason when there is one.
 
 Use it when a decision maker does something you did not expect. The run report (`DecisionTelemetryRecorder`) answers *how did the last hundred decisions go*; this answers *what happened in that one*. Filter to a single decision maker, or to failures only, when several are running at once.
 

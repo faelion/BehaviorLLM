@@ -134,7 +134,7 @@ When reporting a bad decision, include:
 - The model GGUF name + quant.
 - The decision profile and whether **Use Structured Output** is on, both from the
   `DecisionMakerConfig` asset.
-- One exchange from `Tools > BehaviorLLM > Prompt Inspector`, using its **Copy** button:
+- One exchange from `BehaviorLLM > Prompt Inspector`, using its **Copy** button:
   that carries the system prompt, the state block, the applied schema and the raw reply
   in a form that replays against `llama-cli`.
 - A `runs_summary.csv` row from the failing run, or the `parseFailureReason` from the

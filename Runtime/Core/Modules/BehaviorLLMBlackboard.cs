@@ -83,6 +83,14 @@ namespace BehaviorLLM.Core.Modules
         /// </summary>
         public void Post(string text) => Post(text, null);
 
+        /// <summary>
+        /// Posts the first value of a dispatched action as a note. This is the overload to bind
+        /// an action's On Execute to: the event carries <see cref="Decisions.ActionArguments"/>,
+        /// and a <c>Post(string)</c> can only be bound with a constant. The note carries no
+        /// author; a character that should sign its notes wraps the call and passes its name.
+        /// </summary>
+        public void Post(Decisions.ActionArguments args) => Post(args != null ? args.First : null, null);
+
         /// <summary>Posts a note attributed to a named writer.</summary>
         public void Post(string text, string author)
         {

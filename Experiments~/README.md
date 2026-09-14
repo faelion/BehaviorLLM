@@ -2,7 +2,7 @@
 
 The measurements quoted in the package README, with the scripts and inputs that produced them.
 The folder name ends in `~` so Unity never imports it; delete it freely, or use
-`Tools > BehaviorLLM > Readme` to remove it together with the samples.
+`BehaviorLLM > Readme` to remove it together with the samples.
 
 ## The offline matrix
 
