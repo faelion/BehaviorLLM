@@ -1,18 +1,10 @@
-<!--
-  TODO before the next release: add the logo under .github/ and uncomment its block below.
-    .github/logo.png / .github/logo_dark.png   wordmark, ~600x150, transparent background
--->
-
-<!--
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset=".github/logo_dark.png">
-    <img src=".github/logo.png" height="140" alt="BehaviorLLM">
+    <source media="(prefers-color-scheme: dark)" srcset=".github/logo_dark.svg">
+    <img src=".github/logo.svg" height="240" alt="BehaviorLLM">
   </picture>
 </p>
--->
 
-<h1 align="center">BehaviorLLM</h1>
 <h3 align="center">Local language models as game decision makers, inside Unity.</h3>
 
 <p align="center">

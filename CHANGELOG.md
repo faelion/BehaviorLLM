@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **A logo.** A stacked lockup: a brain at the root of a tree whose branches end in arrows, over
+  the wordmark — the behaviour tree redrawn with the model where the hand-authored logic used to
+  sit. `.github/logo.svg` and `logo_dark.svg` are vector and carry no font dependency; `logo.png`
+  and `logo_dark.png` sit beside them for contexts that will not take SVG, and `mark.png` /
+  `mark_dark.png` are the glyph alone for an avatar. The light and dark variants are the same
+  outline with the ink inverted, so they cannot drift apart. The README header now shows it, and
+  the `<h1>` beneath it is gone because the lockup already carries the name.
+
 ### Fixed
 - **The readme's delete buttons and links did nothing unless the package sat at
   `Assets/BehaviorLLM/`.** Every path in `Readme.asset` was stored project-relative and resolved
