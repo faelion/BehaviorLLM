@@ -7,6 +7,35 @@ namespace BehaviorLLM.Core.Actions
 {
     public enum ActionParameterType { None, String, Int }
 
+    /// <summary>
+    /// One value an action takes. An action with no parameters is just a verb ("Hold"); one with
+    /// several is a verb with named operands ("MoveTo(destination, speed)"). The name matters:
+    /// it becomes the JSON property the model fills in, and it is what the action menu shows the
+    /// model, so <c>destination</c> reads better than <c>arg</c>.
+    /// </summary>
+    [Serializable]
+    public class ActionParameter
+    {
+        [Tooltip("Name of this value, for example destination or target. Letters, digits and " +
+                 "underscores only. It becomes the field the AI fills in, and the AI reads it as " +
+                 "a description of what the value means, so name it for what it is.")]
+        public string name = "arg";
+
+        [Tooltip("String or Int. The value always arrives in your handler as a string; Int tells " +
+                 "the AI to answer with a number and is available as GetInt on the arguments.")]
+        public ActionParameterType type = ActionParameterType.String;
+
+        [Tooltip("Optional. A sample value such as 'Route_North', shown to the AI as part of an " +
+                 "example of a correct answer.")]
+        public string exampleValue;
+
+        [Tooltip("Optional. The complete list of values the AI may use here. When filled in, the " +
+                 "AI can only answer with one of these. Leave empty to accept any single word " +
+                 "(letters, digits and underscores). If the valid values change while the game " +
+                 "runs, use an Argument Options Provider on the decision maker instead.")]
+        public List<string> allowedValues = new List<string>();
+    }
+
     [Serializable]
     public class ActionDefinition
     {
@@ -22,29 +51,81 @@ namespace BehaviorLLM.Core.Actions
                  "them'. This is the AI's only explanation of the action.")]
         public string description;
 
-        [Tooltip("Whether the action needs an extra value. None: just the action, like " +
-                 "HoldPosition. String or Int: the AI must also give a value, like the " +
-                 "name of a waypoint for Patrol. The value always arrives in your " +
-                 "function as a string.")]
-        public ActionParameterType parameterType;
+        [Tooltip("The values this action takes, in order. Leave empty for an action that is just " +
+                 "a verb, like HoldPosition. Each one becomes a field the AI must fill in, and " +
+                 "each can have its own list of allowed values.")]
+        public List<ActionParameter> parameters = new List<ActionParameter>();
 
-        [Tooltip("Optional. A sample value for this action's argument, like " +
-                 "'Route_North', shown to the AI as an example of a correct answer. Only " +
-                 "used when Parameter Type is not None.")]
-        public string exampleArgument;
+        // ---------------------------------------------------------------- legacy, migrated on load
+        // Actions used to carry exactly one unnamed argument. These three fields are what those
+        // assets serialised, and they are kept so an asset authored before parameters existed
+        // still describes the same action. MigrateLegacy folds them into a single parameter named
+        // "arg", which is also the JSON property name they produced, so the schema is unchanged.
 
-        [Tooltip("Optional. The complete list of values the AI may use as this action's " +
-                 "argument. When filled in, the AI can only answer with one of these. " +
-                 "Leave empty to accept any single word (letters, digits and " +
-                 "underscores). If the valid values change while the game runs, use an " +
-                 "Argument Options Provider on the decision maker instead.")]
-        public List<string> allowedArguments = new List<string>();
+        [HideInInspector] public ActionParameterType parameterType;
+        [HideInInspector] public string exampleArgument;
+        [HideInInspector] public List<string> allowedArguments = new List<string>();
 
-        public bool TakesArgument => parameterType != ActionParameterType.None;
+        [NonSerialized] private bool migrated;
+
+        /// <summary>
+        /// Folds a pre-parameters action into the parameter list. Idempotent, and safe to call on
+        /// an action built in code, which is why every accessor goes through it rather than
+        /// relying on deserialisation alone.
+        /// </summary>
+        public void MigrateLegacy()
+        {
+            if (migrated) return;
+            migrated = true;
+
+            if (parameters == null) parameters = new List<ActionParameter>();
+            if (parameters.Count > 0) return;
+            if (parameterType == ActionParameterType.None) return;
+
+            parameters.Add(new ActionParameter
+            {
+                name = "arg",
+                type = parameterType,
+                exampleValue = exampleArgument,
+                // Shared, not copied. A copy is taken at first access, so anything added to the
+                // legacy list afterwards - by editor tooling, or by a test building a config in
+                // code - would be invisible, and an action would silently accept any value.
+                allowedValues = allowedArguments ?? (allowedArguments = new List<string>())
+            });
+        }
+
+        /// <summary>This action's parameters, with any legacy single argument folded in.</summary>
+        public List<ActionParameter> Parameters
+        {
+            get { MigrateLegacy(); return parameters; }
+        }
+
+        /// <summary>True when the action takes at least one value.</summary>
+        public bool TakesArgument => Parameters.Count > 0;
+
+        /// <summary>The first parameter, or null for an action that is just a verb.</summary>
+        public ActionParameter FirstParameter => Parameters.Count > 0 ? Parameters[0] : null;
+
+        /// <summary>Case-insensitive lookup of a parameter by name.</summary>
+        public bool TryGetParameter(string parameterName, out ActionParameter parameter)
+        {
+            parameter = null;
+            if (string.IsNullOrWhiteSpace(parameterName)) return false;
+            List<ActionParameter> all = Parameters;
+            for (int i = 0; i < all.Count; i++)
+            {
+                if (all[i] != null && string.Equals(all[i].name, parameterName, StringComparison.OrdinalIgnoreCase))
+                {
+                    parameter = all[i];
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     [CreateAssetMenu(fileName = "NewActionConfig", menuName = "BehaviorLLM/Action Config")]
-    public class ActionConfig : ScriptableObject
+    public class ActionConfig : ScriptableObject, ISerializationCallbackReceiver
     {
         [Header("Capabilities")]
         [Tooltip("Every action the AI can choose from. Add one entry per action. This " +
@@ -63,11 +144,20 @@ namespace BehaviorLLM.Core.Actions
                  "decision maker instead, which the AI cannot ignore.")]
         public string modelInstructions = "Choose exactly one action per turn. If nothing relevant is visible, choose the safest idle action.";
 
+        public void OnBeforeSerialize() { }
+
+        /// <summary>Folds any pre-parameters actions into the parameter list as the asset loads.</summary>
+        public void OnAfterDeserialize()
+        {
+            if (validActions == null) return;
+            for (int i = 0; i < validActions.Count; i++) validActions[i]?.MigrateLegacy();
+        }
+
         /// <summary>
         /// Renders the action menu block of the prompt. <paramref name="optionsFor"/> may supply
-        /// runtime argument options per action; static <c>allowedArguments</c> are used otherwise.
+        /// runtime options per parameter; authored <c>allowedValues</c> are used otherwise.
         /// </summary>
-        public string GetPromptDescription(Func<ActionDefinition, IList<string>> optionsFor = null)
+        public string GetPromptDescription(Func<ActionDefinition, ActionParameter, IList<string>> optionsFor = null)
         {
             return GetPromptDescription(optionsFor, true, null);
         }
@@ -76,7 +166,7 @@ namespace BehaviorLLM.Core.Actions
         /// The action menu, optionally leaving provider-supplied argument lists out of it.
         ///
         /// This exists because of where the two kinds of argument list come from.
-        /// <see cref="ActionDefinition.allowedArguments"/> is authored in this asset and cannot
+        /// <see cref="ActionParameter.allowedValues"/> is authored in this asset and cannot
         /// change while the game runs, so printing it here costs nothing: it is part of the stable
         /// prefix an inference server keeps in its KV cache. A list from an
         /// <c>IArgumentOptionsProvider</c> is computed from the scene, and for anything whose
@@ -84,12 +174,12 @@ namespace BehaviorLLM.Core.Actions
         /// changes almost every decision. Printing that here rewrites the prefix each turn and
         /// throws the cache away.
         ///
-        /// With <paramref name="inlineProviderOptions"/> false, those actions are listed without
-        /// their values and the names are reported through <paramref name="deferred"/>, so the
-        /// caller can put the current values in the per-decision state block instead. The model
+        /// With <paramref name="inlineProviderOptions"/> false, those parameters are listed without
+        /// their values and the action names are reported through <paramref name="deferred"/>, so
+        /// the caller can put the current values in the per-decision state block instead. The model
         /// still sees them; the schema enforces them either way.
         /// </summary>
-        public string GetPromptDescription(Func<ActionDefinition, IList<string>> optionsFor,
+        public string GetPromptDescription(Func<ActionDefinition, ActionParameter, IList<string>> optionsFor,
                                            bool inlineProviderOptions,
                                            IList<string> deferred)
         {
@@ -99,37 +189,60 @@ namespace BehaviorLLM.Core.Actions
                 ActionDefinition act = validActions[i];
                 if (act == null || string.IsNullOrWhiteSpace(act.actionName)) continue;
 
+                List<ActionParameter> parameters = act.Parameters;
                 sb.Append("- ").Append(act.actionName);
-                if (act.TakesArgument) sb.Append('(').Append(act.parameterType).Append(')');
+                if (parameters.Count == 1 && parameters[0] != null && parameters[0].name == "arg")
+                {
+                    // The legacy shape: one unnamed value. Its name says nothing the model can
+                    // use, so print the type as before and leave the cached prefix untouched for
+                    // every config authored before parameters existed.
+                    sb.Append('(').Append(parameters[0].type).Append(')');
+                }
+                else if (parameters.Count > 0)
+                {
+                    sb.Append('(');
+                    for (int p = 0; p < parameters.Count; p++)
+                    {
+                        if (p > 0) sb.Append(", ");
+                        sb.Append(parameters[p] != null ? parameters[p].name : "arg");
+                    }
+                    sb.Append(')');
+                }
                 sb.Append(": ").Append(act.description);
 
-                if (act.TakesArgument)
+                bool anyDeferred = false;
+                for (int p = 0; p < parameters.Count; p++)
                 {
-                    // Whether an action's values are authored here is a property of this asset and
-                    // never changes while the game runs, which is exactly what the cached prefix
-                    // needs. Asking the provider instead does not work: it reports "nothing right
-                    // now" and "I do not handle this action" the same way, so the marker would
+                    ActionParameter parameter = parameters[p];
+                    if (parameter == null) continue;
+
+                    // Whether a parameter's values are authored here is a property of this asset
+                    // and never changes while the game runs, which is exactly what the cached
+                    // prefix needs. Asking the provider instead does not work: it reports "nothing
+                    // right now" and "I do not handle this" the same way, so the marker would
                     // appear and disappear as targets came and went, rewriting the prefix just as
                     // the values themselves used to.
-                    bool authored = act.allowedArguments != null && act.allowedArguments.Count > 0;
+                    bool authored = parameter.allowedValues != null && parameter.allowedValues.Count > 0;
 
                     if (!inlineProviderOptions && !authored && optionsFor != null)
                     {
-                        sb.Append(" [arg: listed under ARGUMENTS below]");
-                        deferred?.Add(act.actionName);
+                        sb.Append(" [").Append(parameter.name).Append(": listed under ARGUMENTS below]");
+                        anyDeferred = true;
+                        continue;
                     }
-                    else
+
+                    IList<string> fromProvider = optionsFor != null ? optionsFor(act, parameter) : null;
+                    IList<string> options = fromProvider != null && fromProvider.Count > 0
+                        ? fromProvider
+                        : parameter.allowedValues;
+                    if (options != null && options.Count > 0)
                     {
-                        IList<string> fromProvider = optionsFor != null ? optionsFor(act) : null;
-                        IList<string> options = fromProvider != null && fromProvider.Count > 0
-                            ? fromProvider
-                            : act.allowedArguments;
-                        if (options != null && options.Count > 0)
-                        {
-                            sb.Append(" [arg: ").Append(string.Join(" | ", options)).Append(']');
-                        }
+                        sb.Append(" [").Append(parameter.name).Append(": ")
+                          .Append(string.Join(" | ", options)).Append(']');
                     }
                 }
+                if (anyDeferred) deferred?.Add(act.actionName);
+
                 sb.Append('\n');
             }
             return sb.ToString();
@@ -137,7 +250,7 @@ namespace BehaviorLLM.Core.Actions
 
         public string GetPromptDescription()
         {
-            return GetPromptDescription(null);
+            return GetPromptDescription((Func<ActionDefinition, ActionParameter, IList<string>>)null);
         }
 
         /// <summary>Case-insensitive lookup of an action definition by name.</summary>

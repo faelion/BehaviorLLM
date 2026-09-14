@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/faelion/BehaviorLLM/releases/latest"><img alt="release" src="https://img.shields.io/github/v/tag/faelion/BehaviorLLM?label=release&color=2F5FA6"></a>
   <img alt="unity" src="https://img.shields.io/badge/unity-6000.0%2B-2F5FA6?logo=unity&logoColor=white">
-  <img alt="tests" src="https://img.shields.io/badge/tests-153%20passing-3A8A5E">
+  <img alt="tests" src="https://img.shields.io/badge/tests-170%20passing-3A8A5E">
   <a href="LICENSE.md"><img alt="license" src="https://img.shields.io/badge/license-MIT-3A8A5E"></a>
   <a href="https://github.com/faelion/BehaviorLLM/stargazers"><img alt="stars" src="https://img.shields.io/github/stars/faelion/BehaviorLLM?color=C8701E"></a>
 </p>

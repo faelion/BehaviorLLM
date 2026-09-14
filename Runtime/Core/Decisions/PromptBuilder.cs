@@ -45,7 +45,7 @@ namespace BehaviorLLM.Core.Decisions
             public IList<string> DeferredArgumentActions;
 
             /// <summary>Optional runtime argument options, mirrored in the action menu.</summary>
-            public Func<ActionDefinition, IList<string>> ArgumentOptionsFor;
+            public Func<ActionDefinition, ActionParameter, IList<string>> ArgumentOptionsFor;
             /// <summary>Set when an availability provider gates the menu, so the contract explains
             /// the per-turn list that appears in the state block.</summary>
             public bool DynamicMenu;
@@ -226,7 +226,7 @@ namespace BehaviorLLM.Core.Decisions
         // exampleArgument, then a neutral placeholder.
         private static string ResolveExampleArgument(ActionDefinition action, SystemPromptOptions options)
         {
-            List<string> opts = ActionSchemaBuilder.CollectOptions(action, new ActionSchemaBuilder.Options { ArgumentOptionsFor = options.ArgumentOptionsFor });
+            List<string> opts = ActionSchemaBuilder.CollectOptions(action, action.FirstParameter, new ActionSchemaBuilder.Options { ArgumentOptionsFor = options.ArgumentOptionsFor });
             if (opts.Count > 0) return opts[0];
             if (!string.IsNullOrWhiteSpace(action.exampleArgument)) return action.exampleArgument.Trim();
             return "Target";

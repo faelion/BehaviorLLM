@@ -50,9 +50,12 @@ namespace BehaviorLLM.Tests.Runtime
             string schema = ActionSchemaBuilder.Build(Config(Action("Stop", ActionParameterType.None), Action("Attack")));
 
             StringAssert.StartsWith("{\"oneOf\":[", schema);
-            StringAssert.Contains("\"action\":{\"const\":\"Stop\"},\"arg\":{\"const\":\"\"}", schema);
+            // A no-argument action no longer carries an empty "arg": the model was being made to
+            // emit a meaningless field on every such decision.
+            StringAssert.Contains("\"action\":{\"const\":\"Stop\"}", schema);
+            StringAssert.DoesNotContain("\"arg\":{\"const\":\"\"}", schema);
             StringAssert.Contains("\"action\":{\"const\":\"Attack\"},\"arg\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_]+$\"}", schema);
-            StringAssert.Contains("\"required\":[\"action\",\"arg\"]", schema);
+            StringAssert.Contains("\"required\":[\"action\"]", schema);
             StringAssert.Contains("\"additionalProperties\":false", schema);
             Assert.IsFalse(schema.Contains("reason"), "reason field must be absent unless requested");
         }
@@ -72,7 +75,7 @@ namespace BehaviorLLM.Tests.Runtime
             ActionConfig config = Config(Action("Move", ActionParameterType.String, "Static_1"));
             string schema = ActionSchemaBuilder.Build(config, new ActionSchemaBuilder.Options
             {
-                ArgumentOptionsFor = def => new List<string> { "Runtime_1", "Runtime_2" }
+                ArgumentOptionsFor = (def, parameter) => new List<string> { "Runtime_1", "Runtime_2" }
             });
 
             StringAssert.Contains("\"enum\":[\"Runtime_1\",\"Runtime_2\"]", schema);
@@ -85,7 +88,7 @@ namespace BehaviorLLM.Tests.Runtime
             string schema = ActionSchemaBuilder.Build(Config(Action("Stop", ActionParameterType.None)), new ActionSchemaBuilder.Options { ReasonMaxChars = 80 });
 
             StringAssert.Contains("\"properties\":{\"reason\":{\"type\":\"string\",\"maxLength\":80},\"action\"", schema);
-            StringAssert.Contains("\"required\":[\"reason\",\"action\",\"arg\"]", schema);
+            StringAssert.Contains("\"required\":[\"reason\",\"action\"]", schema);
         }
 
         [Test]

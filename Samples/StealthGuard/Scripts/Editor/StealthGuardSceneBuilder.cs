@@ -921,7 +921,7 @@ namespace Project.Samples.StealthGuard.Editor
 
         // ---------------------------------------------------------------- helpers
 
-        private static void Bind(DecisionMaker agent, string actionName, UnityAction<string> callback)
+        private static void Bind(DecisionMaker agent, string actionName, UnityAction<ActionArguments> callback)
         {
             ActionEvent evt = new ActionEvent();
             UnityEventTools.AddPersistentListener(evt, callback);

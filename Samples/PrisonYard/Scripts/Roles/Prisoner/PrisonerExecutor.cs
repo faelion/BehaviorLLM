@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using BehaviorLLM.Core.Decisions;
 
 namespace Project.Samples.PrisonYard
 {
@@ -63,7 +64,7 @@ namespace Project.Samples.PrisonYard
         // ---------------------------------------------------------------- bound actions
 
         /// <summary>Bound to FollowSchedule. The argument is always empty.</summary>
-        public void OnFollowSchedule(string _)
+        public void OnFollowSchedule(ActionArguments args)
         {
             sneakingTo = null;
             PrisonSection target = clock != null ? clock.ScheduledSection : PrisonSection.CellBlock;
@@ -71,16 +72,18 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Wander. The argument is a section name.</summary>
-        public void OnWander(string sectionId)
+        public void OnWander(ActionArguments args)
         {
+            string sectionId = args.First;
             sneakingTo = null;
             if (!PrisonSections.TryParse(sectionId, out PrisonSection section)) return;
             if (GoToSection(section)) state.activity = $"Wandering to {section.Id()}";
         }
 
         /// <summary>Bound to Talk. The argument is another prisoner's name.</summary>
-        public void OnTalk(string prisonerName)
+        public void OnTalk(ActionArguments args)
         {
+            string prisonerName = args.First;
             PrisonerState other = FindPrisoner(prisonerName);
             if (other == null) return;
 
@@ -92,8 +95,9 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Fight. The argument is the prisoner being attacked.</summary>
-        public void OnFight(string prisonerName)
+        public void OnFight(ActionArguments args)
         {
+            string prisonerName = args.First;
             PrisonerState other = FindPrisoner(prisonerName);
             if (other == null) return;
 
@@ -114,8 +118,9 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Hide. The argument is a hiding spot id.</summary>
-        public void OnHide(string spotId)
+        public void OnHide(ActionArguments args)
         {
+            string spotId = args.First;
             PrisonMarker spot = FindMarker(spotId);
             if (spot == null) return;
 
@@ -126,8 +131,9 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Sneak. The argument is the section being slipped into.</summary>
-        public void OnSneak(string sectionId)
+        public void OnSneak(ActionArguments args)
         {
+            string sectionId = args.First;
             if (!PrisonSections.TryParse(sectionId, out PrisonSection section)) return;
             if (!GoToSection(section)) return;
 
@@ -136,7 +142,7 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Comply. The argument is always empty.</summary>
-        public void OnComply(string _)
+        public void OnComply(ActionArguments args)
         {
             if (IsNavReady) nav.ResetPath();
             state.activity = PrisonActivities.Complying;

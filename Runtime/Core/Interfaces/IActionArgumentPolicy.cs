@@ -11,6 +11,7 @@ namespace BehaviorLLM.Core.Interfaces
         /// Returns true and a normalised argument when the argument is acceptable; false with a
         /// reason when it must be rejected, after which the fallback action runs.
         /// </summary>
-        bool TryNormalizeArgument(string actionName, string rawArgument, out string normalizedArgument, out string rejectionReason);
+        bool TryNormalizeArgument(string actionName, string parameterName, string rawArgument,
+                                  out string normalizedArgument, out string rejectionReason);
     }
 }

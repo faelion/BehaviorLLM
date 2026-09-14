@@ -55,9 +55,9 @@ namespace BehaviorLLM.Tests.Runtime
         }
 
         /// <summary>A provider that answers for Talk and knows nothing about anything else.</summary>
-        private static System.Func<ActionDefinition, IList<string>> Provider(params string[] talkOptions)
+        private static System.Func<ActionDefinition, ActionParameter, IList<string>> Provider(params string[] talkOptions)
         {
-            return def => def.actionName == "Talk" ? new List<string>(talkOptions) : null;
+            return (def, parameter) => def.actionName == "Talk" ? new List<string>(talkOptions) : null;
         }
 
         [Test]

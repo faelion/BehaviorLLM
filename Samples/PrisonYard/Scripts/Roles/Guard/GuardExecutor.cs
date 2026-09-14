@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using BehaviorLLM.Core.Decisions;
 
 namespace Project.Samples.PrisonYard
 {
@@ -57,7 +58,7 @@ namespace Project.Samples.PrisonYard
         // ---------------------------------------------------------------- bound actions
 
         /// <summary>Bound to HoldPosition. The argument is always empty.</summary>
-        public void OnHoldPosition(string _)
+        public void OnHoldPosition(ActionArguments args)
         {
             StopEscorting();
             respondingTo = null;
@@ -66,16 +67,18 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Patrol. The argument is a patrol point id.</summary>
-        public void OnPatrol(string patrolPointId)
+        public void OnPatrol(ActionArguments args)
         {
+            string patrolPointId = args.First;
             StopEscorting();
             respondingTo = null;
             if (GoToMarker(patrolPointId)) guard.activity = $"Patrolling to {patrolPointId}";
         }
 
         /// <summary>Bound to Respond. The argument is a section name.</summary>
-        public void OnRespond(string sectionId)
+        public void OnRespond(ActionArguments args)
         {
+            string sectionId = args.First;
             StopEscorting();
             if (!PrisonSections.TryParse(sectionId, out PrisonSection section)) return;
 
@@ -84,8 +87,9 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Escort. The argument is a prisoner's name.</summary>
-        public void OnEscort(string prisonerName)
+        public void OnEscort(ActionArguments args)
         {
+            string prisonerName = args.First;
             PrisonerState prisoner = FindPrisoner(prisonerName);
             if (prisoner == null) return;
 
@@ -99,8 +103,9 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Search. The argument is a prisoner's name.</summary>
-        public void OnSearch(string prisonerName)
+        public void OnSearch(ActionArguments args)
         {
+            string prisonerName = args.First;
             PrisonerState prisoner = FindPrisoner(prisonerName);
             if (prisoner == null) return;
 
@@ -119,8 +124,9 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Report. The argument is the section being reported on.</summary>
-        public void OnReport(string sectionId)
+        public void OnReport(ActionArguments args)
         {
+            string sectionId = args.First;
             if (!PrisonSections.TryParse(sectionId, out PrisonSection section)) return;
 
             guard.activity = $"Reporting {section.Id()}";
@@ -146,7 +152,7 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Retreat. The argument is always the infirmary.</summary>
-        public void OnRetreat(string _)
+        public void OnRetreat(ActionArguments args)
         {
             StopEscorting();
             respondingTo = null;

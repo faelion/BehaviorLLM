@@ -32,7 +32,7 @@ namespace Project.Samples.PrisonYard
         private PrisonStatusBoard board => boardCache != null ? boardCache : (boardCache = FindFirstObjectByType<PrisonStatusBoard>());
         private PrisonClock clock => clockCache != null ? clockCache : (clockCache = FindFirstObjectByType<PrisonClock>());
 
-        public bool TryGetArgumentOptions(string actionName, List<string> options)
+        public bool TryGetArgumentOptions(string actionName, string parameterName, List<string> options)
         {
             switch (actionName)
             {

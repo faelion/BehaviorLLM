@@ -135,7 +135,7 @@ namespace BehaviorLLM.Tests.Runtime
 
             Assert.AreEqual("HoldPosition", f.Capture.LastActionName);
             Assert.AreEqual(DecisionResultType.FallbackAction, captured.resultType);
-            StringAssert.Contains("missing argument", captured.fallbackReason);
+            StringAssert.Contains("missing 'arg'", captured.fallbackReason);
         }
 
         [Test]
@@ -466,7 +466,7 @@ namespace BehaviorLLM.Tests.Runtime
         private sealed class MutableOptions : IArgumentOptionsProvider
         {
             public string Value = "Route_North";
-            public bool TryGetArgumentOptions(string action, List<string> options)
+            public bool TryGetArgumentOptions(string action, string parameterName, List<string> options)
             {
                 if (action != "Patrol") return false;
                 options.Add(Value);
@@ -532,7 +532,7 @@ namespace BehaviorLLM.Tests.Runtime
             return config;
         }
 
-        private static void AddBinding(DecisionMaker maker, string actionName, UnityAction<string> callback)
+        private static void AddBinding(DecisionMaker maker, string actionName, UnityAction<ActionArguments> callback)
         {
             ActionEvent evt = new ActionEvent();
             evt.AddListener(callback);
@@ -569,9 +569,9 @@ namespace BehaviorLLM.Tests.Runtime
         public string LastArgument { get; private set; }
         public int InvocationCount { get; private set; }
 
-        public void OnPatrol(string arg) { InvocationCount++; LastActionName = "Patrol"; LastArgument = arg; }
-        public void OnRetreat(string arg) { InvocationCount++; LastActionName = "Retreat"; LastArgument = arg; }
-        public void OnHoldPosition(string arg) { InvocationCount++; LastActionName = "HoldPosition"; LastArgument = arg; }
+        public void OnPatrol(ActionArguments args) { InvocationCount++; LastActionName = "Patrol"; LastArgument = args.First; }
+        public void OnRetreat(ActionArguments args) { InvocationCount++; LastActionName = "Retreat"; LastArgument = args.First; }
+        public void OnHoldPosition(ActionArguments args) { InvocationCount++; LastActionName = "HoldPosition"; LastArgument = args.First; }
     }
 
     /// <summary>

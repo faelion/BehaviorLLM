@@ -49,7 +49,7 @@ namespace Project.Samples.StealthGuard
             markers = FindObjectsByType<StealthGuardMarker>(FindObjectsSortMode.None);
         }
 
-        public bool TryGetArgumentOptions(string actionName, List<string> options)
+        public bool TryGetArgumentOptions(string actionName, string parameterName, List<string> options)
         {
             switch (actionName)
             {

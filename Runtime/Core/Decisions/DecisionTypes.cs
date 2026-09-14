@@ -65,5 +65,9 @@ namespace BehaviorLLM.Core.Decisions
     }
 
     [Serializable]
-    public class ActionEvent : UnityEvent<string> { }
+    /// <summary>
+    /// What a bound handler receives. Carries every value the model chose for the action, so a
+    /// one-value action reads <c>args.First</c> and a multi-value one reads <c>args["speed"]</c>.
+    /// </summary>
+    public class ActionEvent : UnityEvent<ActionArguments> { }
 }

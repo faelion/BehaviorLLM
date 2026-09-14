@@ -8,18 +8,22 @@ namespace BehaviorLLM.Core.Backend
     /// <summary>
     /// Builds the JSON Schema that constrains a decision to one of the configured actions.
     ///
-    /// Shape (one <c>oneOf</c> branch per action, so each action can carry its own argument
-    /// constraint):
+    /// Shape (one <c>oneOf</c> branch per action, so each action carries its own parameters and
+    /// their constraints):
     /// <code>
     /// {"oneOf":[
-    ///   {"type":"object","properties":{"reason":{...},"action":{"const":"Attack"},"arg":{"enum":["Orc","Goblin"]}},
-    ///    "required":["reason","action","arg"],"additionalProperties":false},
-    ///   {"type":"object","properties":{"action":{"const":"Stop"},"arg":{"const":""}}, ...}
+    ///   {"type":"object","properties":{"reason":{...},"action":{"const":"Attack"},"target":{"enum":["Orc","Goblin"]}},
+    ///    "required":["reason","action","target"],"additionalProperties":false},
+    ///   {"type":"object","properties":{"action":{"const":"MoveTo"},"destination":{...},"speed":{...}}, ...},
+    ///   {"type":"object","properties":{"action":{"const":"Stop"}},"required":["action"], ...}
     /// ]}
     /// </code>
+    /// An action with no parameters carries none: it used to emit an empty <c>arg</c>, which made
+    /// the model produce a meaningless field on every such decision.
+    ///
     /// Property order is deliberate: <c>reason</c> (optional) is generated before <c>action</c>
-    /// so a deliberative decision is reasoned first, and <c>action</c> comes before <c>arg</c> so the
-    /// action can be dispatched early from a stream in the future. llama-server compiles this
+    /// so a deliberative decision is reasoned first, and <c>action</c> comes before its parameters
+    /// so the action can be dispatched early from a stream in the future. llama-server compiles this
     /// schema to a grammar and applies it during sampling, so the model cannot emit an unknown
     /// action or, when options are given, an unknown argument.
     ///
@@ -32,6 +36,7 @@ namespace BehaviorLLM.Core.Backend
         public const string ArgumentKey = "arg";
         public const string ReasonKey = "reason";
         public const string IdentifierPattern = "^[A-Za-z0-9_]+$";
+        public const string IntegerPattern = "^-?[0-9]+$";
 
         public sealed class Options
         {
@@ -39,9 +44,9 @@ namespace BehaviorLLM.Core.Backend
             /// is required before the action (Deliberative profile).</summary>
             public int ReasonMaxChars;
 
-            /// <summary>Optional runtime source of argument options per action (scene IDs).
-            /// Returns null or an empty list to fall back to the static list on the action.</summary>
-            public Func<ActionDefinition, IList<string>> ArgumentOptionsFor;
+            /// <summary>Optional runtime source of options per parameter (scene IDs).
+            /// Returns null or an empty list to fall back to the parameter's authored list.</summary>
+            public Func<ActionDefinition, ActionParameter, IList<string>> ArgumentOptionsFor;
 
             /// <summary>Optional filter that drops actions the game does not currently allow.
             /// Returning false removes the action's branch, so the model cannot emit it at all.
@@ -89,24 +94,33 @@ namespace BehaviorLLM.Core.Backend
                   .Append(options.ReasonMaxChars).Append("},");
             }
 
-            sb.Append('"').Append(ActionKey).Append("\":{\"const\":\"").Append(action.actionName).Append("\"},");
-            sb.Append('"').Append(ArgumentKey).Append("\":");
-            AppendArgumentSchema(sb, action, options);
-            sb.Append("},\"required\":[");
-            if (withReason) sb.Append('"').Append(ReasonKey).Append("\",");
-            sb.Append('"').Append(ActionKey).Append("\",\"").Append(ArgumentKey).Append("\"],");
-            sb.Append("\"additionalProperties\":false}");
-        }
+            sb.Append('"').Append(ActionKey).Append("\":{\"const\":\"").Append(action.actionName).Append("\"}");
 
-        private static void AppendArgumentSchema(StringBuilder sb, ActionDefinition action, Options options)
-        {
-            if (!action.TakesArgument)
+            List<ActionParameter> parameters = action.Parameters;
+            for (int i = 0; i < parameters.Count; i++)
             {
-                sb.Append("{\"const\":\"\"}");
-                return;
+                ActionParameter parameter = parameters[i];
+                if (parameter == null || !IsIdentifier(parameter.name)) continue;
+                sb.Append(",\"").Append(parameter.name).Append("\":");
+                AppendParameterSchema(sb, action, parameter, options);
             }
 
-            List<string> values = CollectOptions(action, options);
+            sb.Append("},\"required\":[");
+            if (withReason) sb.Append('"').Append(ReasonKey).Append("\",");
+            sb.Append('"').Append(ActionKey).Append('"');
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                ActionParameter parameter = parameters[i];
+                if (parameter == null || !IsIdentifier(parameter.name)) continue;
+                sb.Append(",\"").Append(parameter.name).Append('"');
+            }
+            sb.Append("],\"additionalProperties\":false}");
+        }
+
+        private static void AppendParameterSchema(StringBuilder sb, ActionDefinition action,
+                                                  ActionParameter parameter, Options options)
+        {
+            List<string> values = CollectOptions(action, parameter, options);
             if (values.Count > 0)
             {
                 sb.Append("{\"enum\":[");
@@ -119,6 +133,14 @@ namespace BehaviorLLM.Core.Backend
                 return;
             }
 
+            // An Int parameter still arrives as a string, but constraining the shape here stops
+            // the model answering "two" where the game will call int.TryParse.
+            if (parameter.type == ActionParameterType.Int)
+            {
+                sb.Append("{\"type\":\"string\",\"pattern\":\"").Append(IntegerPattern).Append("\"}");
+                return;
+            }
+
             sb.Append("{\"type\":\"string\",\"pattern\":\"").Append(IdentifierPattern).Append("\"}");
         }
 
@@ -126,14 +148,14 @@ namespace BehaviorLLM.Core.Backend
         /// Resolves the effective argument options for an action: provider first, then the static
         /// list. Non-identifier values and duplicates are dropped.
         /// </summary>
-        public static List<string> CollectOptions(ActionDefinition action, Options options)
+        public static List<string> CollectOptions(ActionDefinition action, ActionParameter parameter, Options options)
         {
             List<string> result = new List<string>();
-            if (action == null || !action.TakesArgument) return result;
+            if (action == null || parameter == null) return result;
 
             IList<string> source = null;
-            if (options != null && options.ArgumentOptionsFor != null) source = options.ArgumentOptionsFor(action);
-            if (source == null || source.Count == 0) source = action.allowedArguments;
+            if (options != null && options.ArgumentOptionsFor != null) source = options.ArgumentOptionsFor(action, parameter);
+            if (source == null || source.Count == 0) source = parameter.allowedValues;
             if (source == null) return result;
 
             HashSet<string> seen = new HashSet<string>(StringComparer.Ordinal);

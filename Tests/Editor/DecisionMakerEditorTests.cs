@@ -159,7 +159,7 @@ namespace BehaviorLLM.Tests.Editor
 
         public class Receiver : MonoBehaviour
         {
-            public void Handle(string arg) { }
+            public void Handle(ActionArguments arg) { }
         }
     }
 }

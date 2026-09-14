@@ -1,6 +1,7 @@
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
+using BehaviorLLM.Core.Decisions;
 #endif
 
 namespace Project.Samples.PrisonYard
@@ -94,7 +95,7 @@ namespace Project.Samples.PrisonYard
             if (victim == null) return;
 
             PrisonerExecutor executor = hothead.GetComponent<PrisonerExecutor>();
-            if (executor != null) executor.OnFight(victim.name);
+            if (executor != null) executor.OnFight(ActionArguments.Single("Fight", victim.name));
         }
 
         /// <summary>Key 2: gives the escapee something to hide, which puts Hide on its menu.</summary>

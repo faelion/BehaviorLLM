@@ -12,11 +12,15 @@ namespace BehaviorLLM.Core.Interfaces
     public interface IArgumentOptionsProvider
     {
         /// <summary>
-        /// Appends the valid argument values for <paramref name="actionName"/> to
-        /// <paramref name="options"/>. Return false (or an empty list) to use the action's static
-        /// allowed arguments. If those are also empty, any identifier is accepted. Use an
+        /// Appends the valid values for one parameter of <paramref name="actionName"/> to
+        /// <paramref name="options"/>. Return false (or an empty list) to use the parameter's
+        /// authored values. If those are also empty, any identifier is accepted. Use an
         /// availability provider to withhold actions that currently have no valid targets.
+        ///
+        /// <paramref name="parameterName"/> lets one provider serve an action that takes several
+        /// values, for example a destination drawn from the map and a speed drawn from a fixed
+        /// set. A provider that only handles single-argument actions can ignore it.
         /// </summary>
-        bool TryGetArgumentOptions(string actionName, List<string> options);
+        bool TryGetArgumentOptions(string actionName, string parameterName, List<string> options);
     }
 }

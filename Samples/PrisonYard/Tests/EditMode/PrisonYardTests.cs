@@ -132,19 +132,19 @@ namespace Project.Samples.PrisonYard.Tests
             world.Tick();
 
             List<string> options = new List<string>();
-            Assert.IsTrue(p.Options.TryGetArgumentOptions(PrisonYardIds.Wander, options));
+            Assert.IsTrue(p.Options.TryGetArgumentOptions(PrisonYardIds.Wander, "arg", options));
             CollectionAssert.Contains(options, PrisonSection.Cafeteria.Id());
 
             world.SetLocked(PrisonSection.Cafeteria, true);
             options.Clear();
-            p.Options.TryGetArgumentOptions(PrisonYardIds.Wander, options);
+            p.Options.TryGetArgumentOptions(PrisonYardIds.Wander, "arg", options);
             CollectionAssert.DoesNotContain(options, PrisonSection.Cafeteria.Id());
 
             // The clock starts in Cells, so the cell block is the scheduled section; locking it
             // must not leave the prisoner with nowhere legitimate to go.
             world.SetLocked(PrisonSection.CellBlock, true);
             options.Clear();
-            p.Options.TryGetArgumentOptions(PrisonYardIds.Wander, options);
+            p.Options.TryGetArgumentOptions(PrisonYardIds.Wander, "arg", options);
             CollectionAssert.Contains(options, PrisonSection.CellBlock.Id());
         }
 
@@ -161,7 +161,7 @@ namespace Project.Samples.PrisonYard.Tests
             foreach (string action in actions)
             {
                 List<string> options = new List<string>();
-                p.Options.TryGetArgumentOptions(action, options);
+                p.Options.TryGetArgumentOptions(action, "arg", options);
                 foreach (string option in options)
                 {
                     // Anything outside this set is dropped when the schema is built, which would
@@ -208,7 +208,7 @@ namespace Project.Samples.PrisonYard.Tests
             world.Board.OpenIncident(IncidentKind.Fight, PrisonSection.Workshop, "Control");
 
             List<string> options = new List<string>();
-            Assert.IsTrue(g.Options.TryGetArgumentOptions(PrisonYardIds.Respond, options));
+            Assert.IsTrue(g.Options.TryGetArgumentOptions(PrisonYardIds.Respond, "arg", options));
             CollectionAssert.Contains(options, PrisonSection.Workshop.Id());
         }
 
@@ -220,7 +220,7 @@ namespace Project.Samples.PrisonYard.Tests
             world.Tick();
 
             List<string> options = new List<string>();
-            Assert.IsTrue(g.Options.TryGetArgumentOptions(PrisonYardIds.Patrol, options));
+            Assert.IsTrue(g.Options.TryGetArgumentOptions(PrisonYardIds.Patrol, "arg", options));
             CollectionAssert.Contains(options, "Workshop_Patrol_N");
             CollectionAssert.DoesNotContain(options, "Yard_Patrol_N", "a guard patrols its own section");
         }
@@ -254,11 +254,11 @@ namespace Project.Samples.PrisonYard.Tests
             world.SetLocked(PrisonSection.Yard, true);
 
             List<string> toLock = new List<string>();
-            w.Options.TryGetArgumentOptions(PrisonYardIds.Lockdown, toLock);
+            w.Options.TryGetArgumentOptions(PrisonYardIds.Lockdown, "arg", toLock);
             CollectionAssert.DoesNotContain(toLock, PrisonSection.Yard.Id());
 
             List<string> toLift = new List<string>();
-            w.Options.TryGetArgumentOptions(PrisonYardIds.LiftLockdown, toLift);
+            w.Options.TryGetArgumentOptions(PrisonYardIds.LiftLockdown, "arg", toLift);
             CollectionAssert.AreEqual(new[] { PrisonSection.Yard.Id() }, toLift);
         }
 
@@ -275,7 +275,7 @@ namespace Project.Samples.PrisonYard.Tests
             world.Tick(); // recount occupancy
 
             List<string> options = new List<string>();
-            bool any = w.Options.TryGetArgumentOptions(PrisonYardIds.Reinforce, options);
+            bool any = w.Options.TryGetArgumentOptions(PrisonYardIds.Reinforce, "arg", options);
 
             Assert.IsTrue(any);
             CollectionAssert.Contains(options, PrisonSection.Workshop.Id(), "trouble and no guards there");

@@ -8,6 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **BREAKING - an action can take more than one value.** `ActionDefinition` now holds a list of
+  named `ActionParameter`s instead of a single unnamed argument, each with its own type, example
+  and allowed values. The schema emits one property per parameter, the parser reads them by name,
+  and every parameter is validated separately before dispatch.
+
+  **What breaks:** a bound handler receives `ActionArguments` rather than `string`. A
+  single-value action reads `args.First`; a multi-value one reads `args["speed"]` or
+  `args.GetInt("speed")`. Both samples were rewritten accordingly.
+
+  **What does not break:** action config assets. The three fields a pre-parameters action
+  serialised are kept and folded into one parameter named `arg` on load, which is the same JSON
+  property they always produced. An action whose single parameter is still called `arg` also
+  prints its type in the action menu exactly as before, so the cached prompt prefix - and the
+  measured cache-reuse behaviour that depends on it - is byte-identical for every config authored
+  before this change.
+
+  Two smaller consequences worth knowing. An action with no parameters no longer emits an empty
+  `arg` field, so the model is not asked to produce a meaningless property on every such decision.
+  And a fallback action can only supply one value, so naming a fallback that takes two or more is
+  now refused with a reason rather than dispatched half-filled.
+- **A shared blackboard.** `BehaviorLLMBlackboard` is a small noticeboard decision makers write to
+  through an ordinary action binding, and `BlackboardObservationModule` reports it back as an
+  observation. It exists to stop the prompt growing with the square of the cast: without it, eight
+  characters who coordinate each have to perceive everything the other seven perceive. Retention,
+  staleness and prompt shape come from a `BlackboardConfig` asset; notes are capped in length and
+  count so one write cannot swallow a prompt. Interrupts are opt-in, because a board several
+  characters write to would otherwise interrupt everybody every time anybody posts.
 - **`DecisionMaker` has a component icon**, so it is identifiable in the inspector header and the
   Add Component list rather than showing the default script glyph. The icon is the brain from the
   logo rather than the whole lockup: at the 16 px Unity actually draws a component icon at, the
@@ -24,6 +51,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the `<h1>` beneath it is gone because the lockup already carries the name.
 
 ### Fixed
+- **Characters sharing a config no longer decide in lockstep.** Every decision maker counted its
+  interval from the moment it was enabled, so characters enabled together asked the server on the
+  same frame and stayed in step, turning a steady load into bursts of contention separated by idle
+  stretches. `decisionIntervalJitter` (default 0.15) offsets the first tick and spreads each reset
+  around the configured interval. It is centred on zero, so the average decision rate is exactly
+  what the config asks for - the jitter costs no decisions per minute.
+- **A prompt budget too small to work is now refused instead of honoured.** `maxPromptChars` below
+  the length of the system prompt used to be clamped to 64 characters of observations, so the
+  character was asked what to do and told almost nothing about the situation. It answered with a
+  structurally valid action and nothing in the telemetry looked unusual, which is what made the
+  mistake expensive to find. The component now reports the numbers and disables itself, at startup
+  and on a runtime `ApplyConfig` swap alike. The floor is `minStatePromptChars`, not an inline 64.
 - **The model catalogue did not offer two of the three models the package recommends.**
   `Resources/BehaviorLLMModelCatalog.json` listed seven models and `Runtime/Defaults/Models/` ships
   three presets; they overlapped in exactly one. Granite 4.1-3B — the model the README calls the

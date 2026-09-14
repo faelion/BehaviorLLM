@@ -1,4 +1,5 @@
 using UnityEngine;
+using BehaviorLLM.Core.Decisions;
 
 namespace Project.Samples.PrisonYard
 {
@@ -34,13 +35,14 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Observe. Deliberately does nothing: "no change" is a real decision.</summary>
-        public void OnObserve(string _)
+        public void OnObserve(ActionArguments args)
         {
         }
 
         /// <summary>Bound to Lockdown. The argument is the section to shut.</summary>
-        public void OnLockdown(string sectionId)
+        public void OnLockdown(ActionArguments args)
         {
+            string sectionId = args.First;
             if (!PrisonSections.TryParse(sectionId, out PrisonSection section)) return;
             if (board == null || !board.SetLocked(section, true)) return;
 
@@ -49,8 +51,9 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to LiftLockdown. The argument is the section to reopen.</summary>
-        public void OnLiftLockdown(string sectionId)
+        public void OnLiftLockdown(ActionArguments args)
         {
+            string sectionId = args.First;
             if (!PrisonSections.TryParse(sectionId, out PrisonSection section)) return;
             if (board == null || !board.SetLocked(section, false)) return;
 
@@ -61,8 +64,9 @@ namespace Project.Samples.PrisonYard
         /// Bound to Reinforce. The argument is the section needing help; the warden picks which
         /// guard goes, because an action carries one argument and this one needs two.
         /// </summary>
-        public void OnReinforce(string sectionId)
+        public void OnReinforce(ActionArguments args)
         {
+            string sectionId = args.First;
             if (!PrisonSections.TryParse(sectionId, out PrisonSection section)) return;
 
             GuardState chosen = NearestAvailableGuard(section);
@@ -73,8 +77,9 @@ namespace Project.Samples.PrisonYard
         }
 
         /// <summary>Bound to Announce. The argument is one of the fixed announcements.</summary>
-        public void OnAnnounce(string announcement)
+        public void OnAnnounce(ActionArguments args)
         {
+            string announcement = args.First;
             if (string.IsNullOrWhiteSpace(announcement)) return;
 
             string text;

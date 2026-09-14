@@ -429,7 +429,7 @@ namespace BehaviorLLM.Core.Decisions
         public void RebuildSchema()
         {
             int reasonChars = Cfg.EffectiveReasonChars;
-            Func<ActionDefinition, IList<string>> optionsFor = argumentOptionsProvider != null ? ResolveArgumentOptions : (Func<ActionDefinition, IList<string>>)null;
+            Func<ActionDefinition, ActionParameter, IList<string>> optionsFor = argumentOptionsProvider != null ? ResolveArgumentOptions : (Func<ActionDefinition, ActionParameter, IList<string>>)null;
 
             // The full action menu stays in the system prompt even when a provider gates it, so
             // the prefix the server caches never changes. Which of those actions may be chosen
@@ -493,7 +493,7 @@ namespace BehaviorLLM.Core.Decisions
             string schema = ActionSchemaBuilder.Build(actionConfig, new ActionSchemaBuilder.Options
             {
                 ReasonMaxChars = reasonChars,
-                ArgumentOptionsFor = argumentOptionsProvider != null ? ResolveArgumentOptions : (Func<ActionDefinition, IList<string>>)null,
+                ArgumentOptionsFor = argumentOptionsProvider != null ? ResolveArgumentOptions : (Func<ActionDefinition, ActionParameter, IList<string>>)null,
                 IsActionAvailable = def => actionAvailabilityProvider == null || IsAvailableNow(def.actionName)
             });
             if (string.IsNullOrEmpty(schema)) schema = null;
@@ -514,17 +514,33 @@ namespace BehaviorLLM.Core.Decisions
             {
                 string name = deferredArgumentActions[i];
                 if (actionConfig == null || !actionConfig.TryGetAction(name, out ActionDefinition def)) continue;
-                IList<string> options = ResolveArgumentOptions(def);
-                if (options != null && options.Count > 0) deferredArgumentValues[name] = options;
+
+                // Only parameters whose values come from the provider are deferred; an authored
+                // list is stable and stays in the cached action menu where it costs nothing.
+                List<ActionParameter> parameters = def.Parameters;
+                for (int p = 0; p < parameters.Count; p++)
+                {
+                    ActionParameter parameter = parameters[p];
+                    if (parameter == null) continue;
+                    if (parameter.allowedValues != null && parameter.allowedValues.Count > 0) continue;
+
+                    IList<string> options = ResolveArgumentOptions(def, parameter);
+                    if (options == null || options.Count == 0) continue;
+
+                    // One entry per action for a single parameter, so the state block reads as it
+                    // always has; qualified by parameter name only when an action has several.
+                    string key = parameters.Count == 1 ? name : name + "." + parameter.name;
+                    deferredArgumentValues[key] = options;
+                }
             }
             return deferredArgumentValues.Count > 0 ? deferredArgumentValues : null;
         }
 
-        private IList<string> ResolveArgumentOptions(ActionDefinition def)
+        private IList<string> ResolveArgumentOptions(ActionDefinition def, ActionParameter parameter)
         {
             if (argumentOptionsProvider == null || def == null) return null;
             List<string> options = new List<string>();
-            return argumentOptionsProvider.TryGetArgumentOptions(def.actionName, options) ? options : null;
+            return argumentOptionsProvider.TryGetArgumentOptions(def.actionName, parameter != null ? parameter.name : "arg", options) ? options : null;
         }
 
         /// <summary>
@@ -731,7 +747,7 @@ namespace BehaviorLLM.Core.Decisions
 
             telemetry.reason = parsed.Reason;
             string action = parsed.Action;
-            string argument = parsed.Argument;
+            ActionArguments arguments = parsed.Arguments ?? ActionArguments.Empty;
 
             if (!IsActionValid(action))
             {
@@ -753,51 +769,74 @@ namespace BehaviorLLM.Core.Decisions
                 return;
             }
 
-            ActionDefinition def;
-            bool requiresArgument = actionConfig != null && actionConfig.TryGetAction(action, out def) && def.TakesArgument;
-            if (!requiresArgument)
+            // Every parameter the action declares is validated in turn: present, accepted by the
+            // optional policy, and still one of the values currently allowed. A decision that is
+            // well formed but names a value the world no longer offers is the failure mode the
+            // samples hit most, so it is checked here rather than trusted from the schema.
+            List<string> names = new List<string>();
+            List<string> resolved = new List<string>();
+            List<ActionParameter> parameters = definition.Parameters;
+            bool policyNormalized = false;
+
+            for (int p = 0; p < parameters.Count; p++)
             {
-                argument = string.Empty;
-            }
-            else if (string.IsNullOrWhiteSpace(argument))
-            {
-                telemetry.parseFailureReason = $"Missing argument for action '{action}'.";
-                FailOrFallback($"missing argument for '{action}'", telemetry, $"[DecisionMaker] Empty argument for action: {action}");
-                EmitTelemetry(telemetry);
-                return;
-            }
-            else if (actionArgumentPolicy != null)
-            {
-                string normalized;
-                string reason;
-                if (!actionArgumentPolicy.TryNormalizeArgument(action, argument, out normalized, out reason))
+                ActionParameter parameter = parameters[p];
+                if (parameter == null) continue;
+
+                string value = arguments[parameter.name];
+                if (string.IsNullOrWhiteSpace(value) && parameters.Count == 1) value = arguments.First;
+
+                if (string.IsNullOrWhiteSpace(value))
                 {
-                    telemetry.argumentPolicyDecision = ArgumentPolicyDecision.Rejected;
-                    telemetry.argumentPolicyReason = reason;
-                    FailOrFallback($"argument policy rejected '{action}({argument})': {reason}", telemetry,
-                        $"[DecisionMaker] Argument policy rejected '{action}({argument})': {reason}");
+                    telemetry.parseFailureReason = $"Missing '{parameter.name}' for action '{action}'.";
+                    FailOrFallback($"missing '{parameter.name}' for '{action}'", telemetry,
+                        $"[DecisionMaker] Empty '{parameter.name}' for action: {action}");
                     EmitTelemetry(telemetry);
                     return;
                 }
-                string prior = argument;
-                argument = DecisionParser.NormalizeArgument(normalized);
-                telemetry.argumentPolicyDecision = string.Equals(prior, argument, StringComparison.Ordinal)
-                    ? ArgumentPolicyDecision.Unchanged
-                    : ArgumentPolicyDecision.Normalized;
+
+                if (actionArgumentPolicy != null)
+                {
+                    string normalized;
+                    string reason;
+                    if (!actionArgumentPolicy.TryNormalizeArgument(action, parameter.name, value, out normalized, out reason))
+                    {
+                        telemetry.argumentPolicyDecision = ArgumentPolicyDecision.Rejected;
+                        telemetry.argumentPolicyReason = reason;
+                        FailOrFallback($"argument policy rejected '{action}({value})': {reason}", telemetry,
+                            $"[DecisionMaker] Argument policy rejected '{action}({value})': {reason}");
+                        EmitTelemetry(telemetry);
+                        return;
+                    }
+                    string prior = value;
+                    value = DecisionParser.NormalizeArgument(normalized);
+                    if (!string.Equals(prior, value, StringComparison.Ordinal)) policyNormalized = true;
+                }
+
+                if (!IsParameterValueValid(definition, parameter, value))
+                {
+                    telemetry.parseFailureReason = $"Value '{value}' is not currently allowed for '{action}.{parameter.name}'.";
+                    FailOrFallback(telemetry.parseFailureReason, telemetry, $"[DecisionMaker] {telemetry.parseFailureReason}");
+                    EmitTelemetry(telemetry);
+                    return;
+                }
+
+                names.Add(parameter.name);
+                resolved.Add(value);
             }
 
-            if (!IsArgumentValid(action, argument))
+            if (actionArgumentPolicy != null && telemetry.argumentPolicyDecision != ArgumentPolicyDecision.Rejected)
             {
-                telemetry.parseFailureReason = $"Argument '{argument}' is not currently allowed for '{action}'.";
-                FailOrFallback(telemetry.parseFailureReason, telemetry, $"[DecisionMaker] {telemetry.parseFailureReason}");
-                EmitTelemetry(telemetry);
-                return;
+                telemetry.argumentPolicyDecision = policyNormalized
+                    ? ArgumentPolicyDecision.Normalized
+                    : ArgumentPolicyDecision.Unchanged;
             }
 
+            ActionArguments finalArguments = new ActionArguments(action, names, resolved);
             telemetry.resultType = DecisionResultType.ModelAction;
             telemetry.actionName = action;
-            telemetry.argument = argument;
-            DispatchAction(action, argument);
+            telemetry.argument = finalArguments.ToCompactString();
+            DispatchAction(action, finalArguments);
             EmitTelemetry(telemetry);
         }
 
@@ -825,26 +864,45 @@ namespace BehaviorLLM.Core.Decisions
             actionConfig.TryGetAction(actionName, out ActionDefinition definition);
             actionName = definition.actionName;
 
-            ActionDefinition def;
-            bool requiresArgument = actionConfig != null && actionConfig.TryGetAction(actionName, out def) && def.TakesArgument;
-            if (!requiresArgument) argument = string.Empty;
-
-            if ((actionAvailabilityProvider != null && !actionAvailabilityProvider.IsActionAvailable(actionName)) ||
-                !IsArgumentValid(actionName, argument))
+            // The configured fallback carries at most one value, so it can only stand in for an
+            // action of one parameter or none. An action needing more is rejected here rather
+            // than dispatched half-filled.
+            List<ActionParameter> fallbackParameters = definition.Parameters;
+            ActionArguments fallbackArguments;
+            if (fallbackParameters.Count == 0)
             {
-                telemetry.fallbackReason = $"Fallback '{actionName}({argument})' is not currently allowed. Source: {reason}";
+                fallbackArguments = ActionArguments.Empty;
+            }
+            else if (fallbackParameters.Count == 1 && fallbackParameters[0] != null)
+            {
+                fallbackArguments = new ActionArguments(actionName,
+                    new List<string> { fallbackParameters[0].name },
+                    new List<string> { argument ?? string.Empty });
+            }
+            else
+            {
+                telemetry.fallbackReason = $"Fallback '{actionName}' takes {fallbackParameters.Count} values, " +
+                                           $"which a fallback cannot supply. Source: {reason}";
+                return false;
+            }
+
+            string renderedFallback = fallbackArguments.ToCompactString();
+            if ((actionAvailabilityProvider != null && !actionAvailabilityProvider.IsActionAvailable(actionName)) ||
+                !AreArgumentsValid(actionName, fallbackArguments))
+            {
+                telemetry.fallbackReason = $"Fallback '{actionName}({renderedFallback})' is not currently allowed. Source: {reason}";
                 return false;
             }
 
             if (Cfg.logFallbackUsage)
-                BehaviorLLMLog.Warn(() => $"[DecisionMaker] Executing fallback '{actionName}({argument})' because {reason}.");
+                BehaviorLLMLog.Warn(() => $"[DecisionMaker] Executing fallback '{actionName}({renderedFallback})' because {reason}.");
 
             telemetry.resultType = DecisionResultType.FallbackAction;
             telemetry.usedFallback = true;
             telemetry.fallbackReason = reason;
             telemetry.actionName = actionName;
-            telemetry.argument = argument;
-            DispatchAction(actionName, argument);
+            telemetry.argument = renderedFallback;
+            DispatchAction(actionName, fallbackArguments);
             return true;
         }
 
@@ -854,16 +912,41 @@ namespace BehaviorLLM.Core.Decisions
                 && actionConfig != null && actionConfig.TryGetAction(actionName, out _);
         }
 
-        private bool IsArgumentValid(string actionName, string argument)
+        /// <summary>
+        /// True when a value is one the action currently accepts for that parameter. Re-checked
+        /// at dispatch rather than trusted from the schema, because the schema was built before
+        /// the request and the world can move while inference runs.
+        /// </summary>
+        private bool IsParameterValueValid(ActionDefinition def, ActionParameter parameter, string value)
+        {
+            if (def == null || parameter == null) return false;
+            bool numeric = parameter.type == ActionParameterType.Int;
+            if (numeric ? !int.TryParse(value, out _) : !ActionSchemaBuilder.IsIdentifier(value)) return false;
+
+            List<string> options = ActionSchemaBuilder.CollectOptions(def, parameter, new ActionSchemaBuilder.Options
+            {
+                ArgumentOptionsFor = argumentOptionsProvider != null ? ResolveArgumentOptions : (Func<ActionDefinition, ActionParameter, IList<string>>)null
+            });
+            return options.Count == 0 || options.Contains(value);
+        }
+
+        /// <summary>Whole-decision check used by the fallback path, which builds its own values.</summary>
+        private bool AreArgumentsValid(string actionName, ActionArguments arguments)
         {
             if (actionConfig == null || !actionConfig.TryGetAction(actionName, out ActionDefinition def)) return false;
-            if (!def.TakesArgument) return string.IsNullOrEmpty(argument);
-            if (!ActionSchemaBuilder.IsIdentifier(argument)) return false;
-            List<string> options = ActionSchemaBuilder.CollectOptions(def, new ActionSchemaBuilder.Options
+
+            List<ActionParameter> parameters = def.Parameters;
+            if (parameters.Count == 0) return arguments == null || arguments.Count == 0;
+
+            for (int i = 0; i < parameters.Count; i++)
             {
-                ArgumentOptionsFor = argumentOptionsProvider != null ? ResolveArgumentOptions : (Func<ActionDefinition, IList<string>>)null
-            });
-            return options.Count == 0 || options.Contains(argument);
+                ActionParameter parameter = parameters[i];
+                if (parameter == null) continue;
+                string value = arguments != null ? arguments[parameter.name] : string.Empty;
+                if (string.IsNullOrEmpty(value) && arguments != null && parameters.Count == 1) value = arguments.First;
+                if (!IsParameterValueValid(def, parameter, value)) return false;
+            }
+            return true;
         }
 
         // Case-insensitive to match binding lookup: a model that answers "chase" instead of
@@ -878,15 +961,16 @@ namespace BehaviorLLM.Core.Decisions
             return false;
         }
 
-        private void DispatchAction(string actionName, string argument)
+        private void DispatchAction(string actionName, ActionArguments arguments)
         {
-            if (memoryModule != null) memoryModule.RecordEvent($"Executed Action: {actionName}({argument})");
+            string rendered = arguments != null ? arguments.ToCompactString() : string.Empty;
+            if (memoryModule != null) memoryModule.RecordEvent($"Executed Action: {actionName}({rendered})");
 
             ActionBinding binding;
             if (bindingsByName != null && bindingsByName.TryGetValue(actionName, out binding))
             {
-                if (Cfg.logDecisions) BehaviorLLMLog.Requested(() => $"[DecisionMaker] Executing {actionName}('{argument}').");
-                binding.onExecute.Invoke(argument);
+                if (Cfg.logDecisions) BehaviorLLMLog.Requested(() => $"[DecisionMaker] Executing {actionName}('{rendered}').");
+                binding.onExecute.Invoke(arguments ?? ActionArguments.Empty);
                 return;
             }
             BehaviorLLMLog.Warn(() => $"[DecisionMaker] No binding found for action: {actionName}");

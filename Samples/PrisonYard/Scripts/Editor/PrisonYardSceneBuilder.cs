@@ -1318,7 +1318,7 @@ namespace Project.Samples.PrisonYard.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void Bind(DecisionMaker maker, string actionName, UnityAction<string> callback)
+        private static void Bind(DecisionMaker maker, string actionName, UnityAction<ActionArguments> callback)
         {
             ActionEvent evt = new ActionEvent();
             UnityEventTools.AddPersistentListener(evt, callback);

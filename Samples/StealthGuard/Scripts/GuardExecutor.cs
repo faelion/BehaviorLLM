@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using BehaviorLLM.Core.Decisions;
 
 namespace Project.Samples.StealthGuard
 {
@@ -78,7 +79,7 @@ namespace Project.Samples.StealthGuard
         // ---------------------------------------------------------------- bound actions
 
         /// <summary>Bound to HoldPosition. The argument is always empty.</summary>
-        public void OnHoldPosition(string _)
+        public void OnHoldPosition(ActionArguments args)
         {
             chaseTarget = null;
             if (IsNavReady) nav.ResetPath();
@@ -86,29 +87,33 @@ namespace Project.Samples.StealthGuard
         }
 
         /// <summary>Bound to Patrol. The argument is a patrol route marker id.</summary>
-        public void OnPatrol(string routeId)
+        public void OnPatrol(ActionArguments args)
         {
+            string routeId = args.First;
             chaseTarget = null;
             if (GoTo(routeId)) currentActivity = $"Patrolling to {routeId}";
         }
 
         /// <summary>Bound to Investigate. The argument is a location marker id.</summary>
-        public void OnInvestigate(string locationId)
+        public void OnInvestigate(ActionArguments args)
         {
+            string locationId = args.First;
             chaseTarget = null;
             if (GoTo(locationId)) currentActivity = $"Investigating {locationId}";
         }
 
         /// <summary>Bound to Retreat. The argument is a safe zone marker id.</summary>
-        public void OnRetreat(string safeZoneId)
+        public void OnRetreat(ActionArguments args)
         {
+            string safeZoneId = args.First;
             chaseTarget = null;
             if (GoTo(safeZoneId)) currentActivity = $"Retreating to {safeZoneId}";
         }
 
         /// <summary>Bound to Chase. The argument is the intruder's id.</summary>
-        public void OnChase(string targetId)
+        public void OnChase(ActionArguments args)
         {
+            string targetId = args.First;
             if (options == null || options.intruder == null || options.intruder.target == null)
             {
                 Debug.LogWarning("[GuardExecutor] Chase was chosen but no intruder is assigned.");
