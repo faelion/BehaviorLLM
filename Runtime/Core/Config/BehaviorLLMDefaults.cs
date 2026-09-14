@@ -22,6 +22,9 @@ namespace BehaviorLLM.Core.Config
         /// <summary>Asset name of the shipped perception preset (10 m sphere, 5 memories).</summary>
         public const string PerceptionConfigAsset = "Perception_Default";
 
+        /// <summary>Asset name of the shipped blackboard preset.</summary>
+        public const string BlackboardConfigAsset = "Blackboard_Default";
+
         /// <summary>Asset name of the shipped model preset used when no model has been chosen yet.</summary>
         public const string ModelConfigAsset = "Model_Qwen3.5-2B-Q4_K_M";
 

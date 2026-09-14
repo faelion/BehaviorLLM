@@ -56,9 +56,16 @@ namespace BehaviorLLM.Tests.Runtime
             finally { BehaviorLLMSettings.Use(null); }
         }
 
+        /// <summary>
+        /// Builds the fixture inactive and assigns the config before activating, so Awake and
+        /// OnEnable run against the config under test. Assigning afterwards through ApplyConfig
+        /// would mean OnEnable had already seeded the timer from the shipped defaults — which is
+        /// exactly the bug that made the first version of the lockstep test fail.
+        /// </summary>
         private DecisionMaker MakeMaker(DecisionMakerConfig cfg)
         {
             GameObject go = new GameObject("LoopGuardFixture");
+            go.SetActive(false);
             cleanup.Add(go);
             // Added before the DecisionMaker so its Awake resolves a backend on the same object.
             go.AddComponent<StubBackend>();
@@ -67,7 +74,13 @@ namespace BehaviorLLM.Tests.Runtime
             ActionConfig actions = MakeConfig();
             cleanup.Add(actions);
             maker.actionConfig = actions;
-            maker.ApplyConfig(cfg);
+
+            FieldInfo f = typeof(DecisionMaker).GetField("config",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(f, "DecisionMaker.config field not found");
+            f.SetValue(maker, cfg);
+
+            go.SetActive(true);   // Awake, then OnEnable, both against cfg
             return maker;
         }
 
@@ -131,6 +144,30 @@ namespace BehaviorLLM.Tests.Runtime
             DecisionMakerConfig cfg = MakeCfg(maxPromptChars: 0, jitter: 0f);
             cleanup.Add(cfg);
             Assert.IsTrue(MakeMaker(cfg).enabled, "0 means no limit and must always be allowed.");
+        }
+
+        [Test]
+        public void SwappingToAnImpossibleBudgetAtRuntime_AlsoRefuses()
+        {
+            DecisionMakerConfig ok = MakeCfg(maxPromptChars: 0, jitter: 0f);
+            cleanup.Add(ok);
+            DecisionMaker maker = MakeMaker(ok);
+            Assert.IsTrue(maker.enabled, "Precondition: starts runnable.");
+
+            DecisionMakerConfig bad = MakeCfg(maxPromptChars: 10, jitter: 0f);
+            cleanup.Add(bad);
+
+            BehaviorLLMSettings quiet = ScriptableObject.CreateInstance<BehaviorLLMSettings>();
+            quiet.editorLogLevel = BehaviorLLMLogLevel.Off;
+            quiet.playerLogLevel = BehaviorLLMLogLevel.Off;
+            cleanup.Add(quiet);
+            BehaviorLLMSettings.Use(quiet);
+            try { maker.ApplyConfig(bad); }
+            finally { BehaviorLLMSettings.Use(null); }
+
+            Assert.IsFalse(maker.enabled,
+                "Swapping in an impossible budget at runtime is the same silent failure as " +
+                "starting with one, so it must be refused on the same terms.");
         }
 
         // ------------------------------------------------------------------ jitter

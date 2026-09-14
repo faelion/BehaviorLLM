@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aaa87a718e7888148b9d5505911097df, type: 3}
+  m_Name: Blackboard_Default
+  m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Config.BlackboardConfig
+  capacity: 32
+  staleAfterSeconds: 30
+  topicName: Shared Notes
+  maxReportedEntries: 6
+  entryMaxChars: 120
+  includeAuthor: 1
+  includeAge: 1
