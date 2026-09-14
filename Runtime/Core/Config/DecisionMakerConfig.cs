@@ -28,6 +28,16 @@ namespace BehaviorLLM.Core.Config
                  "director.")]
         public float decisionInterval = 2.0f;
 
+        [Tooltip("Spreads decisions out in time so characters sharing this asset do not all " +
+                 "ask the AI on the same frame. Expressed as a fraction of the interval: 0.15 " +
+                 "means each decision lands up to 15% early or late, and the first one is " +
+                 "offset too. The average rate is unchanged, so this costs nothing; what it " +
+                 "buys is a steady load instead of bursts. Measured on eight characters, the " +
+                 "slow tail shortens while the median stays put. 0 disables it and puts every " +
+                 "character back in lockstep.")]
+        [Range(0f, 1f)]
+        public float decisionIntervalJitter = 0.15f;
+
         [Header("Decision Profile")]
         [Tooltip("Reactive: answer as fast as possible, with no thinking. Use it for " +
                  "enemies, allies and anything that must react within a beat. " +
@@ -89,6 +99,14 @@ namespace BehaviorLLM.Core.Config
                  "cut. Set it if the model's context is small and the scene can produce " +
                  "many observations.")]
         public int maxPromptChars = 0;
+
+        [Tooltip("The smallest number of characters of observations a decision is allowed to " +
+                 "carry. If Max Prompt Chars leaves less room than this once the persona and " +
+                 "action list are accounted for, the component refuses to run rather than " +
+                 "asking the character what to do while telling it almost nothing about the " +
+                 "situation. That failure is invisible otherwise: the reply is still a valid " +
+                 "action and nothing in the telemetry looks wrong.")]
+        public int minStatePromptChars = 256;
 
         [Header("Diagnostics")]
         [Tooltip("Print the full text sent to the AI in the console before each " +

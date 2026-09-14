@@ -242,11 +242,57 @@ namespace BehaviorLLM.Core.Decisions
             BuildBindingLookup();
             ResolveBackend();
             RebuildSchema();
+            ValidatePromptBudget();
+        }
+
+        /// <summary>
+        /// A prompt budget smaller than the cached system prompt leaves nothing for the
+        /// observations, so the character is asked what to do and told almost nothing about the
+        /// situation. It still answers with a structurally valid action and nothing in the
+        /// telemetry marks the decision as wrong, which is what makes the mistake expensive to
+        /// find. Startup is the last point at which it is cheap, so the configuration is refused
+        /// here rather than quietly honoured for the rest of the run.
+        /// </summary>
+        private void ValidatePromptBudget()
+        {
+            if (Cfg.maxPromptChars <= 0) return;
+
+            int room = Cfg.maxPromptChars - cachedSystemPrompt.Length;
+            int floor = Mathf.Max(0, Cfg.minStatePromptChars);
+            if (room >= floor) return;
+
+            int systemLength = cachedSystemPrompt.Length;
+            int budget = Cfg.maxPromptChars;
+            BehaviorLLMLog.Error(() =>
+                $"[DecisionMaker] '{name}' disabled: Max Prompt Chars is {budget}, but this " +
+                $"character's system prompt alone is {systemLength} characters, leaving {room} " +
+                $"for observations against a minimum of {floor}. It would decide without being " +
+                $"told what it can see. Raise Max Prompt Chars above {systemLength + floor}, " +
+                $"lower Min State Prompt Chars, or set Max Prompt Chars to 0 for no limit.", this);
+            enabled = false;
         }
 
         private void OnEnable()
         {
             thinkCts = new CancellationTokenSource();
+            // Characters enabled on the same frame would otherwise count the same interval from
+            // the same instant and stay in step forever, turning a steady load into bursts of
+            // contention. Starting each one part-way through its first interval breaks that up.
+            timer = Cfg.decisionIntervalJitter > 0f
+                ? UnityEngine.Random.Range(0f, Cfg.decisionInterval * Cfg.decisionIntervalJitter)
+                : 0f;
+        }
+
+        /// <summary>
+        /// Resets the decision timer, spread around zero by the configured jitter so the next
+        /// decision lands slightly early or slightly late. Centred on zero on purpose: the mean
+        /// interval is exactly what the config asks for, so jitter costs no decisions per minute.
+        /// </summary>
+        private void ResetTimer()
+        {
+            timer = Cfg.decisionIntervalJitter > 0f
+                ? UnityEngine.Random.Range(-1f, 1f) * Cfg.decisionInterval * Cfg.decisionIntervalJitter
+                : 0f;
         }
 
         private void OnDisable()
@@ -290,7 +336,7 @@ namespace BehaviorLLM.Core.Decisions
             timer += Time.deltaTime;
             if (timer >= Cfg.decisionInterval || interrupt)
             {
-                timer = 0f;
+                ResetTimer();
                 Think();
             }
         }
@@ -371,6 +417,9 @@ namespace BehaviorLLM.Core.Decisions
             config = newConfig;
             cfg = BehaviorLLMDefaults.OrTransientDefault(newConfig);
             RebuildSchema();
+            // Swapping in a config whose budget cannot carry the system prompt is the same
+            // silent failure as starting with one, so it is refused on the same terms.
+            ValidatePromptBudget();
         }
 
         /// <summary>
@@ -569,7 +618,8 @@ namespace BehaviorLLM.Core.Decisions
                     CurrentDeferredArguments());
                 if (Cfg.maxPromptChars > 0)
                 {
-                    int stateBudget = Mathf.Max(64, Cfg.maxPromptChars - cachedSystemPrompt.Length);
+                    // Validated at Awake, so by here the budget is known to leave usable room.
+                    int stateBudget = Cfg.maxPromptChars - cachedSystemPrompt.Length;
                     statePrompt = PromptBuilder.TrimStatePrompt(statePrompt, stateBudget);
                 }
 
