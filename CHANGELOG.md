@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Release target: **0.6.0** (not yet tagged). This includes the existing named-parameter API changes below.
+## [0.6.0] - 2026-09-22
+
+Includes the named-parameter API changes described below.
 
 ### Sample installation fixes
 - Move scene builders to `BehaviorLLM > Samples > Build StealthGuard Scene` and `Build PrisonYard Scene`.

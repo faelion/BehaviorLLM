@@ -16,6 +16,7 @@
 </p>
 
 <p align="center">
+  <a href="https://youtu.be/eMRL88Fxa88">Watch the demo (69 seconds)</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#samples">Samples</a> ·
   <a href="#how-it-works">How it works</a> ·
@@ -74,10 +75,10 @@ The folder holds the scripts, the exact prompts and schemas they send, the per-d
 **Unity Package Manager (recommended).** In `Packages/manifest.json`:
 
 ```json
-"com.faelion.behaviorllm": "https://github.com/faelion/BehaviorLLM.git#v0.5.0"
+"com.faelion.behaviorllm": "https://github.com/faelion/BehaviorLLM.git#v0.6.0"
 ```
 
-or *Window > Package Manager > Add package from git URL…* with the same URL. Drop the `#v0.5.0` suffix to track `main`.
+or *Window > Package Manager > Add package from git URL…* with the same URL. Drop the `#v0.6.0` suffix to track `main`.
 
 **Manual.** Download the [latest release](https://github.com/faelion/BehaviorLLM/releases/latest) and copy the folder into your project's `Packages/` or `Assets/` folder.
 
