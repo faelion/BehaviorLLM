@@ -32,7 +32,7 @@ namespace Project.Samples.StealthGuard.Editor
         public static string OutputRoot => BehaviorLLM.Editor.SampleAssetPaths.OutputRoot(Root, "StealthGuard");
         public static string Scenes => OutputRoot + "/Scenes";
         public static string Data => OutputRoot + "/Data";
-        private static string Art => BehaviorLLM.Editor.SampleAssetPaths.PrepareArt(Root, "StealthGuard");
+        private static string Art => OutputRoot + "/Art";
         public static string CharacterArt => Art + "/Characters";
         public static string PropArt => Art + "/Props";
 

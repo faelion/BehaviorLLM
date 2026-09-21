@@ -15,26 +15,31 @@ MonoBehaviour:
   validActions:
   - actionName: Observe
     description: Change nothing and keep watching.
+    parameters: []
     parameterType: 0
     exampleArgument: 
     allowedArguments: []
   - actionName: Lockdown
     description: Shut a section so nobody can go in or out.
+    parameters: []
     parameterType: 1
     exampleArgument: Yard
     allowedArguments: []
   - actionName: LiftLockdown
     description: Reopen a section that is shut.
+    parameters: []
     parameterType: 1
     exampleArgument: Yard
     allowedArguments: []
   - actionName: Reinforce
     description: Send the nearest free officer to a section.
+    parameters: []
     parameterType: 1
     exampleArgument: Yard
     allowedArguments: []
   - actionName: Announce
     description: Say something to the whole prison over the radio.
+    parameters: []
     parameterType: 1
     exampleArgument: StayCalm
     allowedArguments:

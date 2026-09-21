@@ -6,9 +6,10 @@ using UnityEngine;
 namespace Project.Samples.PrisonYard.Editor
 {
     /// <summary>
-    /// Builds an animator controller for a KayKit character from the clips inside its own .glb.
+    /// Builds an animator controller from the character's baked native Unity animation clips.
     ///
-    /// The KayKit characters ship 76 clips each. All this needs is a walk/run blend driven by how
+    /// The source KayKit characters contain 76 clips; the native bake keeps the eight used here.
+    /// All this needs is a walk/run blend driven by how
     /// fast the character is actually moving, plus a handful of one-shots the visuals component
     /// triggers when a decision changes what someone is doing. Building it from script rather than
     /// by hand means the whole sample still regenerates from one menu item.

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Release target: **0.6.0** (not yet tagged). This includes the existing named-parameter API changes below.
 
+### Sample installation fixes
+- Move scene builders to `BehaviorLLM > Samples > Build StealthGuard Scene` and `Build PrisonYard Scene`.
+- Bake PrisonYard characters to native Unity prefabs, meshes and eight required animation clips, removing the consumer's hidden glTFast requirement. Rebuild the shipped PrisonYard scene with the native models.
+- Add missing art when rebuilding an older imported sample, preserve existing copied files, and refresh character/floor material shaders for the active Built-in or Universal render pipeline.
+- Verify five native rigs, actual walking bone motion, controller states, and complete rebuilt sample gameplay/component inventories in a consumer without glTFast.
+
 ### Review fixes and validation
 - New components retain automatic presets and use an active-catalog model preset. Custom config assets remain assignable; explicit model filenames override the catalog.
 - Project settings take precedence over the uniquely located shipped default, eliminating duplicate resource lookup keys.

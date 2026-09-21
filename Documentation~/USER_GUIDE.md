@@ -349,4 +349,4 @@ being true.
 
 ### Installed sample builders
 
-When installed under `Packages/`, the sample builders write scenes and configuration into `Assets/BehaviorLLMSamples/<sample>/`. They copy optional art there once before changing importers or generating controllers. Keep its license files with it. An `Assets/` installation generates beside its source. Missing art still produces primitive scenes. Perceivable objects need a collider on the same GameObject as `LLMContextObject`, because vision resolves metadata from that collider.
+When installed under `Packages/`, the sample builders write scenes and configuration into `Assets/BehaviorLLMSamples/<sample>/`. They copy missing optional art there before changing importers or generating controllers, including new files absent from an older generated copy. PrisonYard uses baked native Unity character assets and requires no glTF importer. Keep its license files with it. An `Assets/` installation generates beside its source. Missing art still produces primitive scenes. Perceivable objects need a collider on the same GameObject as `LLMContextObject`, because vision resolves metadata from that collider.

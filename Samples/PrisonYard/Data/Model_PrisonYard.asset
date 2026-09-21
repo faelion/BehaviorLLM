@@ -27,6 +27,7 @@ MonoBehaviour:
   repeatPenalty: 1
   recommendedProfile: 0
   nativeThinkingUsable: 0
+  reasoningModel: 0
   measuredValidActionRate: 1
   measuredExpectedActionRate: 0.81
   measuredP50LatencyMs: 278

@@ -47,7 +47,7 @@ namespace Project.Samples.StealthGuard.Editor
             Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(Art + "/Textures/colormap.png");
             if (texture == null) return null;
 
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            Shader shader = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null ? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") : Shader.Find("Standard");
             shared = new Material(shader);
             if (shared.HasProperty("_BaseMap")) shared.SetTexture("_BaseMap", texture);
             if (shared.HasProperty("_MainTex")) shared.SetTexture("_MainTex", texture);

@@ -18,7 +18,7 @@ namespace Project.Samples.StealthGuard.Editor
 {
     /// <summary>
     /// Builds the StealthGuard scene from primitives, so the sample is reproducible from source
-    /// and carries no art dependencies. Run it from Tools > StealthGuard > Build Scene.
+    /// and carries no art dependencies. Run it from BehaviorLLM > Samples > Build StealthGuard Scene.
     /// </summary>
     public static class StealthGuardSceneBuilder
     {
@@ -47,9 +47,10 @@ namespace Project.Samples.StealthGuard.Editor
         // head. Shrinking it lands the eyes near the 1.7 m the vision cone and the camera assume.
         private const float CharacterScale = 0.62f;
 
-        [MenuItem("Tools/StealthGuard/Build Scene")]
+        [MenuItem("BehaviorLLM/Samples/Build StealthGuard Scene")]
         public static void BuildScene()
         {
+            BehaviorLLM.Editor.SampleAssetPaths.PrepareArt(StealthGuardPaths.Root, "StealthGuard");
             int occluderLayer = EnsureLayer(OccluderLayerName);
             ActionConfig actions = CreateActionConfig();
 
@@ -932,7 +933,7 @@ namespace Project.Samples.StealthGuard.Editor
         {
             Renderer renderer = go.GetComponent<Renderer>();
             if (renderer == null) return;
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            Shader shader = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null ? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") : Shader.Find("Standard");
             Material mat = new Material(shader);
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
             if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);

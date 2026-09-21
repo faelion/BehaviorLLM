@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Decisions_Guard
   m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Config.DecisionMakerConfig
   decisionInterval: 2.5
+  decisionIntervalJitter: 0.15
   profile: 0
   reasonMaxChars: 120
   thinkingBudgetTokens: 0
@@ -23,6 +24,7 @@ MonoBehaviour:
   maxVisionEntries: 4
   maxMemoryEntries: 3
   maxPromptChars: 2800
+  minStatePromptChars: 256
   logPrompts: 0
   logDecisions: 1
   logFallbackUsage: 1

@@ -18,7 +18,7 @@ namespace Project.Samples.PrisonYard.Editor
 {
     /// <summary>
     /// Builds the whole PrisonYard scene from primitives, so the sample is reproducible from
-    /// source and carries no art dependencies. Run it from Tools > PrisonYard > Build Scene.
+    /// source and carries no art dependencies. Run it from BehaviorLLM > Samples > Build PrisonYard Scene.
     ///
     /// It also authors the sample's configuration assets, which is how a project is meant to use
     /// the package: the guards' senses, the prisoners' cadence and the warden's deliberation are
@@ -173,9 +173,10 @@ namespace Project.Samples.PrisonYard.Editor
                 GateOffsets = new[] { new Vector3(-6f, 0f, 0f) } }
         };
 
-        [MenuItem("Tools/PrisonYard/Build Scene")]
+        [MenuItem("BehaviorLLM/Samples/Build PrisonYard Scene")]
         public static void BuildScene()
         {
+            BehaviorLLM.Editor.SampleAssetPaths.PrepareArt(PrisonYardPaths.Root, "PrisonYard");
             int occluderLayer = EnsureLayer(OccluderLayerName);
             PrisonYardAnimatorBuilder.Reset();
             EnsureFolder(Data);
@@ -742,10 +743,12 @@ namespace Project.Samples.PrisonYard.Editor
             Material material = existing;
             if (material == null)
             {
-                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                Shader shader = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null ? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") : Shader.Find("Standard");
                 material = new Material(shader);
                 AssetDatabase.CreateAsset(material, path);
             }
+            material.shader = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null
+                ? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") : Shader.Find("Standard");
             if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
             if (material.HasProperty("_MainTex")) material.SetTexture("_MainTex", texture);
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", tint);
@@ -1178,7 +1181,7 @@ namespace Project.Samples.PrisonYard.Editor
         /// </summary>
         private static void AttachCharacterModel(GameObject root, string modelName, Color colour)
         {
-            string modelPath = $"{CharacterArt}/{modelName}.glb";
+            string modelPath = $"{CharacterArt}/Native/{modelName}.prefab";
             GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
 
             if (source == null)
@@ -1203,10 +1206,33 @@ namespace Project.Samples.PrisonYard.Editor
             if (animator != null)
             {
                 animator.runtimeAnimatorController =
-                    PrisonYardAnimatorBuilder.Build(modelPath, $"{CharacterArt}/{modelName}.controller");
+                    PrisonYardAnimatorBuilder.Build($"{CharacterArt}/Native/{modelName}.asset", $"{Data}/{modelName}.controller");
                 // The NavMeshAgent drives movement; root motion would fight it.
                 animator.applyRootMotion = false;
             }
+
+            // The baked models use native Unity assets, without a glTF importer or shader.
+            // Select a material for the consumer's render pipeline when building the scene.
+            string textureName = modelName.StartsWith("Rogue") ? "rogue" : modelName.ToLowerInvariant();
+            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>($"{CharacterArt}/{textureName}_texture.png");
+            string materialPath = $"{Data}/{modelName}.mat";
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            Shader shader = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null ? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") : Shader.Find("Standard");
+            if (material == null)
+            {
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, materialPath);
+            }
+            material.shader = shader;
+            material.mainTexture = texture;
+            material.color = Color.white;
+            foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] slots = renderer.sharedMaterials;
+                for (int i = 0; i < slots.Length; i++) slots[i] = material;
+                renderer.sharedMaterials = slots;
+            }
+            EditorUtility.SetDirty(material);
         }
 
         /// <summary>
@@ -1554,7 +1580,7 @@ namespace Project.Samples.PrisonYard.Editor
         {
             Renderer renderer = go.GetComponent<Renderer>();
             if (renderer == null) return;
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            Shader shader = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null ? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") : Shader.Find("Standard");
             Material mat = new Material(shader);
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
             if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);

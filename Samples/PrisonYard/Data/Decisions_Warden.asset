@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Decisions_Warden
   m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Config.DecisionMakerConfig
   decisionInterval: 12
+  decisionIntervalJitter: 0.15
   profile: 1
   reasonMaxChars: 120
   thinkingBudgetTokens: 0
@@ -23,6 +24,7 @@ MonoBehaviour:
   maxVisionEntries: 0
   maxMemoryEntries: 5
   maxPromptChars: 3000
+  minStatePromptChars: 256
   logPrompts: 0
   logDecisions: 1
   logFallbackUsage: 1

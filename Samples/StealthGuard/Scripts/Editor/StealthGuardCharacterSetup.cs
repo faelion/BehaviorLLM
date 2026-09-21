@@ -263,18 +263,19 @@ namespace Project.Samples.StealthGuard.Editor
         {
             string materialPath = $"{Art}/{skinName}.mat";
             Material existing = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
-            if (existing != null) return existing;
 
             Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>($"{Art}/{skinName}.png");
             if (texture == null) return null;
 
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            Material material = new Material(shader);
+            Shader shader = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null ? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") : Shader.Find("Standard");
+            Material material = existing != null ? existing : new Material(shader);
+            material.shader = shader;
             if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
             if (material.HasProperty("_MainTex")) material.SetTexture("_MainTex", texture);
             // Flat shading suits the art; a metallic sheen on a lunchbox character looks wrong.
             if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.05f);
-            AssetDatabase.CreateAsset(material, materialPath);
+            if (existing == null) AssetDatabase.CreateAsset(material, materialPath);
+            EditorUtility.SetDirty(material);
             return material;
         }
     }

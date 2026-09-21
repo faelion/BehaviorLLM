@@ -15,36 +15,43 @@ MonoBehaviour:
   validActions:
   - actionName: HoldPosition
     description: Stand still and keep watch where you are.
+    parameters: []
     parameterType: 0
     exampleArgument: 
     allowedArguments: []
   - actionName: Patrol
     description: Walk to a patrol point in your section and watch from there.
+    parameters: []
     parameterType: 1
     exampleArgument: Yard_Patrol_N
     allowedArguments: []
   - actionName: Respond
     description: Go to a section where something is happening.
+    parameters: []
     parameterType: 1
     exampleArgument: Yard
     allowedArguments: []
   - actionName: Escort
     description: Take a prisoner where they are supposed to be.
+    parameters: []
     parameterType: 1
     exampleArgument: Prisoner_01
     allowedArguments: []
   - actionName: Search
     description: Search a prisoner for contraband.
+    parameters: []
     parameterType: 1
     exampleArgument: Prisoner_04
     allowedArguments: []
   - actionName: Report
     description: Call in what you can see in a section over the radio.
+    parameters: []
     parameterType: 1
     exampleArgument: Yard
     allowedArguments: []
   - actionName: Retreat
     description: Fall back to the infirmary to recover.
+    parameters: []
     parameterType: 1
     exampleArgument: Infirmary
     allowedArguments: []

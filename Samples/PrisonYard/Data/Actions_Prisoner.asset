@@ -15,36 +15,43 @@ MonoBehaviour:
   validActions:
   - actionName: FollowSchedule
     description: Go where the schedule says you should be.
+    parameters: []
     parameterType: 0
     exampleArgument: 
     allowedArguments: []
   - actionName: Wander
     description: Walk to another part of the prison you are allowed into.
+    parameters: []
     parameterType: 1
     exampleArgument: Yard
     allowedArguments: []
   - actionName: Talk
     description: Stand and talk with another prisoner.
+    parameters: []
     parameterType: 1
     exampleArgument: Prisoner_02
     allowedArguments: []
   - actionName: Fight
     description: Attack another prisoner.
+    parameters: []
     parameterType: 1
     exampleArgument: Prisoner_01
     allowedArguments: []
   - actionName: Hide
     description: Stash what you are carrying somewhere out of sight.
+    parameters: []
     parameterType: 1
     exampleArgument: Workshop_Corner
     allowedArguments: []
   - actionName: Sneak
     description: Slip into a part of the prison you are not supposed to be in.
+    parameters: []
     parameterType: 1
     exampleArgument: Workshop
     allowedArguments: []
   - actionName: Comply
     description: Do as the officer says and stay still.
+    parameters: []
     parameterType: 0
     exampleArgument: 
     allowedArguments: []

@@ -29,7 +29,7 @@ Walk behind the metal walls and watch the fan cut off at the corner. That is the
 
 `StealthObjective`, `StealthLoot` and `GuardVisionCone` are the whole of it, and they touch nothing in the package. Delete them and the scene still demonstrates everything it demonstrated before; there is just no longer a reason to walk anywhere in particular.
 
-To rebuild the scene from scratch: `Tools > StealthGuard > Build Scene`. That one menu item also configures the character rig, writes the animator controller and dresses the compound, so the scene never has to be hand-edited.
+To rebuild the scene from scratch: `BehaviorLLM > Samples > Build StealthGuard Scene`. That one menu item also configures the character rig, writes the animator controller and dresses the compound, so the scene never has to be hand-edited.
 
 ## The art
 

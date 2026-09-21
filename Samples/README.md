@@ -4,13 +4,13 @@ Two runnable samples ship inside the package. Each is self-contained: its scenes
 assets and art all live in its own folder, with the art licence beside the art, and neither
 references anything outside itself and the package.
 
-| Sample | What it shows | Size |
+| Sample | What it shows | Animated bodies |
 |---|---|---|
-| [StealthGuard](StealthGuard/README.md) | Three guards patrolling a compound. Cone vision with real line of sight, reflex interrupts, per-guard argument lists, and the lesson that a condition the game already knows should gate the action menu rather than be written into the prompt. | ~5 MB |
-| [PrisonYard](PrisonYard/README.md) | Eight decision makers on one server: three guards, four prisoners and a warden. Custom observation modules (a radio and a status board), decision makers changing each other's world, and a decision maker with no body at all. | ~21 MB |
+| [StealthGuard](StealthGuard/README.md) | Three guards patrolling a compound. Cone vision with real line of sight, reflex interrupts, per-guard argument lists, and the lesson that a condition the game already knows should gate the action menu rather than be written into the prompt. | 3 guards + player |
+| [PrisonYard](PrisonYard/README.md) | Eight decision makers on one server: three guards, four prisoners and a warden. Custom observation modules (a radio and a status board), decision makers changing each other's world, and a decision maker with no body at all. | 3 guards + 4 prisoners; warden has no body |
 
-Build either scene from its menu item (`Tools > StealthGuard > Build Scene`,
-`Tools > PrisonYard > Build Scene`); both regenerate the scene, the animator controllers and the
+Build either scene from its menu item (`BehaviorLLM > Samples > Build StealthGuard Scene`,
+`BehaviorLLM > Samples > Build PrisonYard Scene`); both regenerate the scene, the animator controllers and the
 dressing from source.
 
 ## Requirements

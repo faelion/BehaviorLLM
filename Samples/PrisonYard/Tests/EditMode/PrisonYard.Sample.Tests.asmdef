@@ -6,7 +6,8 @@
     "BehaviorLLM.Runtime",
     "Unity.AI.Navigation",
     "UnityEngine.TestRunner",
-    "UnityEditor.TestRunner"
+    "UnityEditor.TestRunner",
+    "Project.Samples.PrisonYard.Editor"
   ],
   "includePlatforms": [
     "Editor"

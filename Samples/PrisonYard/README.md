@@ -25,7 +25,20 @@ The yard has four doorways, one per wall; every other section has one. A gate si
 2. **Make `llama-server` reachable.** Install it with `BehaviorLLM > Model Manager (Server tab)`, or install llama.cpp yourself (`winget install llama.cpp`) and put it on your `PATH`.
 3. **Open `Scenes/PrisonYard.unity` and press Play.** The server starts on its own and takes a few seconds to load the model. Eight decision makers then begin deciding on their own schedules.
 
-To rebuild the scene from scratch: `Tools > PrisonYard > Build Scene`.
+To rebuild the scene from scratch: `BehaviorLLM > Samples > Build PrisonYard Scene`.
+
+The characters use the shipped Unity prefabs, meshes and animation clips under
+`Art/Characters/Native/`; no glTF importer is needed. The three guards and four prisoners have
+animated bodies; the warden is deliberately a decision maker without a body. Controllers include
+idle/walk/run, punch, interaction, pickup, hit and resting poses. The builder assigns textured
+materials for the active Built-in or Universal render pipeline.
+
+For a package installed under `Packages/`, generated scenes, configs and controllers go to
+`Assets/BehaviorLLMSamples/PrisonYard/`. Rebuilding adds missing shipped art to an older copy
+without overwriting existing files. If all art has been removed, the primitive fallback remains
+available. The original `.glb` files are retained as authoring sources: maintainers can regenerate
+native assets with `PrisonYardCharacterBake.Bake` in a writable Assets checkout that has glTFast.
+Consumers do not need that dependency or regeneration step.
 
 ### The director's keys
 
