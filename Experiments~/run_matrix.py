@@ -7,11 +7,13 @@ PromptBuilder / ActionSchemaBuilder (generated from Unity into this folder), acr
 Writes matrix_results.csv (one row per configuration) and matrix_decisions.csv
 (one row per decision) next to this script.
 """
-import json, os, re, socket, subprocess, sys, time, urllib.request, urllib.error, statistics, csv
+import argparse, hashlib, json, os, re, shutil, socket, subprocess, sys, time, urllib.request, urllib.error, statistics, csv
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SERVER = r"C:\Users\alexx\AppData\Local\Microsoft\WinGet\Packages\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\llama-server.exe"
-MODEL_DIR = r"D:\repos\TFG\Assets\StreamingAssets\models"
+SERVER = os.environ.get("LLAMA_SERVER", shutil.which("llama-server") or "llama-server")
+MODEL_DIR = os.environ.get("BEHAVIORLLM_MODEL_DIR", "models")
+INPUT_DIR = HERE
+OUTPUT_DIR = os.path.join(HERE, "runs", time.strftime("%Y%m%d_%H%M%S"))
 PORT = 8090
 BASE = f"http://127.0.0.1:{PORT}"
 
@@ -30,6 +32,55 @@ SCHEMA = {
     "Deliberative": json.loads(open(os.path.join(HERE, "schema_deliberative.json"), encoding="utf-8-sig").read()),
 }
 MAX_TOKENS = {"Reactive": 48, "Deliberative": 110}
+
+def configure():
+    """Shared portable CLI; keep historical fixtures/results untouched by default."""
+    global SERVER, MODEL_DIR, INPUT_DIR, OUTPUT_DIR, PORT, BASE
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--server", default=SERVER)
+    parser.add_argument("--model-dir", default=MODEL_DIR)
+    parser.add_argument("--input-dir", default=HERE)
+    parser.add_argument("--output-dir", default=OUTPUT_DIR)
+    parser.add_argument("--port", type=int, default=PORT)
+    args = parser.parse_args()
+    SERVER, MODEL_DIR = args.server, os.path.abspath(args.model_dir)
+    INPUT_DIR, OUTPUT_DIR = os.path.abspath(args.input_dir), os.path.abspath(args.output_dir)
+    PORT, BASE = args.port, f"http://127.0.0.1:{args.port}"
+    if not free_port():
+        parser.error(f"port {PORT} is busy")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    for profile in SYSTEM:
+        suffix = profile.lower()
+        with open(os.path.join(INPUT_DIR, f"system_{suffix}.txt"), encoding="utf-8-sig") as f:
+            SYSTEM[profile] = f.read()
+        with open(os.path.join(INPUT_DIR, f"schema_{suffix}.json"), encoding="utf-8-sig") as f:
+            SCHEMA[profile] = json.load(f)
+    def git(*command):
+        result = subprocess.run(["git", "-C", HERE, *command], capture_output=True, text=True)
+        return result.stdout.strip()
+    version = subprocess.run([SERVER, "--version"], capture_output=True, text=True)
+    fixtures = {}
+    for name in os.listdir(INPUT_DIR):
+        if name.startswith(("system_", "schema_")) and name.endswith((".txt", ".json")):
+            source = os.path.join(INPUT_DIR, name)
+            with open(source, "rb") as f:
+                fixtures[name] = hashlib.sha256(f.read()).hexdigest()
+            if INPUT_DIR != OUTPUT_DIR:
+                shutil.copy2(source, OUTPUT_DIR)
+    metadata = {"utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "command": sys.argv, "commit": git("rev-parse", "HEAD"),
+                "working_tree": git("status", "--short"), "server": SERVER,
+                "backend_version": (version.stdout + version.stderr).strip(),
+                "models": [{"file": f, "bytes": os.path.getsize(os.path.join(MODEL_DIR, f))} for _, f in MODELS],
+                "fixture_sha256": fixtures,
+                "scope": "Offline model benchmark; does not execute Unity transport or dispatch."}
+    with open(os.path.join(OUTPUT_DIR, "run_metadata.json"), "w", encoding="utf8") as f:
+        json.dump(metadata, f, indent=2)
+
+def write_csv(filename, rows):
+    with open(os.path.join(OUTPUT_DIR, filename), "w", newline="", encoding="utf8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+        writer.writeheader(); writer.writerows(rows)
 
 # Valid action menu, mirroring the ActionConfig the artifacts were built from.
 MENU = {
@@ -90,9 +141,10 @@ def free_port():
 def start_server(model_file):
     args = [SERVER, "-m", os.path.join(MODEL_DIR, model_file), "--port", str(PORT),
             "--host", "127.0.0.1", "-c", "8192", "-ngl", "99", "-np", "2", "--jinja"]
-    proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     if not wait_health(proc):
-        proc.kill(); raise RuntimeError(f"server failed to start for {model_file}")
+        proc.kill(); proc.wait(); raise RuntimeError(f"server failed to start for {model_file}")
     return proc
 
 def request(profile, use_schema, state_text):
@@ -149,8 +201,9 @@ def parse_decision(text):
 
 def evaluate(d, expected_action, acceptable_args):
     if d is None or not isinstance(d, dict): return (False, False, False)
-    action = (d.get("action") or "").strip()
-    arg = (d.get("arg") or "").strip()
+    action, arg = d.get("action", ""), d.get("arg", "")
+    if not isinstance(action, str) or not isinstance(arg, str): return (False, False, False)
+    action, arg = action.strip(), arg.strip()
     parsed = bool(action)
     if action not in MENU: return (parsed, False, False)
     allowed = MENU[action]
@@ -165,6 +218,7 @@ def pct(xs, p):
     return s[k - 1]
 
 def main():
+    configure()
     if not free_port():
         print(f"port {PORT} is busy; stop whatever is listening and retry"); sys.exit(1)
 
@@ -183,7 +237,7 @@ def main():
                         r = request(profile, use_schema, st)
                         if "error" in r:
                             errors += 1
-                            decisions.append([model_name, profile, use_schema, name, "", "ERROR", 0, 0, 0, 0])
+                            decisions.append([model_name, profile, use_schema, name, r["error"], "ERROR", 0, 0, 0, r["latency_ms"]])
                             continue
                         d = parse_decision(r["content"])
                         p, v, c = evaluate(d, exp, args)
@@ -193,7 +247,7 @@ def main():
                         prompt_tokens += r["prompt_n"] + r["cache_n"]
                         completion_tokens += r["predicted_n"]
                         decisions.append([model_name, profile, use_schema, name,
-                                          r["content"].replace("\n", " ")[:160],
+                                          r["content"],
                                           "ok" if v else "invalid", int(p), int(v), int(c),
                                           round(r["latency_ms"], 1)])
                     n = len(SCENARIOS)
@@ -212,9 +266,9 @@ def main():
         finally:
             proc.kill(); proc.wait(); time.sleep(3)
 
-    with open(os.path.join(HERE, "matrix_results.csv"), "w", newline="", encoding="utf8") as f:
+    with open(os.path.join(OUTPUT_DIR, "matrix_results.csv"), "w", newline="", encoding="utf8") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
-    with open(os.path.join(HERE, "matrix_decisions.csv"), "w", newline="", encoding="utf8") as f:
+    with open(os.path.join(OUTPUT_DIR, "matrix_decisions.csv"), "w", newline="", encoding="utf8") as f:
         w = csv.writer(f)
         w.writerow(["model", "profile", "structured_output", "scenario", "raw_output",
                     "status", "parsed", "valid", "expected_match", "latency_ms"])

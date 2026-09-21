@@ -23,7 +23,7 @@ namespace Project.Samples.StealthGuard.Editor
     public static class StealthGuardSceneBuilder
     {
         // Every path is derived from where this sample actually is; see StealthGuardPaths for why.
-        private static string Root => StealthGuardPaths.Root;
+        private static string Root => StealthGuardPaths.OutputRoot;
         private static string ScenePath => StealthGuardPaths.Scenes + "/StealthGuard.unity";
         private static string ActionConfigPath => StealthGuardPaths.Data + "/StealthGuardActions.asset";
         private static string PerceptionConfigPath => StealthGuardPaths.Data + "/StealthGuardPerception.asset";

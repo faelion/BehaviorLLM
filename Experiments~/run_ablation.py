@@ -49,16 +49,21 @@ def run(model_name, model_file, system_text, tag):
               f"(conditional rules {hurt_correct}/{hurt_total})", flush=True)
         if wrong:
             print(f"      still wrong: {', '.join(wrong)}", flush=True)
-        return correct
+        return {"model": model_name, "variant": tag, "correct": correct,
+                "scenarios": len(m.SCENARIOS), "conditional_correct": hurt_correct,
+                "conditional_total": hurt_total, "failures": "; ".join(wrong)}
     finally:
         proc.kill(); proc.wait()
 
 if __name__ == "__main__":
-    base_reactive = open(os.path.join(HERE, "system_reactive.txt"), encoding="utf-8-sig").read()
+    m.configure()
+    base_reactive = m.SYSTEM["Reactive"]
     original = variant(base_reactive, ORIGINAL_GUIDE)
     reordered = variant(base_reactive, REORDERED_GUIDE)
 
     print("Reactive + schema, same 16 scenarios, only the guide wording/order differs\n")
+    rows = []
     for name, f in [("Qwen3.5-2B", "Qwen3.5-2B-Q4_K_M.gguf"), ("Qwen3.5-4B", "Qwen3.5-4B-Q4_K_M.gguf")]:
-        run(name, f, original, "original")
-        run(name, f, reordered, "reordered")
+        rows.append(run(name, f, original, "original"))
+        rows.append(run(name, f, reordered, "reordered"))
+    m.write_csv("ablation_results.csv", rows)

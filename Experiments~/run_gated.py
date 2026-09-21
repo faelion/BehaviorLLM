@@ -41,6 +41,7 @@ def run(model_name, model_file):
     proc = m.start_server(model_file)
     try:
         correct = 0
+        rows = []
         for name, st, exp, args in FAILING:
             kind = "hurt" if name.startswith("hurt_") else "quiet"
             schema, available = GATED[kind]
@@ -48,15 +49,24 @@ def run(model_name, model_file):
             d = m.parse_decision(content)
             _, _, ok = m.evaluate(d, exp, args)
             correct += ok
+            rows.append({"model": model_name, "scenario": name, "raw_output": content,
+                         "expected_match": int(ok), "latency_ms": round(ms, 1)})
             print(f"    {name:20s} -> {(d or {}).get('action','?'):14s} "
                   f"{'OK ' if ok else 'BAD'}  {ms:.0f} ms", flush=True)
         print(f"  {model_name}: {correct}/{len(FAILING)} correct with the menu gated "
-              f"(was 0/6 and 3/6 without gating)\n", flush=True)
+              "(compare with the matching ungated run)\n", flush=True)
+        return rows
     finally:
         proc.kill(); proc.wait()
 
 if __name__ == "__main__":
+    m.configure()
+    SYSTEM_DYNAMIC = open(os.path.join(m.INPUT_DIR, "system_dynamic.txt"), encoding="utf-8-sig").read()
+    for kind in GATED:
+        GATED[kind] = (json.loads(open(os.path.join(m.INPUT_DIR, f"schema_gated_{kind}.json"), encoding="utf-8-sig").read()), GATED[kind][1])
     print("Same six previously-failing scenarios, Reactive + schema, menu gated per turn\n")
+    rows = []
     for name, f in [("Qwen3.5-2B", "Qwen3.5-2B-Q4_K_M.gguf"), ("Qwen3.5-4B", "Qwen3.5-4B-Q4_K_M.gguf")]:
         print(f"  {name}:")
-        run(name, f)
+        rows.extend(run(name, f))
+    m.write_csv("gated_decisions.csv", rows)

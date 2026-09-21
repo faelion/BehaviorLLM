@@ -77,20 +77,23 @@ PlayMode --filter BehaviorLLM.Tests.Runtime`; with the Editor open, `unity comma
 - `BehaviorLLM.Tests.Editor` - EditMode. Verifies the Runtime + Editor reference graph
   compiles cleanly.
 
-Both assemblies use `defineConstraints: ["UNITY_INCLUDE_TESTS"]`, so they only compile
-when the Test Framework is enabled (the default in the Editor; opt-in for player builds).
+Both assemblies use `defineConstraints: ["UNITY_INCLUDE_TESTS"]`. For a UPM consumer test
+project, add `com.faelion.behaviorllm` to the project manifest’s `testables` array. Check that
+the result contains tests: a CLI summary of zero PlayMode tests is not a passing suite.
 That keeps the package's runtime footprint tests-free when consumed via UPM.
 
-Add a test for any new pure helper you ship. Backend-touching paths (`BehaviorLLMClient`,
-`DecisionMaker.Think`) are validated end-to-end by the **experiment matrix** below, not by
-unit tests, because the failure modes that matter live in the model output.
+Add a test for any new pure helper you ship. Stub-backend runtime tests exercise dispatch, cancellation, fallback and request construction.
+The **experiment matrix** below evaluates model output through Python HTTP requests; it does
+not execute Unity transport, perception or dispatch. Run the Unity suites as well, and use a
+played sample with telemetry for integration evidence.
 
 ## Measured acceptance bar
 
 `Experiments~/run_matrix.py` drives llama-server over 16 hand-labelled guard scenarios,
 across three models and both decision profiles, with and without the schema. It uses the
 prompts and JSON Schemas the package's own `PromptBuilder` and `ActionSchemaBuilder`
-produce, so it measures what actually ships.
+produce. Regenerate the fixtures for current-code validation; the root fixture files preserve
+the historical September baseline rather than tracking every source edit.
 
 The 2026-09-04 baseline is **100% structurally valid actions everywhere**, with
 expected-action rates of 62% (Qwen3.5-2B), 81% (Granite 4.1-3B) and 81% Reactive / 94%
@@ -100,7 +103,10 @@ row in `Experiments~/matrix_results.csv`, every individual decision a row in
 to re-run it.
 
 A PR that changes prompt construction, output format, argument policy or the schema must
-hold those numbers: re-run the matrix and put the affected rows in the PR description.
+report its effect: re-run the matrix and put affected rows in the PR description. Retain the
+historical files, save new runs under a dated directory, and explain any regression or changed
+protocol rather than silently replacing the baseline. This is a small labelled dataset, not a
+statistically established performance guarantee.
 
 For a change you want to see rather than measure, play `Samples/StealthGuard` and
 let `DecisionTelemetryRecorder` write a run summary.

@@ -26,7 +26,7 @@ It contains no game logic; it bridges Unity's component and event system to the 
 
 - **Decision loop.** A timer set by the decision config triggers `Think()`. Every frame it also polls `HasInterrupt()` on its observation modules; a true value bypasses the timer. During inference it cancels the request and discards its result, then requests fresh observations after cancellation completes.
 - **Decision profile.** `Reactive` (default) sends `enable_thinking:false`, no `reason` field and a budget of about 50 tokens. `Deliberative` adds a capped `reason` string before the action and optionally a native thinking budget. The profile is expressed per request, so objects with different profiles share one server. Deliberation is opt-in because every token of reasoning is latency a reactive entity cannot afford.
-- **Prompt.** `PromptBuilder.BuildSystemPrompt` renders persona, output contract, action menu (with allowed arguments), two examples and the config's `modelInstructions`; it is built at Awake and on `RebuildSchema()`. Dynamic argument providers also refresh it each turn; unchanged values preserve the prefix. `BuildStatePrompt` renders current observations as the per-decision state block. In chat transport the two halves are the system and user messages; in raw transport they are concatenated with the `OUTPUT: ` lead.
+- **Prompt.** `PromptBuilder.BuildSystemPrompt` renders persona, output contract, action menu (with allowed arguments), two examples and the config's `modelInstructions`; it is built at Awake and on `RebuildSchema()`. Dynamic argument providers also refresh it each turn; with deferred options, neither the action menu nor examples read live values, so changing targets preserves the prefix. `BuildStatePrompt` renders current observations as the per-decision state block. In chat transport the two halves are the system and user messages; in raw transport they are concatenated with the `OUTPUT: ` lead.
 - **Prompt budget.** The vision and memory entry caps ask budgeted modules for their most relevant entries; the character cap drops observation lines from the end of the state block. The system prompt is never cut and the cut never lands mid-word (a mid-word cut once made small models complete the template instead of answering).
 - **Parsing and dispatch.** `DecisionParser.Parse` strips native-thinking blocks (`<think>…</think>`, `<|channel>thought…<channel|>`, terminated or not), fences and prose, extracts the first balanced JSON object and reads `reason`, `action`, `arg`. The action must exist in ActionConfig, be bound, and still be available; arguments must satisfy current allowed values (or the identifier pattern when unrestricted); an optional `IActionArgumentPolicy` may normalise or reject it. Any failure routes to the optional fallback action.
 - **Telemetry.** Every completed attempt publishes a `DecisionTelemetry` record (source, latency, prompt, completion and cached token counts, profile, structured-output flag, result type, action, argument, reason and failure reasons) through `DecisionTelemetryRecorded`. Cancelled requests produce no completed record. Schema status comes from the backend response; backend failures with fallbacks retain both outcomes.
@@ -42,7 +42,7 @@ It contains no game logic; it bridges Unity's component and event system to the 
 
 ### C. Actions: `ActionConfig`
 
-A ScriptableObject that is the object's API definition: a list of `ActionDefinition` (name, description, and a list of named `ActionParameter`s, each with a type, an example and **allowed values**; a pre-parameters config folds its three legacy fields into one parameter named `arg` on load, which keeps its prompt prefix byte-identical) plus `modelInstructions`. It drives three things at once: the action menu in the prompt, the few-shot examples, and the JSON Schema.
+A ScriptableObject that is the object's API definition: a list of `ActionDefinition` (name, description, and a list of named `ActionParameter`s, each with a type, an example and **allowed values**; a pre-parameters config folds its three legacy fields into one parameter named `arg` on load, preserving the legacy JSON parameter name) plus `modelInstructions`. It drives three things at once: the action menu in the prompt, the few-shot examples, and the JSON Schema.
 
 Source-of-truth split: `ActionConfig.validActions` is the **schema** (what exists), `DecisionMaker.actionBindings` is the **wiring** (who handles it), `bindingsByName` is the dispatch **cache** built at Awake. The `DecisionMaker` inspector keeps the wiring list a mirror of the schema, so a typo cannot be entered; divergence that reaches runtime anyway (bindings built in code) is still warned at Awake.
 
@@ -54,7 +54,7 @@ Builds `{"oneOf":[ ... ]}` with one branch per action:
 {"type":"object","properties":{
    "reason":{"type":"string","maxLength":120},          // Deliberative only
    "action":{"const":"MoveTo"},
-   "arg":{"enum":["Zone_A","Zone_B"]}},                  // or {"const":""} / {"pattern":"^[A-Za-z0-9_]+$"}
+   "arg":{"enum":["Zone_A","Zone_B"]}},                  // or {"pattern":"^[A-Za-z0-9_]+$"}; no field for a parameterless action
  "required":["reason","action","arg"],"additionalProperties":false}
 ```
 
@@ -109,3 +109,9 @@ Every console line in `Runtime/` goes through `BehaviorLLMLog`, which is what en
 - **Why the static/dynamic split.** Prefix reuse (Gim et al., *Prompt Cache*, MLSys 2024; SGLang's RadixAttention) turns a 600-token system prompt into a cache hit per decision; only the state block is re-processed.
 - **Why thinking is per object.** Reactive entities need the shortest response the model can produce; a director deciding every few seconds can afford a reasoned one. A server-wide setting could not express both.
 - **Why settings live in assets.** A component's inspector is the first thing a new user sees, and twenty numbers on it is a wall rather than an invitation. Moving them into config assets makes the component readable, lets one edit retune a whole level, and gives a project unlimited variations without a prefab for each. What stays on the component is only what cannot be shared: its persona, its action bindings, the scene objects it talks to and the server slot it owns.
+
+## Request diagnostics and configuration defaults
+
+`DecisionMaker.JsonSchema` is the cached full action schema. The outgoing request applies current availability and argument options; Prompt Inspector and the editor schema dump capture that final request schema. The dump is a last-writer snapshot, not a replay archive. Dynamic argument values are deferred consistently when a provider is attached, including overrides of authored options; few-shot examples use stable authored values.
+
+New components receive shared shipped config assets. Consumers can duplicate and assign their own variants. Project-wide settings resolve `Resources/BehaviorLLMSettings` first, then the uniquely named shipped `Resources/BehaviorLLM/Defaults/Settings`. The default model asset follows the catalog selection; explicit model filenames override it.

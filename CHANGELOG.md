@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Release target: **0.6.0** (not yet tagged). This includes the existing named-parameter API changes below.
+
+### Review fixes and validation
+- New components retain automatic presets and use an active-catalog model preset. Custom config assets remain assignable; explicit model filenames override the catalog.
+- Project settings take precedence over the uniquely located shipped default, eliminating duplicate resource lookup keys.
+- Installed sample builders write generated content and copied art under `Assets/BehaviorLLMSamples/`; missing art still builds primitive scenes. Align Navigation/Input gates across sample assemblies and fix PrisonYard compilation with the legacy input backend.
+- Keep deferred dynamic options out of complete system prompts, including examples and authored-value overrides. Examples now include named parameters and omit arguments for parameterless actions.
+- Preserve state metadata, topic headers and the first actual observation when trimming; reject impossible budgets before inference. Dump the final request schema after availability filtering.
+- Make experiment paths configurable, preserve complete responses and record run provenance. Retain historical baselines alongside dated current-code results; correct documentation and measurement scope.
+
 ### Added
 - **The catalogue lists only models a decision maker can run.** The Hugging Face search now asks
   for the text-generation task only and reads each repository's GGUF header as the site has

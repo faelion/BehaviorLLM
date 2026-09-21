@@ -61,15 +61,16 @@ namespace BehaviorLLM.Core.Decisions
             if (options.ReasonMaxChars > 0)
             {
                 sb.Append("{\"reason\":\"<why, under ").Append(options.ReasonMaxChars)
-                  .Append(" characters>\",\"action\":\"<name>\",\"arg\":\"<value>\"}");
+                  .Append(" characters>\",\"action\":\"<name>\"}");
             }
             else
             {
-                sb.Append("{\"action\":\"<name>\",\"arg\":\"<value>\"}");
+                sb.Append("{\"action\":\"<name>\"}");
             }
             sb.Append(" and nothing else: no markdown, no commentary.").Append(NL);
-            sb.Append("`arg` must be a non-empty value when the action signature shows a parameter type " +
-                      "(e.g. `Attack(String)`) and an empty string otherwise.").Append(NL);
+            sb.Append("Add one JSON string field for each parameter in the chosen action signature, using its name. " +
+                      "A single type-only signature (e.g. `Attack(String)`) uses `arg`. " +
+                      "Actions without parameters need no argument fields. Int values are integer strings.").Append(NL);
             if (options.DynamicMenu)
             {
                 sb.Append("Some actions are unavailable on some turns. Choose only from the list after ")
@@ -172,12 +173,27 @@ namespace BehaviorLLM.Core.Decisions
             if (string.IsNullOrEmpty(statePrompt) || maxChars <= 0 || statePrompt.Length <= maxChars) return statePrompt;
 
             string[] lines = statePrompt.Split(NL);
+            int stateIndex = Array.FindIndex(lines, line => line.TrimEnd('\r') == StateHeader);
+            // Metadata precedes STATE. Keep it intact along with the first observation rather
+            // than mistaking AVAILABLE/ARGUMENTS for the observation itself. The caller rejects
+            // an impossible budget instead of sending a decision without any world state.
+            int minimumLines = stateIndex >= 0 ? Math.Min(lines.Length, stateIndex + 2) : Math.Min(lines.Length, 2);
+            if (stateIndex >= 0)
+            {
+                // Topic headings are not observations. Keep the first payload line too.
+                int firstObservation = stateIndex + 1;
+                while (firstObservation < lines.Length &&
+                       (string.IsNullOrWhiteSpace(lines[firstObservation]) ||
+                        lines[firstObservation].TrimStart().StartsWith("---", StringComparison.Ordinal)))
+                    firstObservation++;
+                minimumLines = Math.Min(lines.Length, firstObservation + 1);
+            }
             StringBuilder sb = new StringBuilder(maxChars);
             for (int i = 0; i < lines.Length; i++)
             {
                 string line = lines[i].TrimEnd('\r');
                 int projected = sb.Length + line.Length + (sb.Length > 0 ? 1 : 0);
-                if (projected > maxChars && i >= 2) break;
+                if (projected > maxChars && i >= minimumLines) break;
                 if (sb.Length > 0) sb.Append(NL);
                 sb.Append(line);
             }
@@ -202,33 +218,48 @@ namespace BehaviorLLM.Core.Decisions
             {
                 sb.Append(StateHeader).Append(NL);
                 sb.Append("Nothing visible.").Append(NL);
-                sb.Append(CompletionLead).Append(ExampleJson(noArg.actionName, string.Empty, "Nothing relevant in view.", options.ReasonMaxChars)).Append(NL);
+                sb.Append(CompletionLead).Append(ExampleJson(noArg, "Nothing relevant in view.", options)).Append(NL);
                 sb.Append(NL);
             }
             if (withArg != null)
             {
-                string arg = ResolveExampleArgument(withArg, options);
+                string arg = ResolveExampleArgument(withArg, withArg.FirstParameter, options);
                 sb.Append(StateHeader).Append(NL);
                 sb.Append("- ID: ").Append(arg).Append(" | Type: DynamicObject").Append(NL);
-                sb.Append(CompletionLead).Append(ExampleJson(withArg.actionName, arg, "A valid target is visible.", options.ReasonMaxChars)).Append(NL);
+                sb.Append(CompletionLead).Append(ExampleJson(withArg, "A valid target is visible.", options)).Append(NL);
                 sb.Append(NL);
             }
         }
 
-        private static string ExampleJson(string action, string arg, string reason, int reasonMaxChars)
+        private static string ExampleJson(ActionDefinition action, string reason, SystemPromptOptions options)
         {
-            return reasonMaxChars > 0
-                ? "{\"reason\":\"" + reason + "\",\"action\":\"" + action + "\",\"arg\":\"" + arg + "\"}"
-                : "{\"action\":\"" + action + "\",\"arg\":\"" + arg + "\"}";
+            var json = new StringBuilder("{");
+            if (options.ReasonMaxChars > 0)
+            {
+                if (reason.Length > options.ReasonMaxChars) reason = reason.Substring(0, options.ReasonMaxChars);
+                json.Append("\"reason\":\"").Append(reason).Append("\",");
+            }
+            json.Append("\"action\":\"").Append(action.actionName).Append('"');
+            foreach (ActionParameter parameter in action.Parameters)
+            {
+                if (parameter == null || !ActionSchemaBuilder.IsIdentifier(parameter.name)) continue;
+                json.Append(",\"").Append(parameter.name).Append("\":\"")
+                    .Append(ResolveExampleArgument(action, parameter, options)).Append('"');
+            }
+            return json.Append('}').ToString();
         }
 
         // Priority: first argument option (schema and example then agree), then the authored
         // exampleArgument, then a neutral placeholder.
-        private static string ResolveExampleArgument(ActionDefinition action, SystemPromptOptions options)
+        private static string ResolveExampleArgument(ActionDefinition action, ActionParameter parameter, SystemPromptOptions options)
         {
-            List<string> opts = ActionSchemaBuilder.CollectOptions(action, action.FirstParameter, new ActionSchemaBuilder.Options { ArgumentOptionsFor = options.ArgumentOptionsFor });
+            List<string> opts = ActionSchemaBuilder.CollectOptions(action, parameter,
+                new ActionSchemaBuilder.Options { ArgumentOptionsFor = options.InlineProviderOptions ? options.ArgumentOptionsFor : null });
             if (opts.Count > 0) return opts[0];
-            if (!string.IsNullOrWhiteSpace(action.exampleArgument)) return action.exampleArgument.Trim();
+            string example = parameter != null ? parameter.exampleValue : null;
+            if (parameter != null && parameter.type == ActionParameterType.Int)
+                return int.TryParse(example, out int value) ? value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "1";
+            if (ActionSchemaBuilder.IsIdentifier(example)) return example;
             return "Target";
         }
     }

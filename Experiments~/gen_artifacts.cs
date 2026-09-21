@@ -49,7 +49,7 @@ schemaDelibOpts.ReasonMaxChars = 120;
 string reactiveSchema = BehaviorLLM.Core.Backend.ActionSchemaBuilder.Build(config, schemaReactiveOpts);
 string deliberativeSchema = BehaviorLLM.Core.Backend.ActionSchemaBuilder.Build(config, schemaDelibOpts);
 
-string dir = @"C:\Users\alexx\AppData\Local\Temp\claude\D--repos-TFG-Assets-BehaviorLLM\73a39eeb-32fb-4be2-97a8-7f9c9752b255\scratchpad\matrix";
+string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(UnityEngine.Application.dataPath, "../Logs/BehaviorLLMExperiments"));
 System.IO.Directory.CreateDirectory(dir);
 System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "system_reactive.txt"), reactiveSystem, System.Text.Encoding.UTF8);
 System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "system_deliberative.txt"), deliberativeSystem, System.Text.Encoding.UTF8);

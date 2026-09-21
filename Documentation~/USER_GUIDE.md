@@ -22,13 +22,14 @@ No BehaviorLLM component carries tuning fields. Everything that changes behaviou
 | **Server Config** | Address, transport, port, slots, launch flags, timeouts, retries, server log verbosity | `BehaviorLLMClient`, `BehaviorLLMServer` |
 | **Model Config** | Model file, context size, GPU layers, sampling, measured behaviour | `BehaviorLLMClient`, `BehaviorLLMServer` |
 | **Perception Config** | Vision shape, range, field of view, layers, scan rate, sight interrupts, memory capacity | `ModularVisionModule`, `BasicMemory` |
+| **Blackboard Config** | Shared-note retention, staleness and observation caps | `BehaviorLLMBlackboard`, `BlackboardObservationModule` |
 | **Settings** | Console noise in the Editor and in builds, telemetry master switch, diagnostics | the whole package |
 
 The package ships presets under `Runtime/Defaults`, and adding a component in the Editor points it at the matching preset automatically, so a new scene works before you author anything. Assets inside a package are read-only, so duplicate a preset into your own project folder before editing it, or create a fresh one with *Create > BehaviorLLM > …*.
 
 ### The Settings asset is the odd one out
 
-The four assets above each tune one *domain* and are meant to exist in several variants: a Reactive preset and a Deliberative one, a perception profile per character type. **Settings** is different. There is one per project, it is loaded from a `Resources` folder rather than wired into a component, and it answers questions that have nothing to do with how any particular decision maker behaves:
+The domain assets above each tune one *domain* and are meant to exist in several variants: a Reactive preset and a Deliberative one, a perception profile per character type. **Settings** is different. There is one per project, it is loaded from a `Resources` folder rather than wired into a component, and it answers questions that have nothing to do with how any particular decision maker behaves:
 
 | Setting | Default | What it decides |
 |---|---|---|
@@ -36,11 +37,11 @@ The four assets above each tune one *domain* and are meant to exist in several v
 | `playerLogLevel` | `ErrorsOnly` | How much it prints in a shipped build. A released game should not write a console line every time a guard decides something. |
 | `telemetryEnabled` | on | Master switch for `DecisionTelemetryRecorder`. Off, a recorder left in the scene records nothing and writes no files. |
 | `telemetryInBuilds` | off | Whether telemetry may run outside the Editor. Turn it on for a playtest build you intend to collect numbers from. |
-| `dumpAppliedSchema` | on | Whether the Editor writes `_last_applied_schema.json` to StreamingAssets on every schema rebuild. |
+| `dumpAppliedSchema` | on | Whether the Editor writes `_last_applied_schema.json` to StreamingAssets for each outgoing request after availability filtering; an unconstrained request clears the file. With multiple decision makers this is the most recent writer; use Prompt Inspector to identify a specific exchange. |
 | `warnOnBindingMismatch` | on | The startup warning when bindings and the Action Config disagree. Leave it on. |
 | `warnOnModelProfileMismatch` | on | The startup warning when a profile runs against what the model was measured to do. |
 
-The package ships one at `Resources/BehaviorLLMSettings.asset`. To use your own, create it with *Create > BehaviorLLM > Settings*, name it `BehaviorLLMSettings`, and put it in a `Resources` folder in your project — it is found by name. With no asset anywhere, the defaults in the table apply.
+The shipped default lives at `Resources/BehaviorLLM/Defaults/Settings.asset`. It works automatically in every scene. To override it, create *BehaviorLLM > Settings* in your project at `Assets/Resources/BehaviorLLMSettings.asset`. Lookup uses this project override first, then the shipped default, then transient field defaults if neither exists. Keep only one project override at that resource path. Domain configs remain independently assignable: duplicate any shipped preset into `Assets/BehaviorLLMConfigs/`, edit it, and assign it to the relevant components; objects sharing an asset share its values.
 
 **It is a ceiling, not an override.** A decision maker whose config has `logPrompts` off stays quiet whatever the level is; what the level can do is silence one that has it on. That is what makes a single switch enough to quieten a whole project before a build, without visiting every config asset.
 
@@ -80,7 +81,7 @@ The package ships three **model config** assets under `Runtime/Defaults/Models`,
 
 Measured on a Radeon RX 6650 XT over 16 labelled scenarios; reproduce with `Experiments~/run_matrix.py`, which ships with the package. Choose by what the object is: Granite 4.1 3B gives the best quality per millisecond for reactive NPCs, Qwen3.5 2B is the fastest, and Qwen3.5 4B suits low-frequency deciders such as a director or a squad commander.
 
-Assign the asset to **both** `BehaviorLLMServer > Model Config` (which model to launch, with what context and GPU layers) and `BehaviorLLMClient > Model Config` (sampling settings). It wins over the StreamingAssets config, so swapping models is one reference change. Use `Create > BehaviorLLM > Model Config` for your own; copy a preset as a starting point, since assets inside a package are read-only.
+Assign the asset to **both** `BehaviorLLMServer > Model Config` (which model to launch, with what context and GPU layers) and `BehaviorLLMClient > Model Config` (sampling settings). It wins over the StreamingAssets config, so swapping an explicit preset requires updating both references. Newly added components use `Model_ActiveCatalog`, whose empty filename follows the active model in the StreamingAssets config; an explicitly assigned model filename takes priority. Use `Create > BehaviorLLM > Model Config` for your own; copy a preset as a starting point, since assets inside a package are read-only.
 
 `DecisionMaker` reads the measured fields and warns at Awake when its own config contradicts them, for example a thinking budget on a model whose native thinking was measured to be unusable. The warnings are advisory and never override your settings: measure your own scenarios before trusting either.
 
@@ -163,7 +164,7 @@ public void OnMoveTo(ActionArguments args)
 
 Three things follow from the design:
 
-- **The single-parameter case is unchanged.** A parameter named `arg`, which is what every config authored before parameters existed becomes on load, prints as `Attack(String)` in the menu exactly as it always did, so the cached system prompt is byte-identical for older configs and the measured cache-reuse figures hold. `args.First` reads it. Name the parameter something better only when you are ready to lose the cached prefix once.
+- **The single-parameter case is unchanged.** A parameter named `arg`, which is what every config authored before parameters existed becomes on load, prints as `Attack(String)` in the menu exactly as it always did, preserving the legacy parameter name. Current examples now omit argument fields for parameterless actions and include every named parameter; prompt bytes therefore differ from the historical benchmark fixtures. `args.First` reads it. Name the parameter something better only when you are ready to lose the cached prefix once.
 - **Every parameter is validated on its own.** A value outside its allowed list, or a non-number for an `Int`, rejects the decision and runs the fallback with the reason in the telemetry record.
 - **Runtime values are per parameter.** An `IArgumentOptionsProvider` is asked for each parameter of each action by name, so `destination` can come from the scene while `speed` keeps its authored range.
 
@@ -285,7 +286,7 @@ Other settings on the decision config:
 - **Include Examples In Prompt**: two worked examples in the system prompt. They cost a few hundred cached tokens once and markedly help small models get the shape right.
 - **Decision Interval** is the main cost control: every decision is one request, so 0.5 s is four times the work of 2 s. Sight interrupts still decide immediately regardless.
 - **Decision Interval Jitter** spreads decisions out in time so characters sharing one config do not all ask the model on the same frame. It is a fraction of the interval, 0.15 by default: each decision lands up to 15% early or late, and the first one is offset too. The spread is centred on zero, so the average rate is exactly the interval and jitter costs no decisions per minute; what it buys is a steady load instead of bursts of contention on the server's slots. Measured on eight characters, the slow tail shortens while the median stays put. Set it to 0 to put every character back in lockstep, which is only useful when comparing runs.
-- **Prompt Budget**: **Max Vision Entries** and **Max Memory Entries** keep only the nearest and most recent few, and **Max Prompt Chars** drops observation lines from the end of the state block. The system prompt is never cut. 0 means unlimited. **Min State Prompt Chars** (256 by default) is the floor under that: if Max Prompt Chars leaves less room than this once the persona and the action menu are accounted for, the decision maker disables itself at start with an error naming the numbers, rather than asking the character what to do while telling it almost nothing about the situation. That failure is invisible otherwise, because the reply is still a valid action and nothing in the telemetry looks wrong. Raise Max Prompt Chars above the figure in the error, lower the floor, or set Max Prompt Chars to 0.
+- **Prompt Budget**: **Max Vision Entries** and **Max Memory Entries** keep only the nearest and most recent few, and **Max Prompt Chars** drops observation lines from the end of the state block. Availability metadata, deferred argument lists, `STATE:`, and its first line are retained. If those cannot fit, the request is rejected and the configured fallback is considered, with the budget error recorded in telemetry. The system prompt is never cut. 0 means unlimited. **Min State Prompt Chars** (256 by default) is the floor under that: if Max Prompt Chars leaves less room than this once the persona and the action menu are accounted for, the decision maker disables itself at start with an error naming the numbers, rather than asking the character what to do while telling it almost nothing about the situation. That failure is invisible otherwise, because the reply is still a valid action and nothing in the telemetry looks wrong. Raise Max Prompt Chars above the figure in the error, lower the floor, or set Max Prompt Chars to 0.
 - **Diagnostics**: **Log Prompts** prints the whole prompt before every request, which is invaluable when wiring a scene and unreadable afterwards, so it is off by default. **Log Decisions** prints the answer and the dispatched action. **Log Fallback Usage** names the reason each time the fallback runs; keep it on, because a rising fallback rate is the first sign something broke.
 
 And on the component itself, because they cannot be shared:
@@ -319,7 +320,7 @@ The window captures only while it is open, so a project that never opens it pays
 Three rules, in order of how much trouble ignoring them causes.
 
 - **Keep personal data out of prompts and logs.** Everything an observation module returns is sent
-  to the model and is written verbatim into the telemetry record and the Prompt Inspector. A module
+  to the model and is visible in the editor Prompt Inspector. Ordinary telemetry records token counts and outcomes, not the full observation block; prompt logging and copied exchanges may preserve that text. A module
   that reports a player's name, their chat messages or anything they typed puts that text into files
   on disk. Report what the character can perceive, not who the player is.
 - **Keep the action set explicit, and let the schema do the rejecting.** The point of deriving the
@@ -345,3 +346,7 @@ being true.
 - **Every decision re-processes the whole prompt**: the server is not reusing its cache. Check that the system prompt is identical between decisions, since it is cached at Awake and a script rewriting `systemPersona` every frame defeats it, that `-np` is at least the number of decision makers, and that each has its own **Request Slot**. On the same machine this is the difference between 1677 ms and 22 ms of prompt processing.
 - **`cache_reuse is not supported by this context`** in the server log: harmless. That flag covers reuse of non-leading prompt chunks and some builds disable it; ordinary prefix caching still works.
 - **Context too small with several decision makers**: `-c` is divided across `-np` slots. With `-c 4096 -np 4` each slot gets 1024 tokens. Multiply the context by the number of slots you need.
+
+### Installed sample builders
+
+When installed under `Packages/`, the sample builders write scenes and configuration into `Assets/BehaviorLLMSamples/<sample>/`. They copy optional art there once before changing importers or generating controllers. Keep its license files with it. An `Assets/` installation generates beside its source. Missing art still produces primitive scenes. Perceivable objects need a collider on the same GameObject as `LLMContextObject`, because vision resolves metadata from that collider.

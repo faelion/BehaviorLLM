@@ -1,7 +1,7 @@
 using UnityEngine;
+using BehaviorLLM.Core.Decisions;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-using BehaviorLLM.Core.Decisions;
 #endif
 
 namespace Project.Samples.PrisonYard

@@ -27,7 +27,7 @@ namespace Project.Samples.PrisonYard.Editor
     public static class PrisonYardSceneBuilder
     {
         // Every path is derived from where this sample actually is; see PrisonYardPaths for why.
-        private static string Root => PrisonYardPaths.Root;
+        private static string Root => PrisonYardPaths.OutputRoot;
         private static string ScenePath => PrisonYardPaths.Scenes + "/PrisonYard.unity";
         private static string Data => PrisonYardPaths.Data;
         private const string OccluderLayerName = "PrisonOccluder";

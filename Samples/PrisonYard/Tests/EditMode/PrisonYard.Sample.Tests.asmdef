@@ -1,33 +1,39 @@
 {
-    "name": "Project.Samples.PrisonYard.Tests",
-    "rootNamespace": "Project.Samples.PrisonYard.Tests",
-    "references": [
-        "Project.Samples.PrisonYard",
-        "BehaviorLLM.Runtime",
-        "Unity.AI.Navigation",
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
-    "excludePlatforms": [],
-    "allowUnsafeCode": false,
-    "overrideReferences": true,
-    "precompiledReferences": [
-        "nunit.framework.dll"
-    ],
-    "autoReferenced": false,
-    "defineConstraints": [
-        "BEHAVIORLLM_HAS_AI_NAVIGATION",
-        "UNITY_INCLUDE_TESTS"
-    ],
-    "versionDefines": [
-        {
-            "name": "com.unity.ai.navigation",
-            "expression": "1.0.0",
-            "define": "BEHAVIORLLM_HAS_AI_NAVIGATION"
-        }
-    ],
-    "noEngineReferences": false
+  "name": "Project.Samples.PrisonYard.Tests",
+  "rootNamespace": "Project.Samples.PrisonYard.Tests",
+  "references": [
+    "Project.Samples.PrisonYard",
+    "BehaviorLLM.Runtime",
+    "Unity.AI.Navigation",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "BEHAVIORLLM_HAS_AI_NAVIGATION",
+    "UNITY_INCLUDE_TESTS",
+    "ENABLE_INPUT_SYSTEM_PACKAGE"
+  ],
+  "versionDefines": [
+    {
+      "name": "com.unity.ai.navigation",
+      "expression": "1.0.0",
+      "define": "BEHAVIORLLM_HAS_AI_NAVIGATION"
+    },
+    {
+      "name": "com.unity.inputsystem",
+      "expression": "1.0.0",
+      "define": "ENABLE_INPUT_SYSTEM_PACKAGE"
+    }
+  ],
+  "noEngineReferences": false
 }

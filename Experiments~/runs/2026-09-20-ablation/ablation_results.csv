@@ -1,0 +1,5 @@
+model,variant,correct,scenarios,conditional_correct,conditional_total,failures
+Qwen3.5-2B,original,10,16,0,6,quiet_1=HoldPosition; quiet_2=HoldPosition; quiet_3=HoldPosition; hurt_intruder_1=Chase; hurt_intruder_2=Chase; hurt_intruder_3=Chase
+Qwen3.5-2B,reordered,10,16,0,6,quiet_1=HoldPosition; quiet_2=HoldPosition; quiet_3=HoldPosition; hurt_intruder_1=Chase; hurt_intruder_2=Chase; hurt_intruder_3=Chase
+Qwen3.5-4B,original,11,16,1,6,quiet_1=HoldPosition; quiet_3=HoldPosition; hurt_intruder_1=Chase; hurt_intruder_2=Chase; hurt_intruder_3=Chase
+Qwen3.5-4B,reordered,12,16,2,6,quiet_1=HoldPosition; quiet_2=HoldPosition; quiet_3=HoldPosition; hurt_intruder_3=Chase

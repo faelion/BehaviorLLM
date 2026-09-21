@@ -291,8 +291,52 @@ namespace BehaviorLLM.Tests.Runtime
 
             StringAssert.Contains("Route_South", backend.Requests[1].JsonSchema);
             Assert.IsFalse(backend.Requests[1].JsonSchema.Contains("Route_North"));
-            StringAssert.Contains("Route_South", backend.Requests[1].SystemPrompt);
+            StringAssert.Contains("Route_South", backend.Requests[1].UserPrompt);
+            Assert.AreEqual(backend.Requests[0].SystemPrompt, backend.Requests[1].SystemPrompt);
         }
+
+        [Test]
+        public void ImpossibleStateBudget_UsesFallbackWithoutSendingRequest()
+        {
+            Fixture f = CreateFixture();
+            ConfigureFallback(f.Maker, "HoldPosition", "");
+            InvokePrivate(f.Maker, "Think");
+            StubBackend backend = f.Maker.GetComponent<StubBackend>();
+            f.Maker.Config.maxPromptChars = backend.Requests[0].SystemPrompt.Length + 1;
+            backend.Requests.Clear();
+            DecisionTelemetry captured = null;
+            f.Maker.DecisionTelemetryRecorded += t => captured = t;
+            InvokePrivate(f.Maker, "Think");
+            Assert.AreEqual(0, backend.Requests.Count);
+            Assert.IsTrue(captured.usedFallback);
+            StringAssert.Contains("Prompt budget", captured.backendError);
+        }
+
+#if UNITY_EDITOR
+        [Test]
+        public void SchemaDump_MatchesFilteredRequestAndClearsWhenUnconstrained()
+        {
+            Fixture f = CreateFixture();
+            SetPrivate(f.Maker, "actionAvailabilityProvider", new MutableAvailability { AllowPatrol = false });
+            string path = System.IO.Path.Combine(Application.streamingAssetsPath, "_last_applied_schema.json");
+            string previous = System.IO.File.Exists(path) ? System.IO.File.ReadAllText(path) : null;
+            try
+            {
+                InvokePrivate(f.Maker, "Think");
+                StubBackend backend = f.Maker.GetComponent<StubBackend>();
+                Assert.AreEqual(backend.Requests[0].JsonSchema, System.IO.File.ReadAllText(path));
+                StringAssert.DoesNotContain("Patrol", System.IO.File.ReadAllText(path));
+                f.Maker.Config.useStructuredOutput = false;
+                InvokePrivate(f.Maker, "Think");
+                Assert.AreEqual(string.Empty, System.IO.File.ReadAllText(path));
+            }
+            finally
+            {
+                if (previous == null) System.IO.File.Delete(path);
+                else System.IO.File.WriteAllText(path, previous);
+            }
+        }
+#endif
 
         [Test]
         public void Response_RechecksArgumentsAndAvailabilityAfterInference()

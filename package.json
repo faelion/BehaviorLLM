@@ -1,6 +1,6 @@
 {
   "name": "com.faelion.behaviorllm",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "displayName": "BehaviorLLM",
   "description": "Open-source Unity package for creating decision-making game characters and systems driven by local Large Language Models. Define agents with discrete action sets and modular input pipelines that translate game state into textual observations.",
   "unity": "6000.0",

@@ -88,16 +88,16 @@ namespace BehaviorLLM.Tests.Runtime
             List<string> deferred = new List<string>();
             config.GetPromptDescription(Provider("Prisoner_02"), false, deferred);
 
-            CollectionAssert.AreEqual(new[] { "Talk" }, deferred);
+            CollectionAssert.AreEqual(new[] { "Talk", "Announce" }, deferred);
         }
 
         [Test]
-        public void AuthoredArguments_StayInTheMenu()
+        public void AuthoredArguments_AreDeferredWhenAProviderCanOverrideThem()
         {
             string menu = config.GetPromptDescription(Provider("Prisoner_02"), false, null);
 
-            StringAssert.Contains("[arg: Curfew | Headcount]", menu,
-                "Authored values cannot change at runtime, so they cost nothing in the cached prefix.");
+            StringAssert.DoesNotContain("Curfew", menu);
+            StringAssert.Contains("listed under ARGUMENTS below", menu);
             StringAssert.DoesNotContain("Prisoner_02", menu);
         }
 
@@ -109,6 +109,30 @@ namespace BehaviorLLM.Tests.Runtime
             StringAssert.Contains("[arg: Prisoner_02]", menu,
                 "Turning the setting off has to restore the pre-0.4.0 prompt exactly, or the "
                 + "before/after measurement is not comparing what it claims to.");
+        }
+
+        [Test]
+        public void FullPrompt_WithExamples_IsStableAcrossChangingAndEmptyProviders()
+        {
+            var options = new PromptBuilder.SystemPromptOptions { InlineProviderOptions = false, IncludeExamples = true };
+            options.ArgumentOptionsFor = Provider("Prisoner_02");
+            string first = PromptBuilder.BuildSystemPrompt(config, options);
+            options.ArgumentOptionsFor = Provider("Prisoner_03");
+            Assert.AreEqual(first, PromptBuilder.BuildSystemPrompt(config, options));
+            options.ArgumentOptionsFor = Provider();
+            Assert.AreEqual(first, PromptBuilder.BuildSystemPrompt(config, options));
+            StringAssert.DoesNotContain("Prisoner_02", first);
+        }
+
+        [Test]
+        public void FullPrompt_DoesNotInlineProviderOverridesOfAuthoredValues()
+        {
+            var options = new PromptBuilder.SystemPromptOptions { InlineProviderOptions = false };
+            options.ArgumentOptionsFor = (action, parameter) => new[] { "FirstTarget" };
+            string first = PromptBuilder.BuildSystemPrompt(config, options);
+            options.ArgumentOptionsFor = (action, parameter) => new[] { "SecondTarget" };
+            Assert.AreEqual(first, PromptBuilder.BuildSystemPrompt(config, options));
+            StringAssert.DoesNotContain("FirstTarget", first);
         }
 
         [Test]

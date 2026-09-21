@@ -166,15 +166,16 @@ namespace BehaviorLLM.Core.Actions
         /// The action menu, optionally leaving provider-supplied argument lists out of it.
         ///
         /// This exists because of where the two kinds of argument list come from.
-        /// <see cref="ActionParameter.allowedValues"/> is authored in this asset and cannot
-        /// change while the game runs, so printing it here costs nothing: it is part of the stable
-        /// prefix an inference server keeps in its KV cache. A list from an
+        /// <see cref="ActionParameter.allowedValues"/> is authored in this asset and normally
+        /// stays fixed. With no provider, it belongs in the stable prefix an inference server
+        /// keeps in its KV cache. A list from an
         /// <c>IArgumentOptionsProvider</c> is computed from the scene, and for anything whose
         /// arguments are *other entities* - who is standing nearby, which hiding place is free - it
         /// changes almost every decision. Printing that here rewrites the prefix each turn and
         /// throws the cache away.
         ///
-        /// With <paramref name="inlineProviderOptions"/> false, those parameters are listed without
+        /// Providers may override authored lists too. With <paramref name="inlineProviderOptions"/>
+        /// false and a provider attached, all parameters are listed without
         /// their values and the action names are reported through <paramref name="deferred"/>, so
         /// the caller can put the current values in the per-decision state block instead. The model
         /// still sees them; the schema enforces them either way.
@@ -216,15 +217,9 @@ namespace BehaviorLLM.Core.Actions
                     ActionParameter parameter = parameters[p];
                     if (parameter == null) continue;
 
-                    // Whether a parameter's values are authored here is a property of this asset
-                    // and never changes while the game runs, which is exactly what the cached
-                    // prefix needs. Asking the provider instead does not work: it reports "nothing
-                    // right now" and "I do not handle this" the same way, so the marker would
-                    // appear and disappear as targets came and went, rewriting the prefix just as
-                    // the values themselves used to.
-                    bool authored = parameter.allowedValues != null && parameter.allowedValues.Count > 0;
-
-                    if (!inlineProviderOptions && !authored && optionsFor != null)
+                    // A provider can override authored values too. Defer consistently while a
+                    // provider is attached, even when it has no options on this particular turn.
+                    if (!inlineProviderOptions && optionsFor != null)
                     {
                         sb.Append(" [").Append(parameter.name).Append(": listed under ARGUMENTS below]");
                         anyDeferred = true;

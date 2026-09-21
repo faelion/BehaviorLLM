@@ -29,10 +29,12 @@ namespace Project.Samples.PrisonYard.Editor
             }
         }
 
-        public static string Scenes => Root + "/Scenes";
-        public static string Data => Root + "/Data";
-        public static string CharacterArt => Root + "/Art/Characters";
-        public static string DungeonArt => Root + "/Art/Dungeon";
+        public static string OutputRoot => BehaviorLLM.Editor.SampleAssetPaths.OutputRoot(Root, "PrisonYard");
+        public static string Scenes => OutputRoot + "/Scenes";
+        public static string Data => OutputRoot + "/Data";
+        private static string Art => BehaviorLLM.Editor.SampleAssetPaths.PrepareArt(Root, "PrisonYard");
+        public static string CharacterArt => Art + "/Characters";
+        public static string DungeonArt => Art + "/Dungeon";
 
         /// <summary>
         /// This file lives at <c>&lt;root&gt;/Scripts/Editor/PrisonYardPaths.cs</c>, so the root is

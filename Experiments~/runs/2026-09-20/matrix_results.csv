@@ -1,0 +1,13 @@
+model,profile,structured_output,scenarios,errors,json_parse_rate,valid_action_rate,expected_action_rate,mean_latency_ms,p50_latency_ms,p95_latency_ms,mean_completion_tokens,cache_hit_rate
+Qwen3.5-2B,Reactive,True,16,0,1.0,1.0,0.625,179.2,179.9,206.7,12.8,0.813
+Qwen3.5-2B,Reactive,False,16,0,1.0,1.0,0.625,173.6,161.6,205.5,12.8,0.813
+Qwen3.5-2B,Deliberative,True,16,0,1.0,1.0,0.6875,286.1,281.4,342.1,26.8,0.825
+Qwen3.5-2B,Deliberative,False,16,0,1.0,1.0,0.625,283.5,289.8,346.2,26.7,0.825
+Granite-4.1-3B,Reactive,True,16,0,1.0,1.0,0.8125,1230.0,1217.5,1446.9,13.4,0.891
+Granite-4.1-3B,Reactive,False,16,0,1.0,1.0,0.8125,1230.6,1205.5,1410.5,13.4,0.891
+Granite-4.1-3B,Deliberative,True,16,0,1.0,1.0,0.875,2175.0,2092.6,2568.0,24.6,0.898
+Granite-4.1-3B,Deliberative,False,16,0,1.0,1.0,0.6875,2129.3,2082.5,2467.6,24.4,0.898
+Qwen3.5-4B,Reactive,True,16,0,1.0,1.0,0.75,1542.5,1505.4,1817.9,13.6,0.813
+Qwen3.5-4B,Reactive,False,16,0,1.0,1.0,0.75,1551.6,1497.2,1841.8,13.6,0.813
+Qwen3.5-4B,Deliberative,True,16,0,1.0,1.0,0.875,3006.2,2644.2,4077.1,29.6,0.825
+Qwen3.5-4B,Deliberative,False,16,0,1.0,1.0,1.0,3119.3,2718.7,4738.1,31.1,0.825

@@ -34,11 +34,11 @@ namespace BehaviorLLM.Tests.Runtime
             string prompt = PromptBuilder.BuildSystemPrompt(config, new PromptBuilder.SystemPromptOptions { Persona = "You are a guard." });
 
             StringAssert.StartsWith("You are a guard.", prompt);
-            StringAssert.Contains("{\"action\":\"<name>\",\"arg\":\"<value>\"}", prompt);
+            StringAssert.Contains("{\"action\":\"<name>\"}", prompt);
             StringAssert.Contains("- HoldPosition: Wait.", prompt);
             StringAssert.Contains("- MoveTo(String): Walk to a zone. [arg: Zone_A | Zone_B]", prompt);
             StringAssert.Contains("### EXAMPLES", prompt);
-            StringAssert.Contains("OUTPUT: {\"action\":\"HoldPosition\",\"arg\":\"\"}", prompt);
+            StringAssert.Contains("OUTPUT: {\"action\":\"HoldPosition\"}", prompt);
             StringAssert.Contains("OUTPUT: {\"action\":\"MoveTo\",\"arg\":\"Zone_A\"}", prompt);
             StringAssert.Contains("GUIDE:\nStay calm.", prompt);
         }
@@ -48,8 +48,23 @@ namespace BehaviorLLM.Tests.Runtime
         {
             string prompt = PromptBuilder.BuildSystemPrompt(config, new PromptBuilder.SystemPromptOptions { ReasonMaxChars = 60 });
 
-            StringAssert.Contains("{\"reason\":\"<why, under 60 characters>\",\"action\":\"<name>\",\"arg\":\"<value>\"}", prompt);
+            StringAssert.Contains("{\"reason\":\"<why, under 60 characters>\",\"action\":\"<name>\"}", prompt);
             StringAssert.Contains("{\"reason\":\"", prompt);
+        }
+
+        [Test]
+        public void Examples_UseAllNamedParametersAndIntegerStrings()
+        {
+            config.validActions[1] = new ActionDefinition
+            {
+                actionName = "MoveTo", parameters = new List<ActionParameter>
+                {
+                    new ActionParameter { name = "destination", exampleValue = "Zone_A" },
+                    new ActionParameter { name = "speed", type = ActionParameterType.Int, exampleValue = "-2" }
+                }
+            };
+            string prompt = PromptBuilder.BuildSystemPrompt(config, null);
+            StringAssert.Contains("OUTPUT: {\"action\":\"MoveTo\",\"destination\":\"Zone_A\",\"speed\":\"-2\"}", prompt);
         }
 
         [Test]
@@ -79,7 +94,7 @@ namespace BehaviorLLM.Tests.Runtime
             Assert.IsFalse(trimmed.EndsWith("ID"), "must not cut mid-word");
 
             string tiny = PromptBuilder.TrimStatePrompt(state, 5);
-            Assert.AreEqual("STATE:\n--- Vision ---", tiny, "header and first line survive an impossible budget");
+            Assert.AreEqual("STATE:\n--- Vision ---\n- [1.0m] ID: A", tiny, "topic and first observation survive an impossible budget");
         }
 
         [Test]
@@ -119,7 +134,9 @@ namespace BehaviorLLM.Tests.Runtime
             string trimmed = PromptBuilder.TrimStatePrompt(state, 60);
 
             StringAssert.StartsWith("AVAILABLE THIS TURN: MoveTo, HoldPosition\nSTATE:", trimmed);
-            Assert.LessOrEqual(trimmed.Length, 60);
+            StringAssert.Contains("STATE:\n--- Vision ---", trimmed);
+            // Metadata plus the first observation may exceed an impossible budget; the runtime
+            // rejects that request instead of discarding all observations.
         }
 
         [Test]
@@ -127,6 +144,17 @@ namespace BehaviorLLM.Tests.Runtime
         {
             Assert.AreEqual("STATE:\n- A", PromptBuilder.TrimStatePrompt("STATE:\n- A", 100));
             Assert.AreEqual("STATE:\n- A", PromptBuilder.TrimStatePrompt("STATE:\n- A", 0));
+        }
+
+        [Test]
+        public void TrimStatePrompt_PreservesStateAfterAvailabilityAndArguments()
+        {
+            string state = PromptBuilder.BuildStatePrompt("Health: 20\nEnemy: Intruder", new[] { "Talk" },
+                new Dictionary<string, IList<string>> { { "Talk", new[] { "Prisoner_03" } } });
+            string trimmed = PromptBuilder.TrimStatePrompt(state, 40);
+            StringAssert.Contains("- Talk: Prisoner_03", trimmed);
+            StringAssert.Contains("STATE:\nHealth: 20", trimmed);
+            StringAssert.DoesNotContain("Enemy: Intruder", trimmed);
         }
     }
 }

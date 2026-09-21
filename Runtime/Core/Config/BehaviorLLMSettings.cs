@@ -22,7 +22,7 @@ namespace BehaviorLLM.Core.Config
     /// Project-wide switches for the package: how loud it is, whether it records anything, and
     /// which diagnostics it writes.
     ///
-    /// The other four config assets each tune one *domain* and are meant to exist in several
+    /// The other config assets each tune one *domain* and are meant to exist in several
     /// variants - a Reactive preset and a Deliberative one, a perception profile per character
     /// type. This one is different: there is one per project, and it answers questions that have
     /// nothing to do with how any particular decision maker behaves. "Should a shipped build print
@@ -38,8 +38,8 @@ namespace BehaviorLLM.Core.Config
     /// silences it.
     ///
     /// Create it with <c>Assets > Create > BehaviorLLM > Settings</c> and put it in a
-    /// <c>Resources</c> folder so it is found at runtime. Without one, the package uses the
-    /// defaults declared here, which are the ones documented in the User Guide.
+    /// <c>Resources</c> folder so it is found at runtime. Without a project override, the package
+    /// loads its uniquely named shipped preset, then falls back to the defaults declared here.
     /// </summary>
     [CreateAssetMenu(fileName = "BehaviorLLMSettings", menuName = "BehaviorLLM/Settings", order = 0)]
     public class BehaviorLLMSettings : ScriptableObject
@@ -49,6 +49,9 @@ namespace BehaviorLLM.Core.Config
         /// asset means the package stops finding it and silently falls back to the defaults.
         /// </summary>
         public const string ResourceName = "BehaviorLLMSettings";
+
+        /// <summary>Unique resource path for the shipped preset; project overrides use ResourceName.</summary>
+        public const string DefaultResourcePath = "BehaviorLLM/Defaults/Settings";
 
         [Header("Logging")]
         [Tooltip("How much the package prints to the console in the Editor and in a development " +
@@ -114,6 +117,7 @@ namespace BehaviorLLM.Core.Config
                 {
                     searched = true;
                     loaded = Resources.Load<BehaviorLLMSettings>(ResourceName);
+                    if (loaded == null) loaded = Resources.Load<BehaviorLLMSettings>(DefaultResourcePath);
                 }
                 return loaded != null ? loaded : (loaded = CreateInstance<BehaviorLLMSettings>());
             }

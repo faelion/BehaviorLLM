@@ -29,10 +29,12 @@ namespace Project.Samples.StealthGuard.Editor
             }
         }
 
-        public static string Scenes => Root + "/Scenes";
-        public static string Data => Root + "/Data";
-        public static string CharacterArt => Root + "/Art/Characters";
-        public static string PropArt => Root + "/Art/Props";
+        public static string OutputRoot => BehaviorLLM.Editor.SampleAssetPaths.OutputRoot(Root, "StealthGuard");
+        public static string Scenes => OutputRoot + "/Scenes";
+        public static string Data => OutputRoot + "/Data";
+        private static string Art => BehaviorLLM.Editor.SampleAssetPaths.PrepareArt(Root, "StealthGuard");
+        public static string CharacterArt => Art + "/Characters";
+        public static string PropArt => Art + "/Props";
 
         /// <summary>
         /// This file lives at <c>&lt;root&gt;/Scripts/Editor/StealthGuardPaths.cs</c>, so the root is

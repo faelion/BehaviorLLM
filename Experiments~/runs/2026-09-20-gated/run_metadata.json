@@ -1,0 +1,40 @@
+{
+  "utc": "2026-09-20T18:59:07Z",
+  "command": [
+    "Docs/Experiments/run_gated.py",
+    "--model-dir",
+    "D:/repos/TFG/Assets/StreamingAssets/models",
+    "--input-dir",
+    "D:/repos/TFG/Logs/BehaviorLLMExperiments",
+    "--output-dir",
+    "D:/repos/TFG/Docs/Experiments/runs/2026-09-20-gated"
+  ],
+  "commit": "4bebdcabb1f63a678612943305ea29d3a964327d",
+  "working_tree": "M ../../Assets/BehaviorLLM/CONTRIBUTING.md\n M ../../Assets/BehaviorLLM/Documentation~/BehaviorLLM_Architecture_Analysis.md\n M ../../Assets/BehaviorLLM/Documentation~/USER_GUIDE.md\n M ../../Assets/BehaviorLLM/README.md\n D ../../Assets/BehaviorLLM/Resources/BehaviorLLMSettings.asset\n D ../../Assets/BehaviorLLM/Resources/BehaviorLLMSettings.asset.meta\n M ../../Assets/BehaviorLLM/Runtime/Core/Actions/ActionConfig.cs\n M ../../Assets/BehaviorLLM/Runtime/Core/Config/BehaviorLLMDefaults.cs\n M ../../Assets/BehaviorLLM/Runtime/Core/Config/BehaviorLLMSettings.cs\n M ../../Assets/BehaviorLLM/Runtime/Core/Decisions/DecisionMaker.cs\n M ../../Assets/BehaviorLLM/Runtime/Core/Decisions/PromptBuilder.cs\n M ../../Assets/BehaviorLLM/Samples/PrisonYard/Scripts/Demo/DirectorControls.cs\n M ../../Assets/BehaviorLLM/Samples/PrisonYard/Scripts/Editor/PrisonYard.Sample.Editor.asmdef\n M ../../Assets/BehaviorLLM/Samples/PrisonYard/Scripts/Editor/PrisonYardPaths.cs\n M ../../Assets/BehaviorLLM/Samples/PrisonYard/Scripts/Editor/PrisonYardSceneBuilder.cs\n M ../../Assets/BehaviorLLM/Samples/PrisonYard/Tests/EditMode/PrisonYard.Sample.Tests.asmdef\n M ../../Assets/BehaviorLLM/Samples/StealthGuard/README.md\n M ../../Assets/BehaviorLLM/Samples/StealthGuard/Scripts/Editor/StealthGuard.Sample.Editor.asmdef\n M ../../Assets/BehaviorLLM/Samples/StealthGuard/Scripts/Editor/StealthGuardPaths.cs\n M ../../Assets/BehaviorLLM/Samples/StealthGuard/Scripts/Editor/StealthGuardSceneBuilder.cs\n M ../../Assets/BehaviorLLM/Tests/Editor/ShippedModelConfigTests.cs\n M ../../Assets/BehaviorLLM/Tests/Runtime/DecisionMakerDispatchTests.cs\n M ../../Assets/BehaviorLLM/Tests/Runtime/DynamicArgumentPlacementTests.cs\n M ../../Assets/BehaviorLLM/Tests/Runtime/PromptBuilderTests.cs\n M ../../CONTRIBUTING.md\n M gen_artifacts.cs\n M gen_gated.cs\n M run_ablation.py\n M run_gated.py\n M run_matrix.py\n M ../ISSUES_2026-09-14.md\n M ../README_review_2026-09-12.md\n M ../REPOSITORY_REVIEW_2026-09-13.md\n M ../Thesis/REVIEW_2026-09-12.md\n M ../Thesis/REVISION.md\n M ../Thesis/sections/00-front-abstract.tex\n M ../Thesis/sections/05-development.tex\n M ../Thesis/sections/06-validation.tex\n M ../Thesis/sections/07-conclusions.tex\n M ../Thesis/sections/09-annexes.tex\n M ../../PLAN.md\n M ../../PLAN_PrisonYard.md\n?? ../../Assets/BehaviorLLM/Editor/SampleAssetPaths.cs\n?? ../../Assets/BehaviorLLM/Editor/SampleAssetPaths.cs.meta\n?? ../../Assets/BehaviorLLM/Resources/BehaviorLLM.meta\n?? ../../Assets/BehaviorLLM/Resources/BehaviorLLM/\n?? ../../Assets/BehaviorLLM/Runtime/Defaults/Model_ActiveCatalog.asset\n?? ../../Assets/BehaviorLLM/Runtime/Defaults/Model_ActiveCatalog.asset.meta\n?? ../../Assets/BehaviorLLM/Tests/Editor/ConsumerSetupTests.cs\n?? ../../Assets/BehaviorLLM/Tests/Editor/ConsumerSetupTests.cs.meta\n?? __pycache__/\n?? run_coldwarm.py\n?? runs/",
+  "server": "C:\\Users\\alexx\\AppData\\Local\\Microsoft\\WinGet\\Packages\\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\\llama-server.EXE",
+  "backend_version": "version: 0.3.0-dev (build 10775, commit 67a17c17c)\nbuilt with Clang 20.1.8 for Windows x86_64",
+  "models": [
+    {
+      "file": "Qwen3.5-2B-Q4_K_M.gguf",
+      "bytes": 1280835840
+    },
+    {
+      "file": "granite-4.1-3b-Q4_K_M.gguf",
+      "bytes": 2099501664
+    },
+    {
+      "file": "Qwen3.5-4B-Q4_K_M.gguf",
+      "bytes": 2740937888
+    }
+  ],
+  "fixture_sha256": {
+    "schema_deliberative.json": "2158a3743a5ece0b9a7635b916bd26163d5f2e1f0ccfa795acd128dffcac9eeb",
+    "schema_gated_hurt.json": "0785bcbd6077171cdcd83ffced33d010e59adf0e85412811496bbb7d21f694bf",
+    "schema_gated_quiet.json": "23461a543bb6b79495412a7a04bbe1c79acf4fb527ced7964b14af77a2908f62",
+    "schema_reactive.json": "16f2f1af1bd3c9e30855c44aa322562437c25882a56cc25ca3dcd018d5079d20",
+    "system_deliberative.txt": "276a07d7ac7b6ea509b4cc184a82236cdeee6dab38b1579a8fa46d716d1e1bed",
+    "system_dynamic.txt": "148808dce39ecffc35e9323b14d66ff2460b5e4944d055cb469b726a76baf1b2",
+    "system_reactive.txt": "73438b18849de2d9dab5bd19e172c67479912338da189fda6c33cb9714d6f77c"
+  },
+  "scope": "Offline model benchmark; does not execute Unity transport or dispatch."
+}

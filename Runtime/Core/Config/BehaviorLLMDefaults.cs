@@ -26,7 +26,7 @@ namespace BehaviorLLM.Core.Config
         public const string BlackboardConfigAsset = "Blackboard_Default";
 
         /// <summary>Asset name of the shipped model preset used when no model has been chosen yet.</summary>
-        public const string ModelConfigAsset = "Model_Qwen3.5-2B-Q4_K_M";
+        public const string ModelConfigAsset = "Model_ActiveCatalog";
 
         /// <summary>
         /// Looks up one of the shipped preset assets by name. Editor only: at runtime it returns

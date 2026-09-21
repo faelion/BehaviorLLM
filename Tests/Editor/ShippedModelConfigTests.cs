@@ -13,7 +13,14 @@ namespace BehaviorLLM.Tests.Editor
     /// </summary>
     public class ShippedModelConfigTests
     {
-        private const string PresetFolder = "Assets/BehaviorLLM/Runtime/Defaults/Models";
+        private static string PresetFolder
+        {
+            get
+            {
+                var preset = BehaviorLLMDefaults.FindShipped<BehaviorLLMModelConfig>(BehaviorLLMDefaults.ModelConfigAsset);
+                return System.IO.Path.GetDirectoryName(AssetDatabase.GetAssetPath(preset)).Replace('\\', '/') + "/Models";
+            }
+        }
 
         private static BehaviorLLMModelConfig[] LoadPresets()
         {

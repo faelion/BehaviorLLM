@@ -1,0 +1,7 @@
+model,phase,content,latency_ms,prompt_n,cache_n,predicted_n
+Qwen3.5-2B,cold,"{""action"":""Chase"",""arg"":""Intruder_01""}",379.3469999800436,420,0,16
+Qwen3.5-2B,warm,"{""action"":""Chase"",""arg"":""Intruder_01""}",171.3397999992594,4,416,16
+Granite-4.1-3B,cold,"{""action"":""Chase"",""arg"":""Intruder_01""}",2431.8012000003364,388,0,15
+Granite-4.1-3B,warm,"{""action"":""Chase"",""arg"":""Intruder_01""}",1360.8836999919731,1,387,15
+Qwen3.5-4B,cold,"{""action"":""Chase"",""arg"":""Intruder_01""}",4361.183300003177,420,0,16
+Qwen3.5-4B,warm,"{""action"":""Chase"",""arg"":""Intruder_01""}",2229.356399999233,4,416,16

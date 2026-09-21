@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/faelion/BehaviorLLM/releases/latest"><img alt="release" src="https://img.shields.io/github/v/tag/faelion/BehaviorLLM?label=release&color=2F5FA6"></a>
   <img alt="unity" src="https://img.shields.io/badge/unity-6000.0%2B-2F5FA6?logo=unity&logoColor=white">
-  <img alt="tests" src="https://img.shields.io/badge/tests-256%20passing-3A8A5E">
+  <img alt="tests" src="https://img.shields.io/badge/tests-267%20passing-3A8A5E">
   <a href="LICENSE.md"><img alt="license" src="https://img.shields.io/badge/license-MIT-3A8A5E"></a>
   <a href="https://github.com/faelion/BehaviorLLM/stargazers"><img alt="stars" src="https://img.shields.io/github/stars/faelion/BehaviorLLM?color=C8701E"></a>
 </p>
@@ -51,17 +51,17 @@ act      {"action":"Chase","arg":"Intruder"}  ->  actionBindings["Chase"].Invoke
 
 ## Measured
 
-All numbers below come from the harness and the recorded runs in [`Experiments~/`](Experiments~/), on a mid-range PC (Ryzen 5 7600X, RX 6650 XT 8 GB) with 4-bit models:
+The historical September 4–10 baseline numbers below come from the harness and recorded runs in [`Experiments~/`](Experiments~/), on a mid-range PC (Ryzen 5 7600X, RX 6650 XT 8 GB) with 4-bit models:
 
 | | |
 |---|---|
 | Structurally valid decisions | **192 of 192** across three models, two profiles, schema on and off |
-| Expected action chosen | 62% (Qwen3.5-2B) to 94% (Qwen3.5-4B, Deliberative) on 16 labelled situations |
+| Expected action chosen | 62–94% with the schema enabled, on 16 labelled situations per configuration; the full matrix includes a 100% schema-disabled row |
 | One decision, warm | **112 ms** on Qwen3.5-2B, against 1,956 ms for the same decision cold |
 | Eight characters on one model | 444 decisions in five minutes on Granite 4.1-3B, median 1,686 ms, no failed requests |
 | Cost of the schema | none measurable: 189 ms with it against 184 ms without |
 
-The folder holds the scripts, the exact prompts and schemas they send, the per-decision CSVs and three telemetry runs, so every figure above can be re-run or re-read.
+The folder holds the scripts, the exact prompts and schemas they send, the per-decision CSVs and three telemetry runs, so the matrix and live-run figures can be inspected. The cold/warm pair is a historical illustration without its original raw capture; `run_coldwarm.py` now supplies an explicit repeatable protocol. New validation runs live in dated subfolders and do not replace these baseline claims.
 
 ## Requirements
 
@@ -97,7 +97,7 @@ or *Window > Package Manager > Add package from git URL…* with the same URL. D
 2. Add observation modules: **`ModularVisionModule`** (sees `LLMContextObject`s in a sphere or cone), **`BasicMemory`** (the last few executed actions), and for self-status an `LLMContextObject` plus **`SelfObservationModule`** on the object itself.
 3. Create an **`ActionConfig`** asset (*Create > BehaviorLLM > Action Config*) and list the actions: name, description, parameter type, optional example and **allowed arguments**.
 4. Assign that config. **Action Bindings** fills itself with one entry per action; hook a function up to each `On Execute` (`UnityEvent<ActionArguments>`; `args.First` carries a single value, `args["name"]` a named one).
-5. Tag perceivable objects with `LLMContextObject` (name, type, description, live data bindings).
+5. Tag perceivable objects with `LLMContextObject` (name, type, description, live data bindings) and a collider on the same GameObject.
 6. Press Play. It observes, asks the model, and invokes your handlers.
 
 <p align="center">
@@ -132,7 +132,7 @@ Presets ship under `Runtime/Defaults` and are wired automatically when you add a
 | `Reactive` (default) | Enemies, allies, anything that must respond within a beat | No thinking, no reason field, about a 50-token budget |
 | `Deliberative` | Managers, directors, planners that decide every few seconds | A short capped `reason` before the action, and optionally a native thinking budget |
 
-Both profiles share one server; the choice travels with each request. Deliberation cost 50 to 90 percent more latency in the measurements above and only helped the largest model tested, so measure before enabling it. Each shipped model config records the profile it was measured to prefer, and the package warns at startup if you pick the other one.
+Both profiles share one server; the choice travels with each request. Deliberation cost 50 to 90 percent more latency in the measurements above and improved schema-enabled expected-action matches from 13/16 to 15/16 on Qwen3.5-4B and 10/16 to 11/16 on Qwen3.5-2B, while Granite fell from 13/16 to 12/16. These small samples are not a general ranking; measure before enabling it. Each shipped model config records the profile it was measured to prefer, and the package warns at startup if you pick the other one.
 
 ## Samples
 

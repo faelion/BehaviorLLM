@@ -1,0 +1,13 @@
+model,scenario,raw_output,expected_match,latency_ms
+Qwen3.5-2B,quiet_1,"{""action"":""Patrol"",""arg"":""Route_North""}",1,414.0
+Qwen3.5-2B,quiet_2,"{""action"":""Patrol"",""arg"":""Route_South""}",1,250.4
+Qwen3.5-2B,quiet_3,"{""action"":""Patrol"",""arg"":""Route_North""}",1,249.4
+Qwen3.5-2B,hurt_intruder_1,"{""action"":""HoldPosition""}",0,213.6
+Qwen3.5-2B,hurt_intruder_2,"{""action"":""Retreat"",""arg"":""SafeZone_A""}",1,231.4
+Qwen3.5-2B,hurt_intruder_3,"{""action"":""HoldPosition""}",0,195.3
+Qwen3.5-4B,quiet_1,"{""action"":""Patrol"",""arg"":""Route_North""}",1,2603.0
+Qwen3.5-4B,quiet_2,"{""action"":""Patrol"",""arg"":""Route_South""}",1,1567.7
+Qwen3.5-4B,quiet_3,"{""action"":""Patrol"",""arg"":""Route_Perimeter""}",1,1574.7
+Qwen3.5-4B,hurt_intruder_1,"{""action"":""Retreat"",""arg"":""SafeZone_A""}",1,1638.2
+Qwen3.5-4B,hurt_intruder_2,"{""action"":""Retreat"",""arg"":""SafeZone_A""}",1,1671.4
+Qwen3.5-4B,hurt_intruder_3,"{""action"":""Retreat"",""arg"":""SafeZone_A""}",1,1546.9

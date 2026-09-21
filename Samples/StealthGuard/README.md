@@ -47,7 +47,7 @@ Everything the pack contributes is decoration and carries no collider. The four 
 ## What to watch
 
 - **The three guards patrol** between the blue markers while nothing is happening, each choosing its own route each time - and each choosing from a *different* list. `GuardArgumentOptions.patrolBeat` gives every guard its own beat, because argument options are built per decision maker: the same `Patrol` action means different places to different guards. Left unset, all three would keep independently picking the same route and standing in one corner.
-- **They have different personas and behave differently for it.** The persona is the only part of the prompt that differs between them - same actions, same schema, same model, same STATE format - so what they do differently is attributable to that one paragraph.
+- **They have different personas and behave differently for it.** They also have different patrol vocabularies and observations, so this scene does not isolate the effect of persona alone.
 - **Walk into its cone and it reacts immediately.** The vision module raises an interrupt when a previously unseen object enters view, so the guard does not wait for its next scheduled tick.
 - **Hide behind a wall and it loses you.** Cone vision raycasts against the walls' layer, so line of sight is real.
 - **Attack it below half health and the action menu changes.** `Chase` disappears, `Retreat` appears, and the guard withdraws to a green safe zone. The prompt did not change: the *available actions* did.
@@ -82,4 +82,4 @@ Add a marker to the scene with a `StealthGuardMarker` component and it joins the
 
 ## Measured on this scenario
 
-Granite 4.1 3B, Reactive profile, structured output on: **100% valid actions, 81% matching the hand-labelled expected action, 278 ms median decision**, on a Radeon RX 6650 XT. Reproduce with `Docs/Experiments/run_matrix.py` in the repository.
+**Historical offline matrix**, Granite 4.1 3B, Reactive, schema enabled: 16/16 valid, 13/16 expected actions, 278 ms p50 on a Radeon RX 6650 XT. This is not three-guard gameplay latency. The shipped live run `20260910_150511_stealthguard` has 306 decisions and a nearest-rank p50 of 700.073 ms. Reproduce the offline protocol with `Experiments~/run_matrix.py` from the package root.

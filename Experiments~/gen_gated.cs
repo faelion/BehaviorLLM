@@ -45,7 +45,7 @@ string schemaHurt = BuildFor(new[] { "HoldPosition", "Patrol", "Investigate", "R
 // Nothing happening: holding position is not an interesting choice, so it is not offered.
 string schemaQuiet = BuildFor(new[] { "Patrol", "Investigate", "Chase", "Retreat" });
 
-string dir = @"C:\Users\alexx\AppData\Local\Temp\claude\D--repos-TFG-Assets-BehaviorLLM\73a39eeb-32fb-4be2-97a8-7f9c9752b255\scratchpad\matrix";
+string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(UnityEngine.Application.dataPath, "../Logs/BehaviorLLMExperiments"));
 System.IO.Directory.CreateDirectory(dir);
 System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "system_dynamic.txt"), systemDynamic, new System.Text.UTF8Encoding(false));
 System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "schema_gated_hurt.json"), schemaHurt, new System.Text.UTF8Encoding(false));

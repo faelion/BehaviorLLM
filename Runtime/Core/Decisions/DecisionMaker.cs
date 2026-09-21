@@ -462,7 +462,6 @@ namespace BehaviorLLM.Core.Decisions
                 DeferredArgumentActions = deferredArgumentActions
             });
 
-            string previousSchema = cachedSchema;
             cachedSchema = null;
             if (Cfg.useStructuredOutput && actionConfig != null)
             {
@@ -474,9 +473,6 @@ namespace BehaviorLLM.Core.Decisions
                 if (!string.IsNullOrEmpty(schema))
                 {
                     cachedSchema = schema;
-                    #if UNITY_EDITOR
-                    if (schema != previousSchema) DumpToStreamingAssets("_last_applied_schema.json", schema);
-                    #endif
                 }
             }
         }
@@ -531,16 +527,14 @@ namespace BehaviorLLM.Core.Decisions
                 string name = deferredArgumentActions[i];
                 if (actionConfig == null || !actionConfig.TryGetAction(name, out ActionDefinition def)) continue;
 
-                // Only parameters whose values come from the provider are deferred; an authored
-                // list is stable and stays in the cached action menu where it costs nothing.
+                // Match schema precedence: live options first, then authored fallback values.
                 List<ActionParameter> parameters = def.Parameters;
                 for (int p = 0; p < parameters.Count; p++)
                 {
                     ActionParameter parameter = parameters[p];
                     if (parameter == null) continue;
-                    if (parameter.allowedValues != null && parameter.allowedValues.Count > 0) continue;
-
-                    IList<string> options = ResolveArgumentOptions(def, parameter);
+                    IList<string> options = ActionSchemaBuilder.CollectOptions(def, parameter,
+                        new ActionSchemaBuilder.Options { ArgumentOptionsFor = ResolveArgumentOptions });
                     if (options == null || options.Count == 0) continue;
 
                     // One entry per action for a single parameter, so the state block reads as it
@@ -653,9 +647,18 @@ namespace BehaviorLLM.Core.Decisions
                     // Validated at Awake, so by here the budget is known to leave usable room.
                     int stateBudget = Cfg.maxPromptChars - cachedSystemPrompt.Length;
                     statePrompt = PromptBuilder.TrimStatePrompt(statePrompt, stateBudget);
+                    if (statePrompt.Length > stateBudget)
+                    {
+                        EmitBackendUnavailableTelemetry(cachedSystemPrompt.Length + statePrompt.Length,
+                            LLMResponse.Failed("Prompt budget cannot contain action metadata and the first observation. Increase Max Prompt Chars or reduce argument options."));
+                        return;
+                    }
                 }
 
                 LLMRequest request = BuildRequest(statePrompt, schema);
+                #if UNITY_EDITOR
+                DumpToStreamingAssets("_last_applied_schema.json", request.JsonSchema ?? string.Empty);
+                #endif
                 int promptLength = cachedSystemPrompt.Length + statePrompt.Length;
 
                 #if UNITY_EDITOR
@@ -1065,8 +1068,7 @@ namespace BehaviorLLM.Core.Decisions
 
         #if UNITY_EDITOR
         // Written so the schema can be POSTed by hand to llama-server for out-of-band debugging.
-        // Editor only, and switchable: the write is small but it happens on every schema rebuild,
-        // which is once per decision for a decision maker with dynamic argument options.
+        // Editor only, and switchable: captures the final outgoing schema once per request.
         private static void DumpToStreamingAssets(string fileName, string content)
         {
             if (!BehaviorLLMSettings.Current.dumpAppliedSchema) return;
