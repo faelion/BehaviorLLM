@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Includes the named-parameter API changes described below.
 
 ### Sample installation fixes
+- Match the SectionVolume script filename to its MonoBehaviour type while preserving its GUID, so shipped prison section components reload reliably.
 - Move scene builders to `BehaviorLLM > Samples > Build StealthGuard Scene` and `Build PrisonYard Scene`.
 - Bake PrisonYard characters to native Unity prefabs, meshes and eight required animation clips, removing the consumer's hidden glTFast requirement. Rebuild the shipped PrisonYard scene with the native models.
 - Add missing art when rebuilding an older imported sample, preserve existing copied files, and refresh character/floor material shaders for the active Built-in or Universal render pipeline.
