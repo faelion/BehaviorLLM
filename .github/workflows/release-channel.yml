@@ -1,0 +1,43 @@
+name: Update stable install channel
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stable-install-channel
+  cancel-in-progress: false
+
+jobs:
+  update-release:
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    steps:
+      - name: Point release branch at the latest stable release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const repo = context.repo;
+            const { data: release } = await github.rest.repos.getLatestRelease(repo);
+            const { data: commit } = await github.rest.repos.getCommit({
+              ...repo, ref: release.tag_name
+            });
+            try {
+              await github.rest.git.getRef({ ...repo, ref: 'heads/release' });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.git.createRef({
+                ...repo, ref: 'refs/heads/release', sha: commit.sha
+              });
+              core.info(`Created release at ${release.tag_name} (${commit.sha})`);
+              return;
+            }
+            // Refuse to rewrite history if an older/divergent release is selected.
+            await github.rest.git.updateRef({
+              ...repo, ref: 'heads/release', sha: commit.sha, force: false
+            });
+            core.info(`Updated release to ${release.tag_name} (${commit.sha})`);

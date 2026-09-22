@@ -72,13 +72,27 @@ The folder holds the scripts, the exact prompts and schemas they send, the per-d
 
 ## Installation
 
-**Unity Package Manager (recommended).** In `Packages/manifest.json`:
+In Unity, open **Window > Package Manager > Add package from git URL…** and paste one of these URLs.
 
-```json
-"com.faelion.behaviorllm": "https://github.com/faelion/BehaviorLLM.git#v0.6.0"
+**Release (stable, recommended):**
+
+```text
+https://github.com/faelion/BehaviorLLM.git#release
 ```
 
-or *Window > Package Manager > Add package from git URL…* with the same URL. Drop the `#v0.6.0` suffix to track `main`.
+**Dev (latest development on `main`; may include breaking changes):**
+
+```text
+https://github.com/faelion/BehaviorLLM.git#main
+```
+
+These URLs stay the same across versions. Unity locks the installed commit; to update, add the same Git URL again through Package Manager. The `release` branch advances when a stable GitHub release is published.
+
+**Optional: pin a specific release.** Replace the branch suffix with a tag from [Releases](https://github.com/faelion/BehaviorLLM/releases), for example:
+
+```text
+https://github.com/faelion/BehaviorLLM.git#v0.6.0
+```
 
 **Manual.** Download the [latest release](https://github.com/faelion/BehaviorLLM/releases/latest) and copy the folder into your project's `Packages/` or `Assets/` folder.
 

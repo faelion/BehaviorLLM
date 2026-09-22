@@ -148,3 +148,13 @@ When reporting a bad decision, include:
 
 That triple - model + config + decision sample - is what we need to reproduce the bug;
 without it we can usually only guess.
+
+## Installation channels
+
+`main` is the development channel. The `release` branch points to the latest
+stable GitHub release tag and is maintained by `.github/workflows/release-channel.yml`.
+Publish stable releases from `main`; prereleases do not advance this branch.
+Never commit directly to `release` or move existing version tags. The workflow
+refuses non-fast-forward updates. Its manual run can initialize or retry the
+channel using GitHub's latest stable release. Keep the README's branch URLs
+unchanged when publishing a new version.
