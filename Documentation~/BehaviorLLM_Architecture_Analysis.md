@@ -36,7 +36,7 @@ It contains no game logic; it bridges Unity's component and event system to the 
 - **`LLMContextObject`** (passive metadata): name, type, description and reflection-based `dataBindings` (`HealthComponent.currentHealth`). Formats as `ID: Name | Type: Category | Info: ... | field: value`. Discovered by vision strategies through collider lookup; it does not observe itself.
 - **`SelfObservationModule`** (active self-status): `[RequireComponent(LLMContextObject)]`; reports the host's context every decision under its topic name.
 - **`ModularVisionModule`**: `Sphere` / `Cone` / `Global` strategies, a mask for what can be noticed and a second one for what blocks the view in Cone mode, and a throttled scan. Interrupts fire when a previously unseen instance ID enters view, never when one leaves. Implements `IBudgetedObservation` (nearest N). All of it comes from a shared `PerceptionConfig`.
-- **`BasicMemory`**: the last few executed actions, capacity and heading from the same `PerceptionConfig`; `IBudgetedObservation` (most recent N).
+- **`BasicMemory`**: the last few executed actions, capacity and heading from the same `PerceptionConfig`; `IBudgetedObservation` (most recent N). It fills itself by subscribing to its decision maker's `DecisionTelemetryRecorded` and keeping the model and fallback actions.
 - **`BehaviorLLMBlackboard` + `BlackboardObservationModule`**: a shared noticeboard, written through an action binding (`Post(ActionArguments)`) or from code, read as an observation by whichever characters carry the module. Exists so coordination does not grow the observation block with the square of the cast. Retention, staleness, heading and per-decision caps come from a `BlackboardConfig`; the module is `IBudgetedObservation` and its interrupt is opt-in per module, consumed once per note.
 - **`IObservationModule` / `IBudgetedObservation`**: the extension points for custom sensors. `ObservationComposer.Compose(modules, maxVision, maxMemory)` assembles the state block, one `--- Topic ---` section per module.
 
@@ -100,7 +100,7 @@ Every console line in `Runtime/` goes through `BehaviorLLMLog`, which is what en
 2. **Prompt.** Cached system prompt + `STATE:` block, trimmed to budget.
 3. **Request.** `LLMRequest` with schema, slot, budget and thinking policy; `BehaviorLLMClient` posts it; llama-server samples under the schema and reuses the cached prefix.
 4. **Decision.** The response is `{"action":"Attack","arg":"Orc"}` (or with a leading `reason` in Deliberative mode).
-5. **Act.** `DecisionParser` extracts the decision; the component validates it against the bindings and the action definition, applies the optional argument policy, invokes the bound `UnityEvent<ActionArguments>` (one value per named parameter; `args.First` for the single-parameter case), records `Executed Action: Attack(Orc)` in memory and publishes the telemetry record. Invalid output runs the fallback action instead, with the reason in the record.
+5. **Act.** `DecisionParser` extracts the decision; the component validates it against the bindings and the action definition, applies the optional argument policy, invokes the bound `UnityEvent<ActionArguments>` (one value per named parameter; `args.First` for the single-parameter case) and publishes the telemetry record, from which `BasicMemory` records `Executed Action: Attack(Orc)`. Invalid output runs the fallback action instead, with the reason in the record.
 
 ## 4. Design notes
 

@@ -7,6 +7,7 @@ using BehaviorLLM.Core.Actions;
 using BehaviorLLM.Core.Config;
 using BehaviorLLM.Core.Decisions;
 using BehaviorLLM.Core.Interfaces;
+using BehaviorLLM.Core.Modules;
 using BehaviorLLM.Core.Utils;
 using NUnit.Framework;
 using UnityEngine;
@@ -222,6 +223,107 @@ namespace BehaviorLLM.Tests.Runtime
             InvokeExecuteAction(f.Maker, "{\"action\":\"HoldPosition\",\"arg\":\"\"}");
 
             Assert.AreEqual(DecisionProfile.Deliberative, captured.profile);
+        }
+
+        // ------------------------------------------------------------------ memory
+
+        [Test]
+        public void Memory_RecordsTheExecutedAction()
+        {
+            Fixture f = CreateFixture();
+            BasicMemory memory = f.Maker.gameObject.AddComponent<BasicMemory>();
+
+            InvokeExecuteAction(f.Maker, "{\"action\":\"Patrol\",\"arg\":\"Route_North\"}");
+
+            StringAssert.Contains("Executed Action: Patrol(Route_North)", memory.GetObservation());
+        }
+
+        [Test]
+        public void Memory_RecordsTheFallbackThatRan()
+        {
+            Fixture f = CreateFixture();
+            ConfigureFallback(f.Maker, "Retreat", "SafeZone_A");
+            BasicMemory memory = f.Maker.gameObject.AddComponent<BasicMemory>();
+
+            InvokeExecuteAction(f.Maker, "This is not a decision.");
+
+            StringAssert.Contains("Executed Action: Retreat(SafeZone_A)", memory.GetObservation());
+        }
+
+        [Test]
+        public void Memory_IgnoresADecisionThatExecutedNothing()
+        {
+            Fixture f = CreateFixture();
+            BasicMemory memory = f.Maker.gameObject.AddComponent<BasicMemory>();
+
+            InvokeExecuteAction(f.Maker, "This is not JSON.");
+
+            Assert.AreEqual("No recent history.", memory.GetObservation());
+        }
+
+        [Test]
+        public void Memory_OnAChildObject_HearsItsDecisionMaker()
+        {
+            Fixture f = CreateFixture();
+            GameObject child = new GameObject("Memory");
+            child.transform.SetParent(f.Maker.transform);
+            BasicMemory memory = child.AddComponent<BasicMemory>();
+
+            InvokeExecuteAction(f.Maker, "{\"action\":\"HoldPosition\"}");
+
+            StringAssert.Contains("Executed Action: HoldPosition()", memory.GetObservation());
+        }
+
+        [Test]
+        public void Memory_EveryMemoryOnTheCharacterRecords()
+        {
+            Fixture f = CreateFixture();
+            BasicMemory first = f.Maker.gameObject.AddComponent<BasicMemory>();
+            GameObject child = new GameObject("SecondMemory");
+            child.transform.SetParent(f.Maker.transform);
+            BasicMemory second = child.AddComponent<BasicMemory>();
+
+            InvokeExecuteAction(f.Maker, "{\"action\":\"Patrol\",\"arg\":\"Route_North\"}");
+
+            StringAssert.Contains("Patrol(Route_North)", first.GetObservation());
+            StringAssert.Contains("Patrol(Route_North)", second.GetObservation());
+        }
+
+        [UnityTest]
+        public IEnumerator Memory_AddedBeforeItsDecisionMaker_SubscribesAtStart()
+        {
+            // OnEnable runs inside AddComponent, before the decision maker exists; Start retries.
+            GameObject go = new GameObject("MemoryFirst");
+            cleanup.Add(go);
+            BasicMemory memory = go.AddComponent<BasicMemory>();
+            ActionCaptureReceiver capture = go.AddComponent<ActionCaptureReceiver>();
+            go.AddComponent<StubBackend>();
+            DecisionMaker maker = go.AddComponent<DecisionMaker>();
+            maker.actionBindings = new List<DecisionMaker.ActionBinding>();
+            maker.actionConfig = CreateActionConfig();
+            AddBinding(maker, "Patrol", capture.OnPatrol);
+            DecisionMakerConfig cfg = ScriptableObject.CreateInstance<DecisionMakerConfig>();
+            cfg.logDecisions = false;
+            cfg.decisionInterval = 1000f;
+            maker.ApplyConfig(cfg);
+            maker.RebuildBindingLookup();
+
+            yield return null;
+
+            InvokeExecuteAction(maker, "{\"action\":\"Patrol\",\"arg\":\"Route_North\"}");
+            StringAssert.Contains("Executed Action: Patrol(Route_North)", memory.GetObservation());
+        }
+
+        [Test]
+        public void Memory_DisabledStopsListening()
+        {
+            Fixture f = CreateFixture();
+            BasicMemory memory = f.Maker.gameObject.AddComponent<BasicMemory>();
+            memory.enabled = false;
+
+            InvokeExecuteAction(f.Maker, "{\"action\":\"Patrol\",\"arg\":\"Route_North\"}");
+
+            Assert.AreEqual("No recent history.", memory.GetObservation());
         }
 
         // ------------------------------------------------------------------ composition

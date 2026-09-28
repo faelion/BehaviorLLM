@@ -229,6 +229,8 @@ Names must match `[A-Za-z0-9_]+`; anything else is skipped from the schema.
 
 Add **`BasicMemory`** and give it the same perception config as the vision module, so one asset describes everything this object notices. **Memory Capacity** on that asset decides how many recent actions it remembers, and **Memory Topic Name** the heading they appear under.
 
+Put it on the decision maker's object or a child of it. It listens to that decision maker and records every action that ran, including a fallback, as `Executed Action: Patrol(Route_North)`; decisions that executed nothing are not recorded. To remember something else, call `RecordEvent("...")` from your own code. A memory module of your own can record actions the same way, by subscribing to the decision maker's `DecisionTelemetryRecorded` event.
+
 ### Shared notes: the blackboard
 
 Characters that coordinate need to know what the others know, and the expensive way to get that is for each of them to perceive everything the others perceive. The observation block is the fastest-growing part of a prompt as a scene fills up, and that approach grows it with the square of the cast. A **blackboard** is the cheap way: one character reports "the west gate is open" once, and the others read one short line.

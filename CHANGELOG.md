@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`BasicMemory` records executed actions itself.** It subscribes to `DecisionTelemetryRecorded` on the `DecisionMaker` on its own object or a parent, instead of the decision maker writing into the first `BasicMemory` it found under it. Every memory module on a character now records, not only the first, and a custom memory module can record actions the same way. The entry is written just after the bound handler runs rather than just before it. A memory added in code before its decision maker subscribes at its first `Start`.
+
 ## [0.6.0] - 2026-09-22
 
 Includes the named-parameter API changes described below.

@@ -5,7 +5,6 @@ using BehaviorLLM.Core.Actions;
 using BehaviorLLM.Core.Config;
 using BehaviorLLM.Core.Backend;
 using BehaviorLLM.Core.Interfaces;
-using BehaviorLLM.Core.Modules;
 using BehaviorLLM.Core.Utils;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -140,7 +139,11 @@ namespace BehaviorLLM.Core.Decisions
         /// <summary>The configuration in effect, including the fallback used when none is assigned.</summary>
         public DecisionMakerConfig Config => Cfg;
 
-        /// <summary>Raised after every decision attempt, including backend failures.</summary>
+        /// <summary>
+        /// Raised after every decision attempt, including backend failures, once the action (if
+        /// any) has been dispatched. This is the one place to learn what a decision maker did,
+        /// whatever the action: the telemetry recorder and <c>BasicMemory</c> both listen here.
+        /// </summary>
         public event Action<DecisionTelemetry> DecisionTelemetryRecorded;
 
         #if UNITY_EDITOR
@@ -193,7 +196,6 @@ namespace BehaviorLLM.Core.Decisions
 
         private ILLMBackend backend;
         private List<IObservationModule> observations;
-        private BasicMemory memoryModule;
         private IActionArgumentPolicy actionArgumentPolicy;
         private IArgumentOptionsProvider argumentOptionsProvider;
         private IActionAvailabilityProvider actionAvailabilityProvider;
@@ -237,7 +239,6 @@ namespace BehaviorLLM.Core.Decisions
         {
             cfg = BehaviorLLMDefaults.OrTransientDefault(config);
             observations = new List<IObservationModule>(GetComponentsInChildren<IObservationModule>());
-            memoryModule = GetComponentInChildren<BasicMemory>();
             ResolveOptionalComponents();
             BuildBindingLookup();
             ResolveBackend();
@@ -983,7 +984,6 @@ namespace BehaviorLLM.Core.Decisions
         private void DispatchAction(string actionName, ActionArguments arguments)
         {
             string rendered = arguments != null ? arguments.ToCompactString() : string.Empty;
-            if (memoryModule != null) memoryModule.RecordEvent($"Executed Action: {actionName}({rendered})");
 
             ActionBinding binding;
             if (bindingsByName != null && bindingsByName.TryGetValue(actionName, out binding))
