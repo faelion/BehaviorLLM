@@ -316,12 +316,15 @@ Two settings on the decision config apply only to this paradigm:
 
 - **Decision Model Selection**: **Most Likely** (default) takes the top option every time. **Sample** draws one in proportion to its probability, so characters sharing a config and seeing the same thing do not all react identically.
 - **Min Choice Probability**: when the chosen option's probability is below this, the fallback runs instead. 0 turns it off. The probabilities are not calibrated for your game, so look at the telemetry before raising it.
+- **Describe Decision Options**: off by default, so options go out as bare names (`Patrol Route_North`). Every value of an action would otherwise repeat the action's description, and on the 16 labelled guard situations that repetition took LiquidAI d1-3B from 81% to 19% correct and made Kev-4B 30% slower at the same accuracy. Turn it on only when your action and value names say nothing on their own. The persona and the action config's guide are always sent, as the question's instructions.
 
 The profile, thinking budget, token ceiling, structured output and example toggles have no effect in this paradigm.
 
 **What gets recorded.** Each telemetry record carries `paradigm`, `candidateCount` (options offered), `choiceProbability` and `choiceConfidence`, and `completionTokens` is always 0. The Prompt Inspector shows the distribution, most likely first, and the exact request body, which you can replay with `curl -d @_last_decision_request.json http://localhost:8080/v1/systemone` (the Editor writes it to StreamingAssets alongside the schema dump).
 
-**Cost.** llama-server does not reuse a decision model's prompt from one request to the next, so a decision model reads the whole situation every time, where a chat model reuses its cached system prompt and reads only the state. In a 60-second StealthGuard run on an RX 6650 XT (Vulkan, b11429), Kev-4B took a median of 566 ms per decision against Granite 4.1 3B's 288 ms; a single request for the same situation took 480 ms on its own. Its cost grows with the number of tokens it reads: persona, situation and every option with its description.
+**Which model.** Measured on the 16 labelled guard situations (llama-server b11588, RX 6650 XT, Vulkan): LiquidAI d1-3B and Kev-4B both chose the expected action 81% of the time, the same as Granite 4.1 3B in the generative paradigm, at medians of 147 and 279 ms against Granite's 233 ms. Laya (50%) and Julia-1 (31%) are too weak for character decisions. d1-3B needs a llama-server newer than b11429, the build the Model Manager installs today. No Reactive model of either paradigm followed the guide's rule about retreating when hurt; only the Deliberative generative profile on Qwen3.5-4B did, so a conditional rule belongs in an availability provider whichever paradigm you use.
+
+**Cost.** llama-server does not reuse a decision model's prompt from one request to the next, so a decision model reads the whole situation every time, where a chat model reuses its cached system prompt and reads only the state. Its cost grows with the number of tokens it reads: persona, guide, situation and options. That is why Describe Decision Options is off: the repeated descriptions made Kev-4B 30% slower.
 
 ## Step 6. Play
 

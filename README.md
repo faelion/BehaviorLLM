@@ -158,7 +158,17 @@ The package can decide in two ways, chosen once per project in the `BehaviorLLMS
 | `GenerativeLLM` (default) | A chat model (Qwen3.5, Granite...) | It writes a JSON decision, held to the legal actions by a grammar built from the action config. The only paradigm with a written `reason`. |
 | `DecisionModel` | A Jev-style decision model (Kev-4B, Laya, Julia-1) | Every legal action, with its values, becomes one option of a choice question sent to llama-server's `/v1/systemone`. The model returns a probability for each and writes nothing. |
 
-Nothing else changes between them: the same action config, bindings, observation modules, availability gating, argument checks and fallback apply, and telemetry records which paradigm decided along with the chosen option's probability. A decision model needs llama-server build b11361 or newer, and every action parameter needs a finite list of values (authored or from an argument provider), because a decision model can only choose among options it is shown. In a 60-second StealthGuard run on an RX 6650 XT (Vulkan, b11429), Kev-4B produced 67 usable decisions out of 67 with a median of 566 ms, against Granite 4.1 3B's 288 ms in the generative paradigm. llama-server does not reuse a decision model's prompt between requests, so it reads the whole situation every time, while the chat model reuses its cached system prompt.
+Nothing else changes between them: the same action config, bindings, observation modules, availability gating, argument checks and fallback apply, and telemetry records which paradigm decided along with the chosen option's probability. A decision model needs llama-server build b11361 or newer, and every action parameter needs a finite list of values (authored or from an argument provider), because a decision model can only choose among options it is shown. On the 16 labelled guard situations (llama-server b11588, RX 6650 XT, Vulkan, three passes each):
+
+| Model | Paradigm | Expected action | Median latency |
+|---|---|---:|---:|
+| Granite 4.1 3B | Generative, Reactive | 81% | 233 ms |
+| Qwen3.5 4B | Generative, Deliberative | **98%** | 548 ms |
+| LiquidAI d1 3B | Decision model | 81% | **147 ms** |
+| Kev 4B | Decision model | 81% | 279 ms |
+| Laya 0.4B / Julia-1 0.14B | Decision model | 50% / 31% | 61 / 30 ms |
+
+The good decision models match the best Reactive generative model and d1 is the fastest of them, but no Reactive model of either paradigm followed the guide's health rule (0 of 9), which only Deliberative Qwen3.5 4B did (8 of 9); gate such rules with an availability provider in either paradigm. In 90-second runs of the two sample scenes, every decision the decision models made was usable; Granite's were too, apart from 3 of 173 in PrisonYard that named a prisoner no longer allowed by the time it answered. llama-server does not reuse a decision model's prompt between requests, so it reads the whole situation every time, where a chat model reuses its cached system prompt; that is why the 4B decision model is not faster than a 3B chat model.
 
 ## Samples
 

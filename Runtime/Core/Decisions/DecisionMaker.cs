@@ -879,7 +879,7 @@ namespace BehaviorLLM.Core.Decisions
             for (int i = 0; i < candidates.Candidates.Count; i++)
             {
                 DecisionCandidates.Candidate c = candidates.Candidates[i];
-                question.Options.Add(new DecisionOption(c.Key, c.Description));
+                question.Options.Add(new DecisionOption(c.Key, Cfg.describeDecisionOptions ? c.Description : null));
             }
             DecisionRequest request = new DecisionRequest { State = state };
             request.Questions.Add(question);

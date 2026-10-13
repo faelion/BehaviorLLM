@@ -54,6 +54,14 @@ namespace BehaviorLLM.Core.Config
         [Range(0f, 1f)]
         public float minChoiceProbability = 0f;
 
+        [Tooltip("Decision Model paradigm only. Send each action's description beside every option. " +
+                 "Leave off unless your action and value names say nothing on their own. Every value of an " +
+                 "action repeats the action's description, and on the 16 labelled guard situations that " +
+                 "repetition took LiquidAI d1-3B from 81% to 19% correct and made Kev-4B 30% slower " +
+                 "(290 ms against 415) at the same 81%. The persona and the action config's guide are " +
+                 "always sent.")]
+        public bool describeDecisionOptions = false;
+
         [Header("Decision Profile (Generative LLM paradigm)")]
         [Tooltip("Reactive: answer as fast as possible, with no thinking. Use it for " +
                  "enemies, allies and anything that must react within a beat. " +

@@ -57,9 +57,21 @@ namespace BehaviorLLM.Tests.Runtime
             Assert.AreEqual(DecisionQuestionType.Choice, question.Type);
             CollectionAssert.AreEqual(new[] { "Patrol Route_North", "Patrol Route_South", "Retreat SafeZone_A", "HoldPosition" },
                                       question.Options.ConvertAll(o => o.Key));
-            Assert.AreEqual("Walk a route.", question.Options[0].Description);
+            Assert.IsNull(question.Options[0].Description, "descriptions are off by default");
             StringAssert.Contains("You are a guard.", question.Instructions);
             StringAssert.Contains(PromptBuilder.DecisionQuestionText, question.Instructions);
+        }
+
+        [Test]
+        public void OptionDescriptions_AreSentOnlyWhenTheConfigAsks()
+        {
+            Fixture f = CreateFixture();
+            f.Maker.Config.describeDecisionOptions = true;
+            f.Backend.Answer = Distribution(("HoldPosition", 1f));
+
+            Think(f.Maker);
+
+            Assert.AreEqual("Walk a route.", f.Backend.Requests[0].Questions[0].Options[0].Description);
         }
 
         [Test]
