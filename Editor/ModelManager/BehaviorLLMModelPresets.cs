@@ -96,7 +96,8 @@ namespace BehaviorLLM.Editor.ModelManager
         /// </summary>
         internal static BehaviorLLMModelConfig CreateFromSearchResult(BehaviorLLMHuggingFace.Repository repo,
                                                                       BehaviorLLMHuggingFace.GgufFile file,
-                                                                      int contextSize, int gpuLayers)
+                                                                      int contextSize, int gpuLayers,
+                                                                      BehaviorLLMGgufHeader.Info header = null)
         {
             if (repo == null || file == null) return null;
 
@@ -111,6 +112,7 @@ namespace BehaviorLLM.Editor.ModelManager
                 contextSize: contextSize,
                 gpuLayers: gpuLayers,
                 thinking: repo.Thinking,
+                decisionType: header != null ? header.DecisionType : string.Empty,
                 provenance: $"Created from a Hugging Face search on {DateTime.Now:yyyy-MM-dd}. " +
                             $"Architecture {arch}, {FormatParams(repo.ParamsB)} parameters" +
                             (repo.ParamsFromHeader ? " (from the GGUF header)." : " (read from the repository name)."));
@@ -141,13 +143,15 @@ namespace BehaviorLLM.Editor.ModelManager
                 contextSize: contextSize,
                 gpuLayers: gpuLayers,
                 thinking: header != null ? header.Thinking : BehaviorLLMHuggingFace.ThinkingStyle.Unknown,
+                decisionType: header != null ? header.DecisionType : string.Empty,
                 provenance: $"Created from the installed file on {DateTime.Now:yyyy-MM-dd}. " +
                             $"Architecture {arch} (from the GGUF header); size read from the file name.");
         }
 
         private static BehaviorLLMModelConfig Create(string displayName, string fileName, string sourceUrl, float parametersB,
                                                      string quantisation, int contextSize, int gpuLayers,
-                                                     BehaviorLLMHuggingFace.ThinkingStyle thinking, string provenance)
+                                                     BehaviorLLMHuggingFace.ThinkingStyle thinking, string decisionType,
+                                                     string provenance)
         {
             BehaviorLLMModelConfig asset = ScriptableObject.CreateInstance<BehaviorLLMModelConfig>();
             asset.displayName = displayName;
@@ -159,6 +163,17 @@ namespace BehaviorLLM.Editor.ModelManager
             // profile will not work, rather than the scene running twelve identical decisions
             // first. The profile recommendation follows: a model that always reasons has to run
             // Deliberative with a thinking budget or it never reaches an answer.
+            // Read from the file, the way llama-server decides how to load it. A decision model
+            // writes nothing, so whatever its chat template says about thinking does not apply.
+            if (!string.IsNullOrEmpty(decisionType))
+            {
+                asset.paradigm = BehaviorLLM.Core.Decisions.DecisionParadigm.DecisionModel;
+                asset.maxChoiceOptions = MaxChoiceOptionsFor(decisionType);
+                thinking = BehaviorLLMHuggingFace.ThinkingStyle.Unknown;
+                provenance += $" A decision model (type '{decisionType}' in the GGUF header): it scores options " +
+                              "through /v1/systemone and needs the Decision Model paradigm.";
+            }
+
             asset.reasoningModel = thinking == BehaviorLLMHuggingFace.ThinkingStyle.AlwaysThinks;
             if (asset.reasoningModel)
             {
@@ -185,6 +200,13 @@ namespace BehaviorLLM.Editor.ModelManager
             AssetDatabase.SaveAssets();
             return asset;
         }
+
+        /// <summary>
+        /// The most options one question may carry, per llama-server's decision types: OpenJev's
+        /// head was trained on 52, every other type currently merged accepts 255.
+        /// </summary>
+        internal static int MaxChoiceOptionsFor(string decisionType) =>
+            string.Equals(decisionType, "openjev", StringComparison.OrdinalIgnoreCase) ? 52 : 255;
 
         /// <summary>Creates <see cref="UserConfigFolder"/> one level at a time, as the AssetDatabase requires.</summary>
         internal static string EnsureUserConfigFolder()

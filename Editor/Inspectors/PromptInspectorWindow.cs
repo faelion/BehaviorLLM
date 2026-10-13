@@ -36,6 +36,8 @@ namespace BehaviorLLM.Editor.Inspectors
             public float LatencyMs;
             public int PromptTokens, CompletionTokens, CachedTokens;
             public bool StructuredOutput;
+            public DecisionParadigm Paradigm;
+            public float ChoiceProbability;
             public string SystemPrompt, StatePrompt, Schema, ResponseText, ReasoningText;
             public string Reason, FailureReason;
 
@@ -108,6 +110,8 @@ namespace BehaviorLLM.Editor.Inspectors
                 CompletionTokens = telemetry.completionTokens,
                 CachedTokens = telemetry.cachedTokens,
                 StructuredOutput = telemetry.structuredOutput,
+                Paradigm = telemetry.paradigm,
+                ChoiceProbability = telemetry.choiceProbability,
                 SystemPrompt = source.LastSystemPrompt,
                 StatePrompt = source.LastStatePrompt,
                 Schema = source.LastSchema,
@@ -316,9 +320,11 @@ namespace BehaviorLLM.Editor.Inspectors
             {
                 detailScroll = scroll.scrollPosition;
 
+                bool decides = e.Paradigm == DecisionParadigm.DecisionModel;
                 EditorGUILayout.LabelField(
                     $"#{e.Index}  {e.Source}  -  {Describe(e)}  -  {e.LatencyMs:0} ms  -  " +
-                    $"structured output {(e.StructuredOutput ? "on" : "off")}",
+                    (decides ? $"decision model, p = {e.ChoiceProbability:0.00}"
+                             : $"structured output {(e.StructuredOutput ? "on" : "off")}"),
                     EditorStyles.boldLabel);
 
                 if (!string.IsNullOrEmpty(e.FailureReason))
@@ -327,10 +333,22 @@ namespace BehaviorLLM.Editor.Inspectors
                 if (!string.IsNullOrWhiteSpace(e.Reason)) Section("Model's stated reason", e.Reason, 40f);
                 if (!string.IsNullOrWhiteSpace(e.ReasoningText)) Section("Reasoning channel", e.ReasoningText, 90f);
 
-                Section("Answer (raw)", e.ResponseText, 60f);
-                Section("STATE (this decision)", e.StatePrompt, 150f);
-                Section("System prompt (cached prefix)", e.SystemPrompt, 200f);
-                if (!string.IsNullOrWhiteSpace(e.Schema)) Section("Applied JSON Schema", e.Schema, 150f);
+                if (decides)
+                {
+                    // A decision model writes nothing, so its "answer" is the distribution, and
+                    // what replays the decision is the request body rather than a schema.
+                    Section("Probabilities (most likely first)", e.ResponseText, 120f);
+                    Section("STATE (this decision)", e.StatePrompt, 150f);
+                    Section("Question instructions", e.SystemPrompt, 80f);
+                    if (!string.IsNullOrWhiteSpace(e.Schema)) Section("Request body (POST /v1/systemone)", e.Schema, 150f);
+                }
+                else
+                {
+                    Section("Answer (raw)", e.ResponseText, 60f);
+                    Section("STATE (this decision)", e.StatePrompt, 150f);
+                    Section("System prompt (cached prefix)", e.SystemPrompt, 200f);
+                    if (!string.IsNullOrWhiteSpace(e.Schema)) Section("Applied JSON Schema", e.Schema, 150f);
+                }
             }
         }
 
@@ -357,7 +375,8 @@ namespace BehaviorLLM.Editor.Inspectors
             sb.AppendLine().AppendLine("--- SYSTEM ---").AppendLine(e.SystemPrompt);
             sb.AppendLine().AppendLine("--- STATE ---").AppendLine(e.StatePrompt);
             sb.AppendLine().AppendLine("--- ANSWER ---").AppendLine(e.ResponseText);
-            if (!string.IsNullOrWhiteSpace(e.Schema)) sb.AppendLine().AppendLine("--- SCHEMA ---").AppendLine(e.Schema);
+            if (!string.IsNullOrWhiteSpace(e.Schema))
+                sb.AppendLine().AppendLine(e.Paradigm == DecisionParadigm.DecisionModel ? "--- REQUEST BODY ---" : "--- SCHEMA ---").AppendLine(e.Schema);
 
             EditorGUIUtility.systemCopyBuffer = sb.ToString();
             ShowNotification(new GUIContent("Decision copied"));

@@ -38,7 +38,23 @@ namespace BehaviorLLM.Core.Config
         [Range(0f, 1f)]
         public float decisionIntervalJitter = 0.15f;
 
-        [Header("Decision Profile")]
+        [Header("Decision Model Paradigm")]
+        [Tooltip("Decision Model paradigm only. How the model's probabilities become an action. " +
+                 "Most Likely takes the top action every time, so the same situation always gets " +
+                 "the same answer. Sample draws one in proportion to its probability, so guards that " +
+                 "share this config and see the same thing do not all react identically; an action " +
+                 "the model gave 10% still happens about one time in ten.")]
+        public DecisionModelSelection decisionModelSelection = DecisionModelSelection.MostLikely;
+
+        [Tooltip("Decision Model paradigm only. When the chosen action's probability is below this, " +
+                 "run the fallback action instead. 0 turns it off. The probabilities are not " +
+                 "calibrated for your game, and a model often spreads them over two or three " +
+                 "plausible actions, so measure with the telemetry before raising it: a high " +
+                 "threshold turns a reasonable choice into the fallback.")]
+        [Range(0f, 1f)]
+        public float minChoiceProbability = 0f;
+
+        [Header("Decision Profile (Generative LLM paradigm)")]
         [Tooltip("Reactive: answer as fast as possible, with no thinking. Use it for " +
                  "enemies, allies and anything that must react within a beat. " +
                  "Deliberative: the AI writes a short reason before choosing, which can " +
@@ -62,7 +78,7 @@ namespace BehaviorLLM.Core.Config
                  "is what you want. Set it only to stop a runaway model.")]
         public int maxTokens = 0;
 
-        [Header("Structured Output")]
+        [Header("Structured Output (Generative LLM paradigm)")]
         [Tooltip("Force the AI to answer in the exact format expected, choosing only " +
                  "from the allowed actions and arguments. It costs nothing measurable " +
                  "and removes almost all bad answers. Leave on. Turn off only to see how " +

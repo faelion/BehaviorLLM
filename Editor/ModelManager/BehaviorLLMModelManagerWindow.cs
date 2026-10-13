@@ -35,6 +35,15 @@ namespace BehaviorLLM.Editor.ModelManager
         public long sizeBytes;
         public int contextSize = 4096;
         public int gpuLayers = 99;
+        /// <summary>"DecisionModel" for a Jev-style decision model; empty or "GenerativeLLM" for a chat model.</summary>
+        public string paradigm;
+
+        /// <summary>The paradigm this entry belongs to. Anything unrecognised reads as a chat model,
+        /// which is what every entry was before the field existed.</summary>
+        public DecisionParadigm Paradigm =>
+            string.Equals(paradigm, nameof(DecisionParadigm.DecisionModel), StringComparison.OrdinalIgnoreCase)
+                ? DecisionParadigm.DecisionModel
+                : DecisionParadigm.GenerativeLLM;
     }
 
     internal struct DownloadProgressInfo
@@ -588,6 +597,17 @@ namespace BehaviorLLM.Editor.ModelManager
                 bool serverFound = BehaviorLLMServer.TryLocateExecutable(
                     config.executableRelativePath, out _, out string serverSource);
 
+                DecisionParadigm paradigm = BehaviorLLMParadigm.Current;
+                DrawFact("Paradigm", paradigm == DecisionParadigm.DecisionModel ? "decision model" : "generative LLM", true);
+                if (GUILayout.Button(new GUIContent("Switch",
+                        "The paradigm is project-wide: it decides whether every decision maker asks a chat model " +
+                        "to write its decision or a decision model to score the legal ones. The model set " +
+                        "active must be of the same kind."), EditorStyles.miniButton, GUILayout.Width(52f)))
+                    SwitchParadigmInteractively(paradigm == DecisionParadigm.DecisionModel
+                        ? DecisionParadigm.GenerativeLLM
+                        : DecisionParadigm.DecisionModel, null);
+                GUILayout.Space(10f);
+
                 DrawFact("In scene", sceneModel, sceneGood);
                 DrawFact("Config file", fileModel, hasFileModel);
                 DrawFact("Server", serverFound ? serverSource.ToLowerInvariant() : "not found", serverFound);
@@ -598,6 +618,37 @@ namespace BehaviorLLM.Editor.ModelManager
                     EditorUtility.RevealInFinder(BehaviorLLMBackendConfig.GetConfigPath());
                 }
             }
+        }
+
+        /// <summary>
+        /// Changes the project's paradigm after saying what that means. <paramref name="becauseOf"/>
+        /// names the file being set active when the switch is a consequence of picking a model of
+        /// the other kind; null when the switch was asked for directly. False when cancelled.
+        /// </summary>
+        private bool SwitchParadigmInteractively(DecisionParadigm target, string becauseOf)
+        {
+            string what = target == DecisionParadigm.DecisionModel
+                ? "Every decision maker will send the legal actions to a decision model (Kev, Laya, Julia-1...), " +
+                  "which returns a probability for each instead of writing an answer. There is no reason field, " +
+                  "and every action parameter needs a list of allowed values. It needs llama-server b11361 or newer."
+                : "Every decision maker will ask a chat model to write its decision as JSON, held to the legal " +
+                  "actions by a grammar. This is what the package did before decision models.";
+            string why = becauseOf != null
+                ? $"'{becauseOf}' is a {(target == DecisionParadigm.DecisionModel ? "decision model" : "chat model")}, " +
+                  $"but the project's paradigm is {BehaviorLLMParadigm.Label(BehaviorLLMParadigm.Current)}.\n\n"
+                : string.Empty;
+
+            if (!EditorUtility.DisplayDialog("Switch to " + BehaviorLLMParadigm.Label(target) + "?",
+                    why + what + "\n\nThe choice is saved in the project's BehaviorLLM Settings asset, created under " +
+                    "Assets/Resources if the project has none.",
+                    becauseOf != null ? "Switch and set active" : "Switch", "Cancel"))
+                return false;
+
+            string path = BehaviorLLMParadigm.Set(target);
+            downloadStatus = $"Paradigm is now {BehaviorLLMParadigm.Label(target)} (saved in {path})." +
+                             (becauseOf == null ? " Set a matching model active in the Installed tab." : string.Empty);
+            Repaint();
+            return true;
         }
 
         private void DrawFact(string key, string value, bool good)
@@ -624,21 +675,34 @@ namespace BehaviorLLM.Editor.ModelManager
         /// </summary>
         private void DrawModelsView()
         {
-            DrawSearchRow();
-            DrawSection("Measured here", catalog?.models != null
-                ? $"{catalog.models.Count} models · every reply was usable · figures from Experiments~"
-                : "");
+            DecisionParadigm paradigm = BehaviorLLMParadigm.Current;
+            bool decides = paradigm == DecisionParadigm.DecisionModel;
+            List<BehaviorLLMModelDefinition> listed = catalog?.models != null
+                ? catalog.models.FindAll(m => m != null && m.Paradigm == paradigm)
+                : new List<BehaviorLLMModelDefinition>();
 
-            if (catalog?.models == null || catalog.models.Count == 0)
+            DrawSearchRow();
+            DrawSection(decides ? "Decision models" : "Measured here",
+                decides ? $"{listed.Count} models · score every legal action, write nothing · llama-server b11361+"
+                        : $"{listed.Count} models · every reply was usable · figures from Experiments~");
+
+            if (listed.Count == 0)
             {
-                EditorGUILayout.HelpBox($"Catalog missing or empty. Add Resources/{CatalogResourceName}.json.", MessageType.Warning);
+                EditorGUILayout.HelpBox($"No {BehaviorLLMParadigm.Label(paradigm)} models in Resources/{CatalogResourceName}.json.", MessageType.Warning);
             }
             else
             {
-                foreach (BehaviorLLMModelDefinition model in catalog.models) DrawMeasuredCard(model);
+                foreach (BehaviorLLMModelDefinition model in listed) DrawMeasuredCard(model);
             }
 
             DrawSection("Found online", SearchSubtitle());
+            if (decides)
+                EditorGUILayout.HelpBox(
+                    "The search finds chat models, which this paradigm cannot use. Hugging Face files decision " +
+                    "models under text classification; to add one not listed above, paste its repository id " +
+                    "(for example ggml-org/Kev-4B-GGUF) into the box and press Open repo. The Installed tab " +
+                    "reads the file's header and only treats it as a decision model if llama-server would.",
+                    MessageType.Info);
             DrawSearchResults();
 
         }
@@ -1012,6 +1076,10 @@ namespace BehaviorLLM.Editor.ModelManager
                 // The link that was missing when the catalogue and the presets drifted apart.
                 if (preset != null)
                     GUILayout.Label($"ctx {model.contextSize}  ·  pairs with {preset.DisplayName}", monoDimStyle);
+                else if (model.Paradigm == DecisionParadigm.DecisionModel)
+                    // The package ships no preset for these on purpose: the config is made from the
+                    // file's own header when it is set active, so it cannot name the wrong paradigm.
+                    GUILayout.Label($"ctx {model.contextSize}  ·  its config is created from the file when set active", monoDimStyle);
                 else
                     EditorGUILayout.HelpBox(
                         $"No model config expects '{model.fileName}'. Downloading it will work, but no " +
@@ -1408,7 +1476,12 @@ namespace BehaviorLLM.Editor.ModelManager
             BehaviorLLMModelPresets.Preset preset = BehaviorLLMModelPresets.MatchByFileName(presets, fileName);
             BehaviorLLMModelDefinition curated = FindCuratedByFileName(fileName);
             BehaviorLLMGgufHeader.Info header = HeaderFor(absolutePath);
-            bool notText = header.Support == BehaviorLLMHuggingFace.ArchitectureSupport.NotTextGeneration;
+            // A decision model is often an encoder llama.cpp also uses for embeddings (Laya and
+            // Julia-1 are modern-bert), so its architecture alone would wrongly call it unusable.
+            bool decisionFile = header.IsDecisionModel;
+            bool notText = !decisionFile && header.Support == BehaviorLLMHuggingFace.ArchitectureSupport.NotTextGeneration;
+            DecisionParadigm fileParadigm = decisionFile ? DecisionParadigm.DecisionModel : DecisionParadigm.GenerativeLLM;
+            bool otherParadigm = header.IsGguf && fileParadigm != BehaviorLLMParadigm.Current;
 
             // "Active" here means what the open scene will actually run, which is the pinned
             // config when there is one and the config file otherwise.
@@ -1425,13 +1498,30 @@ namespace BehaviorLLM.Editor.ModelManager
                     if (inScene) DrawPill("IN SCENE", StatusGreen);
                     else if (isActive) DrawPill(sceneServers.Length > 0 && !sceneUsesFile ? "CONFIG FILE ONLY" : "ACTIVE", sceneServers.Length > 0 && !sceneUsesFile ? DimColor : StatusGreen);
                     if (curated != null) DrawPill("MEASURED", new Color(0.45f, 0.65f, 0.95f));
-                    DrawArchitecturePill(header.Architecture, header.Support);
-                    DrawThinkingPill(header.Thinking);
+                    if (decisionFile)
+                    {
+                        DrawPill("DECISION MODEL · " + header.DecisionType, new Color(0.70f, 0.50f, 0.95f));
+                        DrawPill(header.Architecture.ToLowerInvariant(), DimColor);
+                    }
+                    else
+                    {
+                        DrawArchitecturePill(header.Architecture, header.Support);
+                        DrawThinkingPill(header.Thinking);
+                    }
                     GUILayout.FlexibleSpace();
                     GUILayout.Label(BehaviorLLMHuggingFace.FormatBytes(size), statStyle, GUILayout.Width(78f));
                 }
 
-                if (header.Thinking == BehaviorLLMHuggingFace.ThinkingStyle.AlwaysThinks)
+                if (otherParadigm)
+                    EditorGUILayout.HelpBox(
+                        decisionFile
+                            ? "A decision model, while the project runs Generative LLM. Setting it active switches the " +
+                              "project to the Decision Model paradigm."
+                            : "A chat model, while the project runs Decision Model. Setting it active switches the " +
+                              "project back to the Generative LLM paradigm.",
+                        MessageType.Info);
+
+                if (!decisionFile && header.Thinking == BehaviorLLMHuggingFace.ThinkingStyle.AlwaysThinks)
                     EditorGUILayout.HelpBox(
                         "Reasoning model: it thinks before every answer and its template has no switch to stop " +
                         "that. It cannot run the Reactive profile. Set the decision makers that use it to " +
@@ -1471,9 +1561,13 @@ namespace BehaviorLLM.Editor.ModelManager
                                 "Assigns this model's config to every Behavior LLM Server and Client in the open " +
                                 "scene(s), creating the config first if none exists, and writes the same choice " +
                                 "to the StreamingAssets config file for scenes that leave Model Config empty. " +
+                                "A model of the other paradigm asks to switch the project's paradigm first. " +
                                 "The scene is marked dirty; save it to keep the change."),
                                 GUILayout.Height(21f), GUILayout.Width(176f)))
-                            SetActiveInCurrentScene(fileName, preset, header, curated);
+                        {
+                            if (!otherParadigm || SwitchParadigmInteractively(fileParadigm, fileName))
+                                SetActiveInCurrentScene(fileName, preset, header, curated);
+                        }
                     }
 
                     if (preset == null && !notText)
@@ -1541,6 +1635,13 @@ namespace BehaviorLLM.Editor.ModelManager
                 }
 
                 GUILayout.Label(serverFound ? serverPath : GetServerDirectoryAbsolute(), monoDimStyle);
+                int build = serverFound ? ServerBuildOf(serverPath) : -1;
+                if (build > 0) GUILayout.Label("Build b" + build, monoDimStyle);
+                if (build > 0 && build < MinDecisionModelBuild && BehaviorLLMParadigm.Current == DecisionParadigm.DecisionModel)
+                    EditorGUILayout.HelpBox(
+                        $"This build (b{build}) predates decision models: llama-server gained /v1/systemone in " +
+                        $"b{MinDecisionModelBuild}. Every decision will fail with a 404 until it is replaced. " +
+                        "Reinstall below to get the current release.", MessageType.Error);
                 if (serverFound && !bundled)
                     EditorGUILayout.HelpBox(
                         "This is a system-wide install, found on " + serverSource + ". It works: the " +
@@ -1591,6 +1692,57 @@ namespace BehaviorLLM.Editor.ModelManager
                     autoInstallServerWithModelDownload);
                 keepServerArchive = EditorGUILayout.ToggleLeft("Keep the downloaded archive", keepServerArchive);
             }
+        }
+
+        /// <summary>The first llama-server build with the <c>/v1/systemone</c> endpoint (llama.cpp PR #29818).</summary>
+        internal const int MinDecisionModelBuild = 11361;
+
+        private string versionProbePath;
+        private DateTime versionProbeStamp;
+        private int versionProbeBuild = -1;
+
+        /// <summary>
+        /// The build number the executable reports for <c>--version</c>, or -1 when it cannot be
+        /// read. Run once per file and modification time, not per repaint: it starts a process.
+        /// </summary>
+        private int ServerBuildOf(string executablePath)
+        {
+            DateTime stamp;
+            try { stamp = File.GetLastWriteTimeUtc(executablePath); }
+            catch { return -1; }
+            if (executablePath == versionProbePath && stamp == versionProbeStamp) return versionProbeBuild;
+
+            versionProbePath = executablePath;
+            versionProbeStamp = stamp;
+            versionProbeBuild = -1;
+            try
+            {
+                using (System.Diagnostics.Process p = new System.Diagnostics.Process())
+                {
+                    p.StartInfo = new System.Diagnostics.ProcessStartInfo(executablePath, "--version")
+                    {
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    };
+                    p.Start();
+                    // llama.cpp prints its version on stderr; read both so either works.
+                    Task<string> err = p.StandardError.ReadToEndAsync();
+                    Task<string> output = p.StandardOutput.ReadToEndAsync();
+                    if (!p.WaitForExit(3000)) { try { p.Kill(); } catch { } return -1; }
+                    versionProbeBuild = ParseBuildNumber(err.Result + "\n" + output.Result);
+                }
+            }
+            catch { /* not runnable here; leave unknown */ }
+            return versionProbeBuild;
+        }
+
+        /// <summary>Reads "version: 0.6.0-dev (build 11429, commit d81235049)". -1 when absent.</summary>
+        internal static int ParseBuildNumber(string versionText)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(versionText ?? string.Empty, @"build\s+(\d+)");
+            return m.Success && int.TryParse(m.Groups[1].Value, out int build) ? build : -1;
         }
 
         // ------------------------------------------------------------------ config
@@ -2126,6 +2278,21 @@ namespace BehaviorLLM.Editor.ModelManager
                 target = CreateConfigFor(fileName, header);
                 if (target == null) { downloadStatus = "Could not create a model config for " + fileName; Repaint(); return; }
                 created = true;
+            }
+
+            // A config made before the paradigm field existed, or by hand, may call a decision
+            // model a chat model. The file's header is what llama-server goes by, so it wins.
+            if (header != null && header.IsGguf)
+            {
+                DecisionParadigm fromFile = header.IsDecisionModel ? DecisionParadigm.DecisionModel : DecisionParadigm.GenerativeLLM;
+                if (target.paradigm != fromFile)
+                {
+                    Undo.RecordObject(target, "Correct model paradigm");
+                    target.paradigm = fromFile;
+                    if (header.IsDecisionModel) target.maxChoiceOptions = BehaviorLLMModelPresets.MaxChoiceOptionsFor(header.DecisionType);
+                    EditorUtility.SetDirty(target);
+                    AssetDatabase.SaveAssets();
+                }
             }
 
             RefreshSceneTargets(force: true);

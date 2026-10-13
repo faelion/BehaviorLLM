@@ -18,12 +18,12 @@ No BehaviorLLM component carries tuning fields. Everything that changes behaviou
 
 | Asset | Holds | Read by |
 |---|---|---|
-| **Decision Maker Config** | Decision interval, profile, reason and thinking budgets, structured output, prompt budget, console noise | `DecisionMaker` |
+| **Decision Maker Config** | Decision interval, profile, reason and thinking budgets, structured output, decision-model selection, prompt budget, console noise | `DecisionMaker` |
 | **Server Config** | Address, transport, port, slots, launch flags, timeouts, retries, server log verbosity | `BehaviorLLMClient`, `BehaviorLLMServer` |
-| **Model Config** | Model file, context size, GPU layers, sampling, measured behaviour | `BehaviorLLMClient`, `BehaviorLLMServer` |
+| **Model Config** | Model file, which paradigm it serves, context size, GPU layers, sampling, measured behaviour | `BehaviorLLMClient`, `BehaviorLLMServer` |
 | **Perception Config** | Vision shape, range, field of view, layers, scan rate, sight interrupts, memory capacity | `ModularVisionModule`, `BasicMemory` |
 | **Blackboard Config** | Shared-note retention, staleness and observation caps | `BehaviorLLMBlackboard`, `BlackboardObservationModule` |
-| **Settings** | Console noise in the Editor and in builds, telemetry master switch, diagnostics | the whole package |
+| **Settings** | The decision paradigm, console noise in the Editor and in builds, telemetry master switch, diagnostics | the whole package |
 
 The package ships presets under `Runtime/Defaults`, and adding a component in the Editor points it at the matching preset automatically, so a new scene works before you author anything. Assets inside a package are read-only, so duplicate a preset into your own project folder before editing it, or create a fresh one with *Create > BehaviorLLM > …*.
 
@@ -33,6 +33,7 @@ The domain assets above each tune one *domain* and are meant to exist in several
 
 | Setting | Default | What it decides |
 |---|---|---|
+| `paradigm` | `GenerativeLLM` | Whether every decision maker asks a chat model to write its decision or a decision model to score the legal ones. See Step 5b. The one setting here that is not about output: it decides which kind of model the server loads. |
 | `editorLogLevel` | `Warnings` | How much the package prints in the Editor and in a development build. `Warnings` already includes anything a config asset asked for, such as `Log Prompts`; `Verbose` adds internal detail nobody asked for; `ErrorsOnly` silences the config switches too, which is how you quieten a project in one place. |
 | `playerLogLevel` | `ErrorsOnly` | How much it prints in a shipped build. A released game should not write a console line every time a guard decides something. |
 | `telemetryEnabled` | on | Master switch for `DecisionTelemetryRecorder`. Off, a recorder left in the scene records nothing and writes no files. |
@@ -43,7 +44,7 @@ The domain assets above each tune one *domain* and are meant to exist in several
 
 The shipped default lives at `Resources/BehaviorLLM/Defaults/Settings.asset`. It works automatically in every scene. To override it, create *BehaviorLLM > Settings* in your project at `Assets/Resources/BehaviorLLMSettings.asset`. Lookup uses this project override first, then the shipped default, then transient field defaults if neither exists. Keep only one project override at that resource path. Domain configs remain independently assignable: duplicate any shipped preset into `Assets/BehaviorLLMConfigs/`, edit it, and assign it to the relevant components; objects sharing an asset share its values.
 
-**It is a ceiling, not an override.** A decision maker whose config has `logPrompts` off stays quiet whatever the level is; what the level can do is silence one that has it on. That is what makes a single switch enough to quieten a whole project before a build, without visiting every config asset.
+**The logging switches are a ceiling, not an override.** A decision maker whose config has `logPrompts` off stays quiet whatever the level is; what the level can do is silence one that has it on. That is what makes a single switch enough to quieten a whole project before a build, without visiting every config asset.
 
 Everything the package prints goes through `BehaviorLLMLog`, so if you are wondering why a message stopped appearing, this asset is the first place to look.
 
@@ -122,6 +123,9 @@ The client talks to llama-server one of two ways, chosen by **Transport** on the
 - **Decisions take seconds on a machine that measured hundreds of milliseconds.** The server warns at start when llama-server offloads fewer layers than the model has; with the log level at Verbose it also prints the `offloaded N/N layers to GPU` line on a full offload. If every layer is offloaded and it is still slow, the card's memory is taken by something else and the driver is paging the model over the bus, which runs slower than the CPU while looking healthy. The Installed tab's **fits GPU** reading uses the card's total memory, not what is free; close other GPU-heavy programs, or sign out and back in if the desktop compositor has grown, and start again. Measured on 2026-09-14: 6.5 tokens a second on the GPU against 24 on the CPU with the card's memory oversubscribed.
 - `Server is still loading the model`: normal for the first seconds after start; the client retries automatically, as many times as **Model Loading Retry Count** on the server config allows.
 - `llama-server rejected the supplied JSON Schema`: inspect `StreamingAssets/_last_applied_schema.json`; an action or argument name outside `[A-Za-z0-9_]` is the usual cause.
+- `The server ... has no decision-model endpoint`: the paradigm is Decision Model but the llama-server that started predates b11361. Check which one actually runs: the Config tab's executable path must point at the binary (`llama-server/llama-server.exe` for one installed by the Model Manager), or the runtime falls back to whatever is on `PATH`.
+- `The server's model is not a decision model`: the paradigm is Decision Model but the server loaded a chat model. Set a decision model active in the Installed tab, or switch the paradigm back.
+- `The server is running a decision model, which ... cannot write an answer`: the reverse. Set a chat model active, or switch the paradigm to Decision Model.
 
 ---
 
@@ -297,6 +301,27 @@ And on the component itself, because they cannot be shared:
 - **Request Slot**: which of the server's slots this object owns, so its cached prompt survives the others' requests. Give each one a different number and set Parallel Slots to match.
 
 ---
+
+## Step 5b. Or choose the Decision Model paradigm
+
+Everything above describes the **Generative LLM** paradigm, the package's default: a chat model writes each decision as JSON, and a grammar built from the action config keeps it to the legal actions. The **Decision Model** paradigm replaces the writing with scoring. A Jev-style decision model (Kev-4B, Laya, Julia-1) is shown every legal decision as one option of a choice question, through llama-server's `/v1/systemone` endpoint, and returns a probability for each. Nothing is generated, so there is no format to get wrong, no reason field and no thinking.
+
+**Switching.** The paradigm is project-wide, because it decides which kind of model the server loads. It lives on the `BehaviorLLMSettings` asset (field **Paradigm**). The easiest way to change it is `BehaviorLLM > Model Manager`: the status strip shows the paradigm with a **Switch** button, the Catalog lists the models of the current paradigm, and **Set active in current scene** on a model of the other kind offers to switch for you. Either way the choice is written to the project's own `Assets/Resources/BehaviorLLMSettings.asset`, created from the shipped defaults if the project has none. A model config records which paradigm its file belongs to (**Paradigm** on the model config, read from the GGUF header by the Model Manager), and every decision maker reports an error at start when its client's model does not match the project.
+
+**Server.** Decision models need llama-server **b11361 or newer**; the Server tab shows the installed build and says when it is too old. The server loads a decision model in embedding mode, so `BehaviorLLMServer` leaves out `--cache-reuse` and `--jinja` for it. A decision model cannot write and a chat model cannot score, so a project that runs both needs two servers on two ports, each with its own client.
+
+**What has to change in your config.** Only one thing: every parameter of every action must have a finite list of values, authored as **Allowed Values** or supplied by an **Argument Options Provider**, because a decision model chooses among complete decisions it is shown. `Patrol` with three routes becomes three options, `Patrol Route_North` and so on. An action with a free-form parameter is not offered, and the decision maker warns once. Availability gating, argument checks, the argument policy and the fallback all work exactly as before: a decision model's choice goes through the same checks a generated one does.
+
+Two settings on the decision config apply only to this paradigm:
+
+- **Decision Model Selection**: **Most Likely** (default) takes the top option every time. **Sample** draws one in proportion to its probability, so characters sharing a config and seeing the same thing do not all react identically.
+- **Min Choice Probability**: when the chosen option's probability is below this, the fallback runs instead. 0 turns it off. The probabilities are not calibrated for your game, so look at the telemetry before raising it.
+
+The profile, thinking budget, token ceiling, structured output and example toggles have no effect in this paradigm.
+
+**What gets recorded.** Each telemetry record carries `paradigm`, `candidateCount` (options offered), `choiceProbability` and `choiceConfidence`, and `completionTokens` is always 0. The Prompt Inspector shows the distribution, most likely first, and the exact request body, which you can replay with `curl -d @_last_decision_request.json http://localhost:8080/v1/systemone` (the Editor writes it to StreamingAssets alongside the schema dump).
+
+**Cost.** llama-server does not reuse a decision model's prompt from one request to the next, so a decision model reads the whole situation every time, where a chat model reuses its cached system prompt and reads only the state. In a 60-second StealthGuard run on an RX 6650 XT (Vulkan, b11429), Kev-4B took a median of 566 ms per decision against Granite 4.1 3B's 288 ms; a single request for the same situation took 480 ms on its own. Its cost grows with the number of tokens it reads: persona, situation and every option with its description.
 
 ## Step 6. Play
 

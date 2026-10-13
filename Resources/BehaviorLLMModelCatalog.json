@@ -32,6 +32,42 @@
       "sizeBytes": 2740937888,
       "contextSize": 8192,
       "gpuLayers": 99
+    },
+    {
+      "id": "kev-4b-q4km",
+      "displayName": "Kev 4B (Q4_K_M) · decision model",
+      "description": "A Jev-style decision model: Qwen3.5-4B-Base read once, with a pointer head over the options, so it returns a probability for every legal action and writes nothing. Apache-2.0. Same base as Qwen3.5 4B above, which makes it the like-for-like comparison. Causal, so the server shares the work of reading one situation between several questions.",
+      "downloadUrl": "https://huggingface.co/ggml-org/Kev-4B-GGUF/resolve/main/Kev-4B-Q4_K_M.gguf",
+      "fileName": "Kev-4B-Q4_K_M.gguf",
+      "sha256": "",
+      "sizeBytes": 3033489824,
+      "contextSize": 8192,
+      "gpuLayers": 99,
+      "paradigm": "DecisionModel"
+    },
+    {
+      "id": "laya-q8",
+      "displayName": "Laya 0.4B (Q8_0) · decision model",
+      "description": "A small encoder decision model (ModernBERT, 0.42B), Apache-2.0. Under half a gigabyte. An encoder reads the whole prompt at once, so it shares no work between questions and long situations must fit one batch.",
+      "downloadUrl": "https://huggingface.co/ggml-org/Laya-GGUF/resolve/main/Laya-Q8_0.gguf",
+      "fileName": "Laya-Q8_0.gguf",
+      "sha256": "",
+      "sizeBytes": 449397600,
+      "contextSize": 8192,
+      "gpuLayers": 99,
+      "paradigm": "DecisionModel"
+    },
+    {
+      "id": "julia-1-q8",
+      "displayName": "Julia-1 0.14B (Q8_0) · decision model",
+      "description": "The smallest decision model listed here: a 0.14B ModernBERT encoder, Apache-2.0, 168 MB. llama-server loads it as the same decision type as Laya, with the same limits.",
+      "downloadUrl": "https://huggingface.co/ggml-org/Julia-1-GGUF/resolve/main/Julia-1-Q8_0.gguf",
+      "fileName": "Julia-1-Q8_0.gguf",
+      "sha256": "",
+      "sizeBytes": 168166496,
+      "contextSize": 8192,
+      "gpuLayers": 99,
+      "paradigm": "DecisionModel"
     }
   ]
 }

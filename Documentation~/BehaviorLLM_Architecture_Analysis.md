@@ -72,9 +72,9 @@ No component carries a tuning field. Four ScriptableObject types hold everything
 
 | Asset | Holds | Read by |
 |---|---|---|
-| `DecisionMakerConfig` | Decision interval, profile, reason and thinking budgets, token ceiling, structured output and few-shot toggles, prompt budget, console noise | `DecisionMaker` |
+| `DecisionMakerConfig` | Decision interval, profile, reason and thinking budgets, token ceiling, structured output and few-shot toggles, decision-model selection and minimum probability, prompt budget, console noise | `DecisionMaker` |
 | `BehaviorLLMServerConfig` | Base URL, transport, port, parallel slots, cache reuse, jinja, extra arguments, executable, StreamingAssets source, timeouts, retry policy, log verbosity | `BehaviorLLMClient`, `BehaviorLLMServer` |
-| `BehaviorLLMModelConfig` | Model file, context size, GPU layers, sampling, and what that model was measured to do well | `BehaviorLLMClient`, `BehaviorLLMServer` |
+| `BehaviorLLMModelConfig` | Model file, the paradigm it serves and its option limit, context size, GPU layers, sampling, and what that model was measured to do well | `BehaviorLLMClient`, `BehaviorLLMServer` |
 | `PerceptionConfig` | Vision shape, range, field of view, perception and occluder layers, scan interval, sight interrupts, prompt headings, memory capacity | `ModularVisionModule`, `BasicMemory` |
 
 `BehaviorLLMDefaults` resolves them. In the Editor, `Reset()` on each component finds the preset the package ships under `Runtime/Defaults`, so a component added to a scene arrives working. At runtime a cleared reference falls back to a throwaway instance carrying the type's declared defaults, so no component ever dereferences null. Every component also exposes `ApplyConfig(...)`, which swaps the asset and rebuilds whatever depended on it; cloning a shared asset with `Instantiate` and applying the clone is how one object is varied without touching the others.
@@ -85,14 +85,25 @@ The four assets above each tune one domain and are meant to exist in variants: a
 
 | Setting | Default | What it decides |
 |---|---|---|
+| `paradigm` | `GenerativeLLM` | Whether decision makers ask a chat model to write a decision or a decision model to score the legal ones (section H) |
 | `editorLogLevel` / `playerLogLevel` | `Warnings` / `ErrorsOnly` | How much the package prints, separately in the Editor and in a non-development build |
 | `telemetryEnabled` / `telemetryInBuilds` | on / off | Master switch for `DecisionTelemetryRecorder`, and whether it may record outside the Editor |
 | `dumpAppliedSchema` | on | Whether the Editor writes `_last_applied_schema.json` to StreamingAssets on every schema rebuild |
 | `warnOnBindingMismatch` / `warnOnModelProfileMismatch` | on | The two advisory startup warnings |
 
-**It is a ceiling, never an override.** A decision maker whose config asks to be quiet stays quiet whatever the project level says; what the level can do is silence one that asked to be loud. That asymmetry is what makes a single switch enough to quieten a whole project before a build without visiting every config asset, and it is why the setting cannot be used to force diagnostics on.
+**The logging switches are a ceiling, never an override.** A decision maker whose config asks to be quiet stays quiet whatever the project level says; what the level can do is silence one that asked to be loud. That asymmetry is what makes a single switch enough to quieten a whole project before a build without visiting every config asset, and it is why the setting cannot be used to force diagnostics on.
 
 Every console line in `Runtime/` goes through `BehaviorLLMLog`, which is what enforces the ceiling. Messages are passed as `Func<string>` rather than as strings, so a suppressed line costs nothing to build; that matters because the verbose lines interpolate whole prompts and response bodies. There are four entry points. `Error` and `Warn` are the obvious two. `Requested` is a line a config asset explicitly asked for, such as `logPrompts`, and prints at the normal level, because needing a second project-wide switch before the first one works is a trap. `Info` is internal detail nobody asked for and needs `Verbose`. `BehaviorLLMLog.Allows(level)` is public for a caller that would do real work purely to log. A bare `Debug.Log*` in `Runtime/` would be a line the project cannot turn off, which is why there are none.
+
+### H. The Decision Model paradigm
+
+TypeSafe's Jev (September 2026) and the open models llama.cpp gained support for in October 2026 (Kev, Laya, Julia-1, Clef, LiquidAI d1 and others) answer typed questions about a state with a probability per option, without generating text. The package exposes them as a second paradigm beside the generative one, chosen project-wide on `BehaviorLLMSettings.paradigm`, because the paradigm determines which kind of model the server can load: a decision model is run in embedding mode and cannot write, and a chat model cannot score.
+
+- **Contract.** `IDecisionModelBackend.DecideAsync(DecisionRequest, CancellationToken)` returns a `DecisionResponse`. A request is one `State` and any number of `DecisionQuestion`s (`Choice`, `Score` or `YesNo`), each with instructions and options; an answer carries the server's choice, a probability per option in the order asked, and a confidence. It is TypeSafe's System One API, which llama-server implements as `POST /v1/systemone`. `SystemOneProtocol` writes and reads it by hand, for the same reason `LlamaRequestWriter` exists: `questions`, `criteria` and `probabilities` are objects keyed by data, which `JsonUtility` cannot express. `BehaviorLLMClient` implements both backend interfaces and shares its HTTP, retry and server-management path between them; it reads a 404 as a server too old for decision models (before b11361), a 501 as a chat model loaded under the Decision Model paradigm, and a 500 "does not support logits" from the completion endpoint as the reverse.
+- **Options.** `DecisionCandidates.Enumerate` turns the action config into complete decisions: each action once per legal combination of its parameter values (`Patrol Route_North`, or `MoveTo destination=Gate speed=Run` for several parameters), with the action's description beside it. Values come from `ActionSchemaBuilder.CollectOptions` and actions pass the same availability filter, so the options are by construction what the generative grammar would allow. A parameter with no finite list cannot be offered and its action is left out. The model's option limit (`BehaviorLLMModelConfig.maxChoiceOptions`, 255 for most types and 52 for OpenJev) truncates the list.
+- **The turn.** `DecisionMaker.Think` branches after resolving availability. The question's instructions are the persona, the config's guide and a fixed question, built once like the system prompt; the state is the same `STATE:` block, trimmed to the same budget. `SelectOption` takes the most likely option or samples one in proportion to its probability (`DecisionMakerConfig.decisionModelSelection`); an option below `minChoiceProbability` runs the fallback. The chosen option's action and values then go through `HandleChoice`, the tail shared with the generative path: binding, availability after inference, every value present and still legal, argument policy, dispatch or fallback, telemetry. Nothing is parsed, so a decision model's answer cannot be malformed, only uncertain or overtaken by the world.
+- **Server.** `BehaviorLLMServer` leaves out `--cache-reuse` (unsupported in embedding mode) and `--jinja` for a decision model and keeps `-np`, which is how many questions about one state the server evaluates together. llama-server shares the prefix only between the questions of one request; it does not reuse a decision model's prompt between requests, so unlike the generative path there is no cached system prompt and every decision reads the whole situation.
+- **Consistency.** `BehaviorLLMModelConfig.paradigm` records which paradigm a file serves; the Model Manager reads it from the GGUF header key `<architecture>.decision.type`, the key llama-server dispatches on. A decision maker whose client's model does not match the project's paradigm reports an error at start.
 
 ## 3. Step-by-step workflow
 
@@ -101,6 +112,8 @@ Every console line in `Runtime/` goes through `BehaviorLLMLog`, which is what en
 3. **Request.** `LLMRequest` with schema, slot, budget and thinking policy; `BehaviorLLMClient` posts it; llama-server samples under the schema and reuses the cached prefix.
 4. **Decision.** The response is `{"action":"Attack","arg":"Orc"}` (or with a leading `reason` in Deliberative mode).
 5. **Act.** `DecisionParser` extracts the decision; the component validates it against the bindings and the action definition, applies the optional argument policy, invokes the bound `UnityEvent<ActionArguments>` (one value per named parameter; `args.First` for the single-parameter case) and publishes the telemetry record, from which `BasicMemory` records `Executed Action: Attack(Orc)`. Invalid output runs the fallback action instead, with the reason in the record.
+
+In the Decision Model paradigm, steps 2 to 4 become one choice question whose options are every legal decision, and step 4's answer is a probability per option instead of JSON.
 
 ## 4. Design notes
 

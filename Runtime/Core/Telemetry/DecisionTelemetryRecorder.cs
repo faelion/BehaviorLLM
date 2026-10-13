@@ -340,8 +340,11 @@ namespace BehaviorLLM.Core.Telemetry
             BehaviorLLMClient client = FindFirstClient();
             if (client != null)
             {
-                d.Transport = client.ActiveTransport.ToString();
-                d.Endpoint = client.Endpoint;
+                // A decision model has no transport choice; naming the paradigm here keeps a
+                // summary row comparing the two paradigms self-describing without a new column.
+                bool decides = BehaviorLLMSettings.Current.paradigm == DecisionParadigm.DecisionModel;
+                d.Transport = decides ? "DecisionModel" : client.ActiveTransport.ToString();
+                d.Endpoint = decides ? client.DecisionEndpoint : client.Endpoint;
                 BehaviorLLMClient.GenerationSummary g = client.Settings;
                 d.MaxTokens = g.MaxTokens;
                 d.Temperature = g.Temperature;

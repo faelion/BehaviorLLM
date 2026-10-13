@@ -34,6 +34,18 @@ namespace BehaviorLLM.Core.Config
         [Tooltip("The compression level of the file, for example Q4_K_M, for reference.")]
         public string quantisation = "Q4_K_M";
 
+        [Tooltip("What kind of model the file holds. Generative LLM: a chat model that writes its " +
+                 "answer. Decision Model: a Jev-style model (Kev, Laya, Julia-1...) that only scores " +
+                 "options and cannot write. It must match the paradigm in BehaviorLLM Settings, and " +
+                 "the decision makers warn at start when it does not. The Model Manager reads it from " +
+                 "the file, where llama.cpp itself looks, so a config it creates is always right.")]
+        public DecisionParadigm paradigm = DecisionParadigm.GenerativeLLM;
+
+        [Tooltip("Decision models only. The most options this model accepts in one question: 255 " +
+                 "for Kev, Laya and most others, 52 for OpenJev. A decision maker with more legal " +
+                 "action-and-value combinations than this offers the first ones and warns once.")]
+        public int maxChoiceOptions = 255;
+
         [Header("Server")]
         [Tooltip("How much text the server can hold at once, in tokens. It is split " +
                  "between the lanes set by Parallel Slots in the Server Config, so 8192 " +

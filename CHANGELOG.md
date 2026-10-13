@@ -7,7 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **A second decision paradigm: Jev-style decision models.** `BehaviorLLMSettings.paradigm` chooses, project-wide, between `GenerativeLLM` (the default and everything the package did before) and `DecisionModel`. In the new paradigm every legal decision is offered as one option of a choice question to llama-server's `POST /v1/systemone`, which implements TypeSafe's System One API for the open decision models (Kev-4B, Laya, Julia-1 and others). The model returns a probability per option and writes nothing, so there is no output format to fail and no reason field. The chosen option then goes through the same binding, availability, value, policy and fallback checks as a generated decision. Requires llama-server b11361 or newer.
+- `IDecisionModelBackend` with `DecisionRequest` / `DecisionQuestion` (`Choice`, `Score`, `YesNo`) / `DecisionResponse`, implemented by `BehaviorLLMClient.DecideAsync`. `SystemOneProtocol` writes and reads the wire format by hand. 404, 501 and the completion endpoint's "does not support logits" reply are turned into messages that say whether the server is too old or the loaded model is of the wrong paradigm.
+- `DecisionCandidates.Enumerate` turns an action config into complete decisions (`Patrol Route_North`, `MoveTo destination=Gate speed=Run`), using the schema's own value sources and availability filter. Actions with a parameter that has no finite list are left out, with one warning when no argument provider is attached.
+- `DecisionMakerConfig.decisionModelSelection` (`MostLikely`, or `Sample` in proportion to probability) and `minChoiceProbability`, below which the fallback runs. `BehaviorLLMModelConfig.paradigm` and `maxChoiceOptions`. A decision maker whose client's model does not match the project's paradigm reports an error at start.
+- `DecisionTelemetry` gains `paradigm`, `candidateCount`, `choiceProbability` and `choiceConfidence`, appended at the end. The run summary's transport column reads `DecisionModel` for such runs.
+- Model Manager: the status strip shows the paradigm and switches it, writing the project's own `Assets/Resources/BehaviorLLMSettings.asset` and never the shipped preset. The Catalog lists the models of the current paradigm, with Kev-4B, Laya and Julia-1 added. The Installed tab reads `<architecture>.decision.type` from the GGUF header, marks decision models, offers to switch paradigm when one of the other kind is set active, and records the paradigm on the configs it creates or assigns. The Server tab shows the installed build and warns when it predates decision models.
+- Prompt Inspector shows a decision model's distribution and the exact request body; the Editor also writes it to `StreamingAssets/_last_decision_request.json` for replay with curl.
+
+### Fixed
+- `BehaviorLLMServer` recognises the readiness line of llama-server builds from about b11300 on (`llama_server: listening on http://...`). With those builds `IsReady` never became true.
+
 ### Changed
+- `BehaviorLLMServer` leaves out `--cache-reuse` and `--jinja` when it launches a decision model, which llama-server runs in embedding mode where neither applies.
 - **`BasicMemory` records executed actions itself.** It subscribes to `DecisionTelemetryRecorded` on the `DecisionMaker` on its own object or a parent, instead of the decision maker writing into the first `BasicMemory` it found under it. Every memory module on a character now records, not only the first, and a custom memory module can record actions the same way. The entry is written just after the bound handler runs rather than just before it. A memory added in code before its decision maker subscribes at its first `Start`.
 
 ## [0.6.0] - 2026-09-22

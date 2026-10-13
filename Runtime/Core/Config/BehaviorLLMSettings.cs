@@ -1,3 +1,4 @@
+using BehaviorLLM.Core.Decisions;
 using UnityEngine;
 
 namespace BehaviorLLM.Core.Config
@@ -19,8 +20,8 @@ namespace BehaviorLLM.Core.Config
     }
 
     /// <summary>
-    /// Project-wide switches for the package: how loud it is, whether it records anything, and
-    /// which diagnostics it writes.
+    /// Project-wide switches for the package: which decision paradigm it uses, how loud it is,
+    /// whether it records anything, and which diagnostics it writes.
     ///
     /// The other config assets each tune one *domain* and are meant to exist in several
     /// variants - a Reactive preset and a Deliberative one, a perception profile per character
@@ -28,7 +29,10 @@ namespace BehaviorLLM.Core.Config
     /// nothing to do with how any particular decision maker behaves. "Should a shipped build print
     /// anything?" is not a property of a guard.
     ///
-    /// It acts as a **ceiling**, never as an override. A decision maker that has turned its own
+    /// The paradigm is the one setting here that is not a switch on output: it decides which kind
+    /// of model the whole project runs, so it lives once per project rather than per decision maker.
+    ///
+    /// The logging switches act as a **ceiling**, never as an override. A decision maker that has turned its own
     /// prompt logging off stays quiet whatever this says; what this can do is silence one that has
     /// it on, which is what makes a single switch enough to quieten a whole project before a build.
     ///
@@ -52,6 +56,17 @@ namespace BehaviorLLM.Core.Config
 
         /// <summary>Unique resource path for the shipped preset; project overrides use ResourceName.</summary>
         public const string DefaultResourcePath = "BehaviorLLM/Defaults/Settings";
+
+        [Header("Paradigm")]
+        [Tooltip("How every decision maker in the project chooses its action. Generative LLM: a chat " +
+                 "model writes a JSON answer, held to the legal actions by a grammar; this is what " +
+                 "the package has always done, and the only paradigm with a written reason. Decision " +
+                 "Model: a Jev-style decision model scores every legal action and returns their " +
+                 "probabilities, without writing anything, through llama-server's /v1/systemone " +
+                 "endpoint. The model the server loads must match: a decision model cannot write and " +
+                 "a chat model cannot score. Change it from BehaviorLLM > Model Manager, which keeps " +
+                 "the active model in step. A decision model needs llama-server build b11361 or newer.")]
+        public DecisionParadigm paradigm = DecisionParadigm.GenerativeLLM;
 
         [Header("Logging")]
         [Tooltip("How much the package prints to the console in the Editor and in a development " +

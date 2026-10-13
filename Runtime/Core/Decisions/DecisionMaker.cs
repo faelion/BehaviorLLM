@@ -51,9 +51,9 @@ namespace BehaviorLLM.Core.Decisions
 
         [Header("Scene Wiring")]
         [Tooltip("The component that sends requests to the AI server, normally a " +
-                 "Behavior LLM Client. Leave empty and it is found automatically: first " +
-                 "on this object, then anywhere in the scene. Set it only when the scene " +
-                 "has several clients and you need a specific one.")]
+                 "Behavior LLM Client, which serves both paradigms. Leave empty and it is " +
+                 "found automatically: first on this object, then anywhere in the scene. Set " +
+                 "it only when the scene has several clients and you need a specific one.")]
         [FormerlySerializedAs("defaultBackend")]
         [SerializeField] private MonoBehaviour defaultBackendComponent;
 
@@ -195,6 +195,7 @@ namespace BehaviorLLM.Core.Decisions
         private DecisionMakerConfig cfg;
 
         private ILLMBackend backend;
+        private IDecisionModelBackend decisionBackend;
         private List<IObservationModule> observations;
         private IActionArgumentPolicy actionArgumentPolicy;
         private IArgumentOptionsProvider argumentOptionsProvider;
@@ -220,6 +221,21 @@ namespace BehaviorLLM.Core.Decisions
         private float lastBackendWarningTime = -999f;
         private const float BackendWarningCooldown = 5f;
         private const int ReactiveTokenBudget = 48;
+
+        /// <summary>Id of the one question a decision maker asks a decision model each turn.</summary>
+        public const string ActionQuestionId = "action";
+
+        /// <summary>Option limit when the backend does not say what its model accepts: Kev's, Laya's
+        /// and most other decision models'.</summary>
+        private const int DefaultMaxChoiceOptions = 255;
+
+        // Decision-model setup problems are a property of the config, not of a turn, so each is
+        // reported once rather than on every decision.
+        private bool warnedUnenumerable;
+        private bool warnedTruncated;
+
+        /// <summary>The project's paradigm, read live so a test or tool that swaps the settings is honoured.</summary>
+        private static DecisionParadigm Paradigm => BehaviorLLMSettings.Current.paradigm;
 
         // Linked to component lifetime: cancelled when the component is disabled or destroyed so any
         // in-flight backend call aborts cleanly instead of resuming on a dead GameObject.
@@ -359,24 +375,63 @@ namespace BehaviorLLM.Core.Decisions
                 BehaviorLLMLog.Error(() => "[DecisionMaker] actionAvailabilityProviderComponent does not implement IActionAvailabilityProvider.");
         }
 
+        // Both kinds are resolved whatever the paradigm, so a tool or test that switches the
+        // project's paradigm at runtime finds the other backend already in place. Only the one the
+        // paradigm needs is an error to be missing.
         private void ResolveBackend()
         {
-            backend = GetComponent<ILLMBackend>();
-            if (backend == null && defaultBackendComponent != null)
+            bool decides = Paradigm == DecisionParadigm.DecisionModel;
+            backend = FindBackend<ILLMBackend>(!decides);
+            decisionBackend = FindBackend<IDecisionModelBackend>(decides);
+
+            if (decides && decisionBackend == null)
+                BehaviorLLMLog.Error(() => "[DecisionMaker] The project's paradigm is Decision Model, but no backend that " +
+                                           "serves one (IDecisionModelBackend) was found. Add a Behavior LLM Client to the scene.");
+            else if (!decides && backend == null)
+                BehaviorLLMLog.Error(() => "[DecisionMaker] No Backend (ILLMBackend) found!");
+
+            WarnOnParadigmMismatch();
+            WarnOnModelConfigMismatch();
+        }
+
+        private T FindBackend<T>(bool reportWrongType) where T : class
+        {
+            T found = GetComponent<T>();
+            if (found == null && defaultBackendComponent != null)
             {
-                backend = defaultBackendComponent as ILLMBackend;
-                if (backend == null) BehaviorLLMLog.Error(() => "[DecisionMaker] Default Backend Component does not implement ILLMBackend.");
+                found = defaultBackendComponent as T;
+                if (found == null && reportWrongType)
+                    BehaviorLLMLog.Error(() => $"[DecisionMaker] Default Backend Component does not implement {typeof(T).Name}.");
             }
-            if (backend == null)
+            if (found == null)
             {
                 MonoBehaviour[] all = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
                 for (int i = 0; i < all.Length; i++)
                 {
-                    if (all[i] is ILLMBackend found) { backend = found; break; }
+                    if (all[i] is T match) { found = match; break; }
                 }
             }
-            if (backend == null) BehaviorLLMLog.Error(() => "[DecisionMaker] No Backend (ILLMBackend) found!");
-            WarnOnModelConfigMismatch();
+            return found;
+        }
+
+        /// <summary>
+        /// The model a client is configured with must be the kind the project's paradigm needs: a
+        /// decision model cannot write a JSON answer and a chat model cannot score options, so a
+        /// mismatch fails every single decision. Reported whatever the warning switches say,
+        /// because it is not advice. Only a config that names a file is checked; an empty one
+        /// means the server runs whatever the Model Manager chose, which it keeps in step itself.
+        /// </summary>
+        private void WarnOnParadigmMismatch()
+        {
+            BehaviorLLMClient client = (Paradigm == DecisionParadigm.DecisionModel ? (object)decisionBackend : backend) as BehaviorLLMClient;
+            BehaviorLLMModelConfig model = client != null ? client.ModelConfig : null;
+            if (model == null || !model.HasModelFile || model.paradigm == Paradigm) return;
+
+            DecisionParadigm project = Paradigm;
+            BehaviorLLMLog.Error(() => $"[DecisionMaker] '{gameObject.name}': the project's paradigm is {project}, but the " +
+                                       $"client's model '{model.displayName}' is a {model.paradigm} model. Every decision " +
+                                       "will fail. Set the model and the paradigm together from BehaviorLLM > Model Manager, " +
+                                       "or change Paradigm in the BehaviorLLM Settings asset.");
         }
 
         // Advisory only: a model config records what that model was measured to do well, and this
@@ -385,6 +440,17 @@ namespace BehaviorLLM.Core.Decisions
         private void WarnOnModelConfigMismatch()
         {
             if (!BehaviorLLMSettings.Current.warnOnModelProfileMismatch) return;
+
+            if (Paradigm == DecisionParadigm.DecisionModel)
+            {
+                // A decision model writes nothing, so it has no reason to write and nothing to
+                // think with. The profile is not an error, only a setting with no effect.
+                if (Cfg.profile == DecisionProfile.Deliberative)
+                    BehaviorLLMLog.Warn(() => $"[DecisionMaker] '{gameObject.name}': profile is Deliberative, but a decision " +
+                                              "model writes no reason and does not think; the profile has no effect in the " +
+                                              "Decision Model paradigm.");
+                return;
+            }
 
             BehaviorLLMClient client = backend as BehaviorLLMClient;
             BehaviorLLMModelConfig model = client != null ? client.ModelConfig : null;
@@ -445,6 +511,16 @@ namespace BehaviorLLM.Core.Decisions
         /// </summary>
         public void RebuildSchema()
         {
+            // A decision model is asked one fixed question about each situation; the options are
+            // rebuilt every turn from the config, so the only thing to cache is the question.
+            if (Paradigm == DecisionParadigm.DecisionModel)
+            {
+                deferredArgumentActions.Clear();
+                cachedSystemPrompt = PromptBuilder.BuildDecisionInstructions(actionConfig, systemPersona);
+                cachedSchema = null;
+                return;
+            }
+
             int reasonChars = Cfg.EffectiveReasonChars;
             Func<ActionDefinition, ActionParameter, IList<string>> optionsFor = argumentOptionsProvider != null ? ResolveArgumentOptions : (Func<ActionDefinition, ActionParameter, IList<string>>)null;
 
@@ -614,7 +690,8 @@ namespace BehaviorLLM.Core.Decisions
 
         private async void Think()
         {
-            if (backend == null || actionConfig == null) return;
+            bool decides = Paradigm == DecisionParadigm.DecisionModel;
+            if (actionConfig == null || (decides ? decisionBackend == null : backend == null)) return;
             if (thinkCts == null) return; // disabled between Update() and Think()
             isThinking = true;
             CancellationTokenSource currentRequest = CancellationTokenSource.CreateLinkedTokenSource(thinkCts.Token);
@@ -626,6 +703,12 @@ namespace BehaviorLLM.Core.Decisions
                 if (!ResolveAvailableActions())
                 {
                     BehaviorLLMLog.Warn(() => $"[DecisionMaker] '{gameObject.name}': the action availability provider allows no action this turn; skipping the decision.");
+                    return;
+                }
+
+                if (decides)
+                {
+                    await DecideWithModel(token);
                     return;
                 }
 
@@ -744,6 +827,249 @@ namespace BehaviorLLM.Core.Decisions
             };
         }
 
+        // ------------------------------------------------------------------ decide (decision model)
+
+        /// <summary>
+        /// The Decision Model paradigm's turn. Every legal decision becomes one option of a single
+        /// choice question; the model returns a probability for each, one is selected, and the
+        /// result goes through the same checks and dispatch as a generated decision.
+        ///
+        /// Nothing here is parsed: the model can only answer with an option it was offered, so the
+        /// failure modes left are the backend failing, the world changing during inference, and a
+        /// choice too uncertain to act on when the config asks for a minimum.
+        /// </summary>
+        private async System.Threading.Tasks.Task DecideWithModel(CancellationToken token)
+        {
+            DecisionCandidates.Result candidates = DecisionCandidates.Enumerate(actionConfig, new DecisionCandidates.Options
+            {
+                ArgumentOptionsFor = argumentOptionsProvider != null ? ResolveArgumentOptions : (Func<ActionDefinition, ActionParameter, IList<string>>)null,
+                IsActionAvailable = actionAvailabilityProvider == null ? (Func<ActionDefinition, bool>)null : def => IsAvailableNow(def.actionName),
+                MaxCandidates = MaxChoiceOptions()
+            });
+            WarnAboutCandidates(candidates);
+
+            if (candidates.Candidates.Count == 0)
+            {
+                EmitBackendUnavailableTelemetry(0, LLMResponse.Failed(
+                    "No decision can be offered to the decision model: every available action has a parameter " +
+                    "with no list of allowed values. Give those parameters Allowed Values or an Argument Options Provider."));
+                return;
+            }
+
+            string observationText = ObservationComposer.Compose(observations, Cfg.maxVisionEntries, Cfg.maxMemoryEntries);
+            string state = PromptBuilder.BuildStatePrompt(observationText);
+            if (Cfg.maxPromptChars > 0)
+            {
+                int stateBudget = Cfg.maxPromptChars - cachedSystemPrompt.Length;
+                state = PromptBuilder.TrimStatePrompt(state, stateBudget);
+                if (state.Length > stateBudget)
+                {
+                    EmitBackendUnavailableTelemetry(cachedSystemPrompt.Length + state.Length,
+                        LLMResponse.Failed("Prompt budget cannot contain the question and the first observation. Increase Max Prompt Chars."));
+                    return;
+                }
+            }
+
+            DecisionQuestion question = new DecisionQuestion
+            {
+                Id = ActionQuestionId,
+                Type = DecisionQuestionType.Choice,
+                Instructions = cachedSystemPrompt
+            };
+            for (int i = 0; i < candidates.Candidates.Count; i++)
+            {
+                DecisionCandidates.Candidate c = candidates.Candidates[i];
+                question.Options.Add(new DecisionOption(c.Key, c.Description));
+            }
+            DecisionRequest request = new DecisionRequest { State = state };
+            request.Questions.Add(question);
+            int promptLength = cachedSystemPrompt.Length + state.Length;
+
+            #if UNITY_EDITOR
+            DumpToStreamingAssets("_last_decision_request.json", SystemOneProtocol.WriteRequest(request));
+            if (CaptureExchanges)
+            {
+                LastSystemPrompt = cachedSystemPrompt;
+                LastStatePrompt = state;
+                // The exact body, so it can be replayed against the server with curl, which is
+                // what the dumped schema is for in the other paradigm.
+                LastSchema = SystemOneProtocol.WriteRequest(request);
+                LastResponseText = null;
+                LastReasoningText = null;
+            }
+            if (Cfg.logPrompts) BehaviorLLMLog.Requested(() => $"[DecisionMaker] Question ({promptLength} chars, {candidates.Candidates.Count} options):\n{cachedSystemPrompt}\n{state}");
+            #endif
+
+            DecisionResponse response = await decisionBackend.DecideAsync(request, token);
+            token.ThrowIfCancellationRequested();
+
+            DecisionAnswer answer = response != null && response.Succeeded ? response.Find(ActionQuestionId) : null;
+            if (answer == null)
+            {
+                LLMResponse failure = AsLLMResponse(response, response != null && response.Succeeded
+                    ? $"The decision model returned no answer to the '{ActionQuestionId}' question."
+                    : null);
+                LogBackendUnavailable(failure);
+                EmitBackendUnavailableTelemetry(promptLength, failure);
+                return;
+            }
+
+            #if UNITY_EDITOR
+            if (CaptureExchanges) LastResponseText = DescribeDistribution(answer);
+            #endif
+
+            HandleDecisionAnswer(answer, candidates, response, promptLength);
+        }
+
+        /// <summary>Turns the model's distribution into one offered decision, then dispatches it.</summary>
+        private void HandleDecisionAnswer(DecisionAnswer answer, DecisionCandidates.Result candidates,
+                                          DecisionResponse response, int promptLength)
+        {
+            DecisionTelemetry telemetry = CreateTelemetryRecord(promptLength, AsLLMResponse(response, null));
+            telemetry.candidateCount = candidates.Candidates.Count;
+            telemetry.choiceConfidence = answer.Confidence;
+
+            string key = SelectOption(answer, candidates);
+            DecisionCandidates.Candidate chosen = candidates.Find(key);
+            if (chosen == null)
+            {
+                telemetry.parseFailureReason = $"The decision model chose '{key}', which was not one of the options offered.";
+                FailOrFallback(telemetry.parseFailureReason, telemetry, $"[DecisionMaker] {telemetry.parseFailureReason}");
+                EmitTelemetry(telemetry);
+                return;
+            }
+
+            float probability = answer.ProbabilityOf(chosen.Key);
+            telemetry.choiceProbability = probability;
+            if (Cfg.logDecisions) BehaviorLLMLog.Requested(() => $"[DecisionMaker] Answer: {chosen.Key} (p={probability:0.00}, confidence {answer.Confidence:0.00})");
+
+            if (Cfg.minChoiceProbability > 0f && probability < Cfg.minChoiceProbability)
+            {
+                // Not a parse failure: the answer was well formed, only too uncertain to act on.
+                string reason = $"'{chosen.Key}' had probability {probability:0.00}, below Min Choice Probability {Cfg.minChoiceProbability:0.00}";
+                FailOrFallback(reason, telemetry, $"[DecisionMaker] {reason}; no fallback is configured, so nothing ran.");
+                EmitTelemetry(telemetry);
+                return;
+            }
+
+            HandleChoice(telemetry, chosen.Action, chosen.Arguments);
+        }
+
+        /// <summary>
+        /// The key of the option to act on. Most Likely takes the server's own choice, falling back to
+        /// the highest probability among the offered options if the server named none. Sample draws in
+        /// proportion to probability, over the offered options only, so a key the server invented
+        /// can never be drawn.
+        /// </summary>
+        private string SelectOption(DecisionAnswer answer, DecisionCandidates.Result candidates)
+        {
+            if (Cfg.decisionModelSelection == DecisionModelSelection.Sample)
+            {
+                float total = 0f;
+                for (int i = 0; i < answer.Probabilities.Count; i++)
+                {
+                    if (candidates.Find(answer.Probabilities[i].Key) != null) total += Mathf.Max(0f, answer.Probabilities[i].Value);
+                }
+                if (total > 0f)
+                {
+                    // Zero-probability options are skipped outright: Random.value can return exactly
+                    // 0, and "draw <= 0" would then pick the first option whatever its weight.
+                    float draw = UnityEngine.Random.value * total;
+                    string last = null;
+                    for (int i = 0; i < answer.Probabilities.Count; i++)
+                    {
+                        float weight = answer.Probabilities[i].Value;
+                        if (weight <= 0f || candidates.Find(answer.Probabilities[i].Key) == null) continue;
+                        last = answer.Probabilities[i].Key;
+                        draw -= weight;
+                        if (draw <= 0f) return last;
+                    }
+                    if (last != null) return last;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(answer.Choice)) return answer.Choice;
+
+            string best = null;
+            float bestP = -1f;
+            for (int i = 0; i < answer.Probabilities.Count; i++)
+            {
+                if (answer.Probabilities[i].Value > bestP && candidates.Find(answer.Probabilities[i].Key) != null)
+                {
+                    best = answer.Probabilities[i].Key;
+                    bestP = answer.Probabilities[i].Value;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>The option limit of the model behind the decision backend.</summary>
+        private int MaxChoiceOptions()
+        {
+            BehaviorLLMClient client = decisionBackend as BehaviorLLMClient;
+            int limit = client != null ? client.ModelConfig.maxChoiceOptions : DefaultMaxChoiceOptions;
+            return limit > 0 ? limit : 0;
+        }
+
+        private void WarnAboutCandidates(DecisionCandidates.Result candidates)
+        {
+            // With a provider attached, an action with no values may simply have none this turn
+            // (nobody to chase), which is the scene working, not a configuration to fix.
+            if (!warnedUnenumerable && candidates.UnenumerableActions.Count > 0 && argumentOptionsProvider == null)
+            {
+                warnedUnenumerable = true;
+                string names = string.Join(", ", candidates.UnenumerableActions);
+                BehaviorLLMLog.Warn(() => $"[DecisionMaker] '{gameObject.name}': {names} cannot be offered to a decision model, " +
+                                          "because a parameter accepts any value rather than a list. A decision model only chooses " +
+                                          "between options it is shown. Give the parameter Allowed Values, or supply them with an " +
+                                          "Argument Options Provider.", this);
+            }
+            if (!warnedTruncated && candidates.Truncated)
+            {
+                warnedTruncated = true;
+                int count = candidates.Candidates.Count;
+                BehaviorLLMLog.Warn(() => $"[DecisionMaker] '{gameObject.name}': more legal decisions than the model accepts in one " +
+                                          $"question; only the first {count} are offered. Narrow the argument lists, or gate actions " +
+                                          "with an Action Availability Provider.", this);
+            }
+        }
+
+        /// <summary>
+        /// A decision-model response in the shape the shared telemetry and failure paths read. A
+        /// success carries empty text rather than null, because a null text is how those paths
+        /// recognise a failed backend.
+        /// </summary>
+        private static LLMResponse AsLLMResponse(DecisionResponse response, string errorOverride)
+        {
+            if (response == null) return LLMResponse.Failed(errorOverride ?? "empty backend response.");
+            string error = errorOverride ?? response.Error;
+            return new LLMResponse
+            {
+                Text = error == null ? string.Empty : null,
+                Error = error,
+                LatencyMs = response.LatencyMs,
+                PromptTokens = response.InputTokens
+            };
+        }
+
+        #if UNITY_EDITOR
+        /// <summary>The distribution as the Prompt Inspector shows it: most likely first, one per line.</summary>
+        private static string DescribeDistribution(DecisionAnswer answer)
+        {
+            List<KeyValuePair<string, float>> sorted = new List<KeyValuePair<string, float>>(answer.Probabilities);
+            sorted.Sort((a, b) => b.Value.CompareTo(a.Value));
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            sb.Append("choice: ").Append(answer.Choice).Append("   confidence: ")
+              .Append(answer.Confidence.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                sb.Append(sorted[i].Value.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture))
+                  .Append("  ").Append(sorted[i].Key).Append('\n');
+            }
+            return sb.ToString().TrimEnd();
+        }
+        #endif
+
         // ------------------------------------------------------------------ act
 
         // Kept as a single-string entry point so tests can feed synthetic model output.
@@ -766,9 +1092,18 @@ namespace BehaviorLLM.Core.Decisions
             }
 
             telemetry.reason = parsed.Reason;
-            string action = parsed.Action;
-            ActionArguments arguments = parsed.Arguments ?? ActionArguments.Empty;
+            HandleChoice(telemetry, parsed.Action, parsed.Arguments ?? ActionArguments.Empty);
+        }
 
+        /// <summary>
+        /// Everything after the model has named an action, whichever paradigm named it: the action
+        /// must be bound and still available, every value present, accepted by the policy and still
+        /// legal; then it is dispatched, or the fallback runs, and the telemetry goes out. One path
+        /// for both paradigms, so a decision model's choice is held to exactly the checks a
+        /// generated one is.
+        /// </summary>
+        private void HandleChoice(DecisionTelemetry telemetry, string action, ActionArguments arguments)
+        {
             if (!IsActionValid(action))
             {
                 telemetry.parseFailureReason = $"Unbound action '{action}'.";
@@ -1011,6 +1346,7 @@ namespace BehaviorLLM.Core.Decisions
                 completionTokens = response != null ? response.CompletionTokens : 0,
                 cachedTokens = response != null ? response.CachedTokens : 0,
                 profile = Cfg.profile,
+                paradigm = Paradigm,
                 structuredOutput = response != null && response.StructuredOutput,
                 resultType = DecisionResultType.NoAction,
                 actionName = string.Empty,
@@ -1035,7 +1371,8 @@ namespace BehaviorLLM.Core.Decisions
         private string DescribeBackendFailure(LLMResponse response)
         {
             if (response != null && !string.IsNullOrWhiteSpace(response.Error)) return response.Error;
-            if (backend is IBackendDiagnostics diag && !string.IsNullOrWhiteSpace(diag.LastBackendError)) return diag.LastBackendError;
+            object active = Paradigm == DecisionParadigm.DecisionModel ? decisionBackend : (object)backend;
+            if (active is IBackendDiagnostics diag && !string.IsNullOrWhiteSpace(diag.LastBackendError)) return diag.LastBackendError;
             return "empty backend response.";
         }
 

@@ -323,11 +323,14 @@ namespace BehaviorLLM.Core.Backend
                    line.IndexOf("model buffer size", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        private static bool IsServerReadyLine(string line)
+        // Builds from about b11300 on announce readiness as "llama_server: listening on http://...",
+        // without the word "is"; the older phrasings stay for older builds.
+        internal static bool IsServerReadyLine(string line)
         {
             return line.IndexOf("server is listening on", StringComparison.OrdinalIgnoreCase) >= 0 ||
                    line.IndexOf("HTTP server is listening", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   line.IndexOf("starting the main loop", StringComparison.OrdinalIgnoreCase) >= 0;
+                   line.IndexOf("starting the main loop", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   line.IndexOf("listening on http", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static bool IsServerRequestTrafficLine(string line)
@@ -541,20 +544,43 @@ namespace BehaviorLLM.Core.Backend
             return Path.Combine(Application.streamingAssetsPath, relativeOrAbsolute);
         }
 
+        /// <summary>
+        /// Whether the model this server loads is a decision model. The model config says so when
+        /// it names the file; otherwise the server runs whatever the Model Manager chose, which it
+        /// keeps in step with the project's paradigm, so the paradigm answers.
+        /// </summary>
+        public bool ServesDecisionModel =>
+            modelConfig != null && modelConfig.HasModelFile
+                ? modelConfig.paradigm == BehaviorLLM.Core.Decisions.DecisionParadigm.DecisionModel
+                : BehaviorLLMSettings.Current.paradigm == BehaviorLLM.Core.Decisions.DecisionParadigm.DecisionModel;
+
         // No --reasoning-budget here on purpose: a server-wide budget disables the per-request
         // thinking control that lets reactive and deliberative decision makers share one server.
         private string BuildArgs(string fullModelPath, RuntimeServerConfig cfg)
         {
+            return BuildArgs(fullModelPath, cfg.contextSize, cfg.port, cfg.gpuLayers, Settings, ServesDecisionModel);
+        }
+
+        /// <summary>
+        /// The command line for one launch. A decision model drops the two flags that only mean
+        /// something to a model that writes: llama-server runs it in embedding mode, where
+        /// <c>--cache-reuse</c> is unsupported and switched off with a warning, and it has no chat
+        /// template for <c>--jinja</c> to apply. The parallel slots stay: they are how many questions
+        /// about one state the server evaluates together.
+        /// </summary>
+        internal static string BuildArgs(string fullModelPath, int contextSize, int port, int gpuLayers,
+                                         BehaviorLLMServerConfig settings, bool decisionModel)
+        {
             StringBuilder sb = new StringBuilder();
             sb.Append($"-m \"{fullModelPath}\"");
-            sb.Append($" -c {cfg.contextSize}");
-            sb.Append($" --port {cfg.port}");
+            sb.Append($" -c {contextSize}");
+            sb.Append($" --port {port}");
             sb.Append(" --host 127.0.0.1");
-            sb.Append($" -ngl {cfg.gpuLayers}");
-            if (Settings.parallelSlots > 0) sb.Append($" -np {Settings.parallelSlots}");
-            if (Settings.cacheReuse > 0) sb.Append($" --cache-reuse {Settings.cacheReuse}");
-            if (Settings.useJinja) sb.Append(" --jinja");
-            if (!string.IsNullOrWhiteSpace(Settings.extraArguments)) sb.Append(' ').Append(Settings.extraArguments.Trim());
+            sb.Append($" -ngl {gpuLayers}");
+            if (settings.parallelSlots > 0) sb.Append($" -np {settings.parallelSlots}");
+            if (!decisionModel && settings.cacheReuse > 0) sb.Append($" --cache-reuse {settings.cacheReuse}");
+            if (!decisionModel && settings.useJinja) sb.Append(" --jinja");
+            if (!string.IsNullOrWhiteSpace(settings.extraArguments)) sb.Append(' ').Append(settings.extraArguments.Trim());
             return sb.ToString();
         }
 

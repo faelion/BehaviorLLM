@@ -97,6 +97,28 @@ namespace BehaviorLLM.Core.Decisions
             return sb.ToString().TrimEnd();
         }
 
+        /// <summary>The question a decision model is asked about every situation.</summary>
+        public const string DecisionQuestionText = "Which action should you take now?";
+
+        /// <summary>
+        /// The instructions of the one question a decision maker asks a decision model: who it is,
+        /// the config's guide, and the question itself. The counterpart of the system prompt, and
+        /// built once for the same reason.
+        ///
+        /// There is no action menu and no output contract here. The options travel as the
+        /// question's own criteria, each with its description, and the model cannot answer in any
+        /// form but a probability per option, so there is nothing to explain about format.
+        /// </summary>
+        public static string BuildDecisionInstructions(ActionConfig config, string persona)
+        {
+            StringBuilder sb = new StringBuilder(256);
+            if (!string.IsNullOrWhiteSpace(persona)) sb.Append(persona.Trim()).Append(NL);
+            if (config != null && !string.IsNullOrWhiteSpace(config.modelInstructions))
+                sb.Append(config.modelInstructions.Trim()).Append(NL);
+            sb.Append(DecisionQuestionText);
+            return sb.ToString();
+        }
+
         /// <summary>Dynamic half of the prompt.</summary>
         public static string BuildStatePrompt(string observations)
         {

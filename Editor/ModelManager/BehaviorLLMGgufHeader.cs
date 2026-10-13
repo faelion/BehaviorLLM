@@ -31,8 +31,18 @@ namespace BehaviorLLM.Editor.ModelManager
             public string Name = string.Empty;
             /// <summary><c>tokenizer.chat_template</c>, or empty. Read for its thinking markers, not shown.</summary>
             public string ChatTemplate = string.Empty;
+            /// <summary>
+            /// <c>&lt;architecture&gt;.decision.type</c> (kev, laya, lfm2-d1...), or empty for a model
+            /// that writes. It is the key llama-server reads to load a file as a decision model, so
+            /// it is the honest test of which paradigm a file belongs to: Kev is a qwen35 like
+            /// Qwen3.5-4B, and only this key tells them apart.
+            /// </summary>
+            public string DecisionType = string.Empty;
             /// <summary>Why reading stopped, for a tooltip. Empty on success.</summary>
             public string Error = string.Empty;
+
+            /// <summary>True when the file is a Jev-style decision model rather than a chat model.</summary>
+            public bool IsDecisionModel => DecisionType.Length > 0;
 
             public BehaviorLLMHuggingFace.ArchitectureSupport Support =>
                 BehaviorLLMHuggingFace.ClassifyArchitecture(Architecture);
@@ -96,6 +106,7 @@ namespace BehaviorLLM.Editor.ModelManager
                         if (type == TypeString && key == "general.architecture") info.Architecture = ReadString(r);
                         else if (type == TypeString && key == "general.name") info.Name = ReadString(r);
                         else if (type == TypeString && key == "tokenizer.chat_template") info.ChatTemplate = ReadString(r);
+                        else if (type == TypeString && key.EndsWith(".decision.type", StringComparison.Ordinal)) info.DecisionType = ReadString(r);
                         else SkipValue(r, type);
 
                         if (info.Architecture.Length > 0 && info.Name.Length > 0 && info.ChatTemplate.Length > 0) break;

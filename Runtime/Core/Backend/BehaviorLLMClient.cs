@@ -13,9 +13,13 @@ namespace BehaviorLLM.Core.Backend
     /// HTTP backend for a local llama.cpp <c>llama-server</c> (or any server exposing the same
     /// OpenAI-compatible <c>/v1/chat/completions</c> endpoint). Schema, slot and thinking policy
     /// arrive with each <see cref="LLMRequest"/>, so one client can serve any number of decision makers.
+    ///
+    /// It serves both paradigms. A generative model is asked through <see cref="CompleteAsync"/>;
+    /// a decision model through <see cref="DecideAsync"/>, which posts to the server's
+    /// <c>/v1/systemone</c> endpoint. Which one is used is the project's paradigm, not the client's.
     /// </summary>
     [AddComponentMenu("BehaviorLLM/Behavior LLM Client")]
-    public class BehaviorLLMClient : MonoBehaviour, ILLMBackend, IBackendDiagnostics
+    public class BehaviorLLMClient : MonoBehaviour, ILLMBackend, IDecisionModelBackend, IBackendDiagnostics
     {
         [Header("Configuration")]
         [Tooltip("Where the AI server is and how to talk to it: address, timeouts, " +
@@ -95,6 +99,9 @@ namespace BehaviorLLM.Core.Backend
 
         /// <summary>Full endpoint the current transport posts to.</summary>
         public string Endpoint => EndpointFor(ActiveTransport);
+
+        /// <summary>Full endpoint decision-model requests post to.</summary>
+        public string DecisionEndpoint => (activeBaseUrl ?? string.Empty).TrimEnd('/') + SystemOneProtocol.EndpointPath;
 
         private string EndpointFor(BackendTransport transport) =>
             (activeBaseUrl ?? string.Empty).TrimEnd('/') +
@@ -236,83 +243,203 @@ namespace BehaviorLLM.Core.Backend
             string body = BuildBody(request, schema, transport);
             string endpoint = EndpointFor(transport);
 
-            int maxAttempts = server != null ? Mathf.Max(2, Cfg.modelLoadingRetryCount + 1) : 1;
+            int maxAttempts = MaxAttempts;
             for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                float started = Time.realtimeSinceStartup;
+                HttpResult http = await PostAsync(endpoint, body, cancellationToken);
 
-                using (UnityWebRequest web = new UnityWebRequest(endpoint, "POST"))
+                if (http.Success)
                 {
-                    web.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-                    web.downloadHandler = new DownloadHandlerBuffer();
-                    web.SetRequestHeader("Content-Type", "application/json");
-                    web.timeout = Mathf.Max(1, Cfg.requestTimeoutSeconds);
+                    ClearBackendFailure();
+                    LLMResponse response = ParseResponseBody(http.Raw, http.LatencyMs);
+                    response.StructuredOutput = response.Succeeded && !string.IsNullOrEmpty(schema);
 
-                    UnityWebRequestAsyncOperation op = web.SendWebRequest();
-                    using (cancellationToken.Register(() => { try { web.Abort(); } catch { } }))
+                    // A model whose chat template ignores the thinking switch spends the whole
+                    // budget reasoning and returns nothing to act on. Retry once without the
+                    // template: on /completion the schema constrains generation from the first
+                    // token, so a preamble is not merely discouraged but impossible.
+                    if (ShouldRetryWithoutChatTemplate(transport, response))
                     {
-                        while (!op.isDone) await Task.Yield();
-                    }
-                    if (cancellationToken.IsCancellationRequested) throw new OperationCanceledException(cancellationToken);
+                        transportOverride = BackendTransport.RawCompletion;
+                        BehaviorLLMLog.Warn(() =>
+                            "[BehaviorLLMClient] The model spent its whole budget of " + response.CompletionTokens +
+                            " tokens reasoning and gave no answer, so its chat template ignores the " +
+                            "request not to think: either it is out of date, or this is a reasoning " +
+                            "model that always thinks first. Switching this client to raw completion, " +
+                            "which sends the prompt without the chat template and forbids thinking from " +
+                            "the first token. That fixes an out-of-date template. It does NOT fix a " +
+                            "reasoning model: forbidden to think and stripped of its template, a small " +
+                            "one gives the cheapest legal answer every time (the first action, with no " +
+                            "argument). For a reasoning model set Profile to Deliberative with a Thinking " +
+                            "Budget on the decision maker config, or use a model that does not reason " +
+                            "first. To make raw completion permanent for a template that only needed " +
+                            "the switch, set Transport to RawCompletion on the server config.", this);
 
-                    float latencyMs = Mathf.Max(0f, (Time.realtimeSinceStartup - started) * 1000f);
-                    string raw = web.downloadHandler != null ? web.downloadHandler.text : string.Empty;
-
-                    if (web.result == UnityWebRequest.Result.Success)
-                    {
-                        ClearBackendFailure();
-                        LLMResponse response = ParseResponseBody(raw, latencyMs);
-                        response.StructuredOutput = response.Succeeded && !string.IsNullOrEmpty(schema);
-
-                        // A model whose chat template ignores the thinking switch spends the whole
-                        // budget reasoning and returns nothing to act on. Retry once without the
-                        // template: on /completion the schema constrains generation from the first
-                        // token, so a preamble is not merely discouraged but impossible.
-                        if (ShouldRetryWithoutChatTemplate(transport, response))
-                        {
-                            transportOverride = BackendTransport.RawCompletion;
-                            BehaviorLLMLog.Warn(() =>
-                                "[BehaviorLLMClient] The model spent its whole budget of " + response.CompletionTokens +
-                                " tokens reasoning and gave no answer, so its chat template ignores the " +
-                                "request not to think: either it is out of date, or this is a reasoning " +
-                                "model that always thinks first. Switching this client to raw completion, " +
-                                "which sends the prompt without the chat template and forbids thinking from " +
-                                "the first token. That fixes an out-of-date template. It does NOT fix a " +
-                                "reasoning model: forbidden to think and stripped of its template, a small " +
-                                "one gives the cheapest legal answer every time (the first action, with no " +
-                                "argument). For a reasoning model set Profile to Deliberative with a Thinking " +
-                                "Budget on the decision maker config, or use a model that does not reason " +
-                                "first. To make raw completion permanent for a template that only needed " +
-                                "the switch, set Transport to RawCompletion on the server config.", this);
-
-                            transport = BackendTransport.RawCompletion;
-                            body = BuildBody(request, schema, transport);
-                            endpoint = EndpointFor(transport);
-                            continue;
-                        }
-
-                        return response;
-                    }
-
-                    bool loadingModel = IsModelLoadingResponse(web.responseCode, raw);
-                    bool startupIssue = IsLikelyStartupConnectionError(web.error);
-                    if (attempt < maxAttempts && (startupIssue || loadingModel))
-                    {
-                        await Task.Delay(Mathf.Max(50, Cfg.startupRetryDelayMs), cancellationToken);
+                        transport = BackendTransport.RawCompletion;
+                        body = BuildBody(request, schema, transport);
+                        endpoint = EndpointFor(transport);
                         continue;
                     }
 
-                    string message = loadingModel
-                        ? "Server is still loading the model. Wait a few seconds and retry."
-                        : $"Request failed ({web.result}) at '{endpoint}': {web.error}" + (string.IsNullOrWhiteSpace(raw) ? "" : $" | Body: {raw}");
-                    SetBackendFailure(message);
-                    return LLMResponse.Failed(message, latencyMs);
+                    return response;
                 }
+
+                if (attempt < maxAttempts && http.Retryable)
+                {
+                    await Task.Delay(Mathf.Max(50, Cfg.startupRetryDelayMs), cancellationToken);
+                    continue;
+                }
+
+                string message = http.LoadingModel
+                    ? "Server is still loading the model. Wait a few seconds and retry."
+                    : IsDecisionModelRefusingToGenerate(http.Code, http.Raw)
+                        ? "The server is running a decision model, which scores options but cannot write an answer, " +
+                          "while the project's paradigm is Generative LLM. Choose a chat model in BehaviorLLM > Model " +
+                          "Manager, or set Paradigm to Decision Model in the BehaviorLLM Settings asset."
+                        : $"Request failed ({http.Result}) at '{endpoint}': {http.Error}" + (string.IsNullOrWhiteSpace(http.Raw) ? "" : $" | Body: {http.Raw}");
+                SetBackendFailure(message);
+                return LLMResponse.Failed(message, http.LatencyMs);
             }
 
             SetBackendFailure("Request failed: exhausted retries.");
             return LLMResponse.Failed(LastBackendError);
+        }
+
+        /// <summary>
+        /// Asks a decision model, through the server's <c>/v1/systemone</c> endpoint. Shares the
+        /// server management and the startup retries with <see cref="CompleteAsync"/>; what it adds
+        /// is reading the two failures specific to this paradigm, an old server and a chat model,
+        /// into messages that say what to change.
+        /// </summary>
+        public async Task<DecisionResponse> DecideAsync(DecisionRequest request, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (request == null) return DecisionResponse.Failed("request is null");
+            if (!PrepareEndpointAndServer()) return DecisionResponse.Failed(LastBackendError);
+
+            string body = SystemOneProtocol.WriteRequest(request);
+            string endpoint = DecisionEndpoint;
+
+            int maxAttempts = MaxAttempts;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                HttpResult http = await PostAsync(endpoint, body, cancellationToken);
+
+                if (http.Success)
+                {
+                    ClearBackendFailure();
+                    return SystemOneProtocol.ParseResponse(http.Raw, http.LatencyMs);
+                }
+
+                if (attempt < maxAttempts && http.Retryable)
+                {
+                    await Task.Delay(Mathf.Max(50, Cfg.startupRetryDelayMs), cancellationToken);
+                    continue;
+                }
+
+                string message = http.LoadingModel
+                    ? "Server is still loading the model. Wait a few seconds and retry."
+                    : DescribeDecisionFailure(http, endpoint);
+                SetBackendFailure(message);
+                return DecisionResponse.Failed(message, http.LatencyMs);
+            }
+
+            SetBackendFailure("Request failed: exhausted retries.");
+            return DecisionResponse.Failed(LastBackendError);
+        }
+
+        /// <summary>
+        /// The two failures that mean the setup is wrong rather than the request, said in terms of
+        /// what to change. llama-server answers 404 for a path it does not have, which is what a
+        /// build from before decision models looks like, and 501 when the endpoint exists but the
+        /// loaded model is not a decision model.
+        /// </summary>
+        internal static string DescribeDecisionFailure(long code, string raw, string endpoint, string transportError)
+        {
+            string serverMessage = SystemOneProtocol.ReadErrorMessage(raw);
+            switch (code)
+            {
+                case 404:
+                    return $"The server at '{endpoint}' has no decision-model endpoint. llama-server builds before b11361 " +
+                           "cannot serve decision models; install a newer one from BehaviorLLM > Model Manager (Server tab).";
+                case 501:
+                    return "The server's model is not a decision model" + (serverMessage != null ? $" ({serverMessage})" : "") +
+                           ", while the project's paradigm is Decision Model. Choose a decision model (Kev, Laya, Julia-1...) " +
+                           "in BehaviorLLM > Model Manager, or set Paradigm back to Generative LLM in the BehaviorLLM Settings asset.";
+                case 400:
+                case 422:
+                    return "The server rejected the decision request: " + (serverMessage ?? raw);
+                default:
+                    return $"Decision request failed at '{endpoint}': {transportError}" +
+                           (string.IsNullOrWhiteSpace(raw) ? "" : $" | Body: {raw}");
+            }
+        }
+
+        private static string DescribeDecisionFailure(HttpResult http, string endpoint) =>
+            DescribeDecisionFailure(http.Code, http.Raw, endpoint, http.Error);
+
+        /// <summary>
+        /// A decision model loaded in embedding mode answers a completion request with a 500 saying
+        /// the context does not compute logits. That is the paradigm being wrong, not the server
+        /// being broken, so it gets its own message.
+        /// </summary>
+        internal static bool IsDecisionModelRefusingToGenerate(long code, string raw)
+        {
+            return code == 500 && !string.IsNullOrEmpty(raw) &&
+                   raw.IndexOf("does not support logits", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        // ------------------------------------------------------------------ transport
+
+        private int MaxAttempts => server != null ? Mathf.Max(2, Cfg.modelLoadingRetryCount + 1) : 1;
+
+        private struct HttpResult
+        {
+            public bool Success;
+            public long Code;
+            public string Raw;
+            public string Error;
+            public UnityWebRequest.Result Result;
+            public float LatencyMs;
+            public bool LoadingModel;
+            public bool Retryable;
+        }
+
+        /// <summary>One POST, with cancellation and the timeout from the server config. Never throws
+        /// for an HTTP failure; only cancellation escapes, as <see cref="OperationCanceledException"/>.</summary>
+        private async Task<HttpResult> PostAsync(string endpoint, string body, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            float started = Time.realtimeSinceStartup;
+
+            using (UnityWebRequest web = new UnityWebRequest(endpoint, "POST"))
+            {
+                web.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+                web.downloadHandler = new DownloadHandlerBuffer();
+                web.SetRequestHeader("Content-Type", "application/json");
+                web.timeout = Mathf.Max(1, Cfg.requestTimeoutSeconds);
+
+                UnityWebRequestAsyncOperation op = web.SendWebRequest();
+                using (cancellationToken.Register(() => { try { web.Abort(); } catch { } }))
+                {
+                    while (!op.isDone) await Task.Yield();
+                }
+                if (cancellationToken.IsCancellationRequested) throw new OperationCanceledException(cancellationToken);
+
+                string raw = web.downloadHandler != null ? web.downloadHandler.text : string.Empty;
+                bool loadingModel = IsModelLoadingResponse(web.responseCode, raw);
+                return new HttpResult
+                {
+                    Success = web.result == UnityWebRequest.Result.Success,
+                    Code = web.responseCode,
+                    Raw = raw,
+                    Error = web.error,
+                    Result = web.result,
+                    LatencyMs = Mathf.Max(0f, (Time.realtimeSinceStartup - started) * 1000f),
+                    LoadingModel = loadingModel,
+                    Retryable = loadingModel || IsLikelyStartupConnectionError(web.error)
+                };
+            }
         }
 
         private LlamaRequestWriter.GenerationSettings BuildSettings(LLMRequest request)

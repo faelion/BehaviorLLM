@@ -67,7 +67,7 @@ The folder holds the scripts, the exact prompts and schemas they send, the per-d
 ## Requirements
 
 - Unity **6000.0** or newer.
-- A local [`llama-server`](https://github.com/ggml-org/llama.cpp) (the package can download it) and a GGUF model (the package can download one).
+- A local [`llama-server`](https://github.com/ggml-org/llama.cpp) (the package can download it) and a GGUF model (the package can download one). The Decision Model paradigm needs build b11361 or newer.
 - For the samples only: `com.unity.ai.navigation` and `com.unity.inputsystem`.
 
 ## Installation
@@ -149,6 +149,17 @@ Presets ship under `Runtime/Defaults` and are wired automatically when you add a
 
 Both profiles share one server; the choice travels with each request. Deliberation cost 50 to 90 percent more latency in the measurements above and improved schema-enabled expected-action matches from 13/16 to 15/16 on Qwen3.5-4B and 10/16 to 11/16 on Qwen3.5-2B, while Granite fell from 13/16 to 12/16. These small samples are not a general ranking; measure before enabling it. Each shipped model config records the profile it was measured to prefer, and the package warns at startup if you pick the other one.
 
+### 6. Or let a decision model choose: the two paradigms
+
+The package can decide in two ways, chosen once per project in the `BehaviorLLMSettings` asset (the Model Manager's status strip switches it and keeps the active model in step):
+
+| Paradigm | Model | What happens per decision |
+|---|---|---|
+| `GenerativeLLM` (default) | A chat model (Qwen3.5, Granite...) | It writes a JSON decision, held to the legal actions by a grammar built from the action config. The only paradigm with a written `reason`. |
+| `DecisionModel` | A Jev-style decision model (Kev-4B, Laya, Julia-1) | Every legal action, with its values, becomes one option of a choice question sent to llama-server's `/v1/systemone`. The model returns a probability for each and writes nothing. |
+
+Nothing else changes between them: the same action config, bindings, observation modules, availability gating, argument checks and fallback apply, and telemetry records which paradigm decided along with the chosen option's probability. A decision model needs llama-server build b11361 or newer, and every action parameter needs a finite list of values (authored or from an argument provider), because a decision model can only choose among options it is shown. In a 60-second StealthGuard run on an RX 6650 XT (Vulkan, b11429), Kev-4B produced 67 usable decisions out of 67 with a median of 566 ms, against Granite 4.1 3B's 288 ms in the generative paradigm. llama-server does not reuse a decision model's prompt between requests, so it reads the whole situation every time, while the chat model reuses its cached system prompt.
+
 ## Samples
 
 Two runnable samples ship inside the package under `Samples/`. Each is self-contained: scenes, scripts, config assets and art in its own folder, referencing nothing outside itself and the package.
@@ -174,6 +185,7 @@ Open `BehaviorLLM > Readme` to delete either sample, the experiment data, or all
 - **`ActionConfig`** is the schema (what exists), **`actionBindings`** is the wiring (who handles it). The inspector keeps the two in step, so you never type an action name twice.
 - **The prompt has two halves.** Everything constant about a character (persona, action menu, examples, guidance) is sent first and cached by the server; everything that changes (available actions, argument values, observations) is sent last. Anything that depends on the state of the world belongs in the second half, however naturally it reads in the first.
 - **`ILLMBackend`** receives an `LLMRequest` (prompt sections, schema, slot, token budget, thinking policy) and returns an `LLMResponse` (text, reasoning, token counts, latency). `BehaviorLLMClient` is the llama-server implementation; any OpenAI-compatible local server should work.
+- **`IDecisionModelBackend`** is the Decision Model paradigm's contract: a `DecisionRequest` (one state, any number of choice, score and yes/no questions) in, a probability per option out. `BehaviorLLMClient` implements it too, against llama-server's `/v1/systemone`, which follows TypeSafe's System One API, so the same request shape reaches a hosted Jev-compatible endpoint. `DecisionCandidates` turns the action config into the options, from the same value sources the schema uses.
 - **Conditional behaviour belongs in the action menu, not the prompt.** A component implementing `IActionAvailabilityProvider` decides which actions may be chosen each turn, and the ones it withholds are dropped from the schema so the model cannot produce them. Rules written as prose were followed unreliably by every model measured; withholding the action worked.
 - **Fallback.** Name a fallback action to handle unusable decisions and backend failures. It runs only if its action and argument are currently allowed; telemetry preserves the original failure.
 

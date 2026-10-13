@@ -157,6 +157,46 @@ namespace BehaviorLLM.Tests.Editor
         }
 
         [Test]
+        public void ADecisionModelIsToldApartFromTheChatModelItWasBuiltOn()
+        {
+            // Kev-4B and Qwen3.5-4B are both qwen35; only the decision key, which llama-server
+            // dispatches on, separates them. Laid out as in the real Kev file: the key sits between
+            // the architecture's own keys and the tokenizer.
+            BehaviorLLMGgufHeader.Info kev = Read(Gguf(3,
+                ("general.architecture", "qwen35"),
+                ("general.name", "Kev-4B"),
+                ("qwen35.block_count", 32u),
+                ("qwen35.decision.type", "kev"),
+                ("qwen35.decision.temperature.choice", 2.41f),
+                ("tokenizer.chat_template", "{{ messages }}")));
+            BehaviorLLMGgufHeader.Info qwen = Read(Gguf(3,
+                ("general.architecture", "qwen35"),
+                ("general.name", "Qwen3.5-4B"),
+                ("tokenizer.chat_template", "{{ messages }}")));
+
+            Assert.IsTrue(kev.IsDecisionModel);
+            Assert.AreEqual("kev", kev.DecisionType);
+            Assert.IsFalse(qwen.IsDecisionModel);
+            Assert.IsEmpty(qwen.DecisionType);
+        }
+
+        [Test]
+        public void OpenJevGetsItsSmallerOptionLimit()
+        {
+            Assert.AreEqual(52, BehaviorLLMModelPresets.MaxChoiceOptionsFor("openjev"));
+            Assert.AreEqual(255, BehaviorLLMModelPresets.MaxChoiceOptionsFor("kev"));
+            Assert.AreEqual(255, BehaviorLLMModelPresets.MaxChoiceOptionsFor("laya"));
+        }
+
+        [Test]
+        public void ServerBuildNumberIsReadFromTheVersionLine()
+        {
+            Assert.AreEqual(11429, BehaviorLLMModelManagerWindow.ParseBuildNumber(
+                "version: 0.6.0-dev (build 11429, commit d81235049)\nbuilt with Clang 20.1.8 for Windows x86_64"));
+            Assert.AreEqual(-1, BehaviorLLMModelManagerWindow.ParseBuildNumber("llama-server: unknown option"));
+        }
+
+        [Test]
         public void AMissingFileIsReportedNotThrown()
         {
             BehaviorLLMGgufHeader.Info info = BehaviorLLMGgufHeader.Read(Path.Combine(Path.GetTempPath(), "does-not-exist.gguf"));
