@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Prompt Inspector shows a decision model's distribution and the exact request body; the Editor also writes it to `StreamingAssets/_last_decision_request.json` for replay with curl.
 
 ### Fixed
+- A decision model refused large action menus. llama-server reads a question and all its options in one batch, 512 tokens by default, so Kev-4B answered a 160-option question with HTTP 400. `BehaviorLLMServerConfig.decisionModelBatchTokens` (default 2048) is passed as `-b`/`-ub` when a decision model is launched; it cost nothing measurable on a 10-option menu. The client's error for an oversized menu now names the setting.
 - `BehaviorLLMServer` recognises the readiness line of llama-server builds from about b11300 on (`llama_server: listening on http://...`). With those builds `IsReady` never became true.
 
 ### Changed

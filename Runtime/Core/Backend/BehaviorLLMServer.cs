@@ -566,7 +566,9 @@ namespace BehaviorLLM.Core.Backend
         /// something to a model that writes: llama-server runs it in embedding mode, where
         /// <c>--cache-reuse</c> is unsupported and switched off with a warning, and it has no chat
         /// template for <c>--jinja</c> to apply. The parallel slots stay: they are how many questions
-        /// about one state the server evaluates together.
+        /// about one state the server evaluates together. It gains a batch size, because a decision
+        /// model reads a question and every option in one batch and the server's default of 512
+        /// tokens refuses a large action menu outright.
         /// </summary>
         internal static string BuildArgs(string fullModelPath, int contextSize, int port, int gpuLayers,
                                          BehaviorLLMServerConfig settings, bool decisionModel)
@@ -580,6 +582,8 @@ namespace BehaviorLLM.Core.Backend
             if (settings.parallelSlots > 0) sb.Append($" -np {settings.parallelSlots}");
             if (!decisionModel && settings.cacheReuse > 0) sb.Append($" --cache-reuse {settings.cacheReuse}");
             if (!decisionModel && settings.useJinja) sb.Append(" --jinja");
+            if (decisionModel && settings.decisionModelBatchTokens > 0)
+                sb.Append($" -b {settings.decisionModelBatchTokens} -ub {settings.decisionModelBatchTokens}");
             if (!string.IsNullOrWhiteSpace(settings.extraArguments)) sb.Append(' ').Append(settings.extraArguments.Trim());
             return sb.ToString();
         }
