@@ -512,11 +512,11 @@ namespace BehaviorLLM.Core.Decisions
         public void RebuildSchema()
         {
             // A decision model is asked one fixed question about each situation; the options are
-            // rebuilt every turn from the config, so the only thing to cache is the question.
+            // rebuilt every turn from the config, so the only thing to cache is who is asking.
             if (Paradigm == DecisionParadigm.DecisionModel)
             {
                 deferredArgumentActions.Clear();
-                cachedSystemPrompt = PromptBuilder.BuildDecisionInstructions(actionConfig, systemPersona);
+                cachedSystemPrompt = PromptBuilder.BuildDecisionContext(actionConfig, systemPersona);
                 cachedSchema = null;
                 return;
             }
@@ -874,14 +874,14 @@ namespace BehaviorLLM.Core.Decisions
             {
                 Id = ActionQuestionId,
                 Type = DecisionQuestionType.Choice,
-                Instructions = cachedSystemPrompt
+                Instructions = PromptBuilder.DecisionQuestionText
             };
             for (int i = 0; i < candidates.Candidates.Count; i++)
             {
                 DecisionCandidates.Candidate c = candidates.Candidates[i];
                 question.Options.Add(new DecisionOption(c.Key, Cfg.describeDecisionOptions ? c.Description : null));
             }
-            DecisionRequest request = new DecisionRequest { State = state };
+            DecisionRequest request = new DecisionRequest { State = PromptBuilder.BuildDecisionState(cachedSystemPrompt, state) };
             request.Questions.Add(question);
             int promptLength = cachedSystemPrompt.Length + state.Length;
 

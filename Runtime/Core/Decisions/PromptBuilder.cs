@@ -101,22 +101,34 @@ namespace BehaviorLLM.Core.Decisions
         public const string DecisionQuestionText = "Which action should you take now?";
 
         /// <summary>
-        /// The instructions of the one question a decision maker asks a decision model: who it is,
-        /// the config's guide, and the question itself. The counterpart of the system prompt, and
-        /// built once for the same reason.
+        /// What a decision model is told about who is deciding: the persona, then the action config's
+        /// guide. It goes at the top of the request's <c>state</c>, ahead of the observations, and
+        /// the question's own instructions are only <see cref="DecisionQuestionText"/>. Built once,
+        /// like the system prompt it stands in for.
+        ///
+        /// Placed in the state rather than in the instructions because that is where the models
+        /// read it. Measured on situations recorded in the StealthGuard sample: with persona and
+        /// guide as the question's instructions, Kev-4B chased a visible intruder 0 times in 39 and
+        /// LiquidAI d1-3B 17 times in 45; moved into the state, 20 in 39 and 43 in 45, at the same
+        /// latency and with no loss on the other situations (Kev 83% either way, d1 66% to 77%).
         ///
         /// There is no action menu and no output contract here. The options travel as the
-        /// question's own criteria, each with its description, and the model cannot answer in any
-        /// form but a probability per option, so there is nothing to explain about format.
+        /// question's own criteria, and the model cannot answer in any form but a probability per
+        /// option, so there is nothing to explain about format.
         /// </summary>
-        public static string BuildDecisionInstructions(ActionConfig config, string persona)
+        public static string BuildDecisionContext(ActionConfig config, string persona)
         {
             StringBuilder sb = new StringBuilder(256);
             if (!string.IsNullOrWhiteSpace(persona)) sb.Append(persona.Trim()).Append(NL);
             if (config != null && !string.IsNullOrWhiteSpace(config.modelInstructions))
                 sb.Append(config.modelInstructions.Trim()).Append(NL);
-            sb.Append(DecisionQuestionText);
-            return sb.ToString();
+            return sb.ToString().TrimEnd();
+        }
+
+        /// <summary>The <c>state</c> a decision model is sent: the context, then the STATE block.</summary>
+        public static string BuildDecisionState(string context, string statePrompt)
+        {
+            return string.IsNullOrEmpty(context) ? statePrompt : context + NL + statePrompt;
         }
 
         /// <summary>Dynamic half of the prompt.</summary>

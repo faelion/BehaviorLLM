@@ -316,7 +316,7 @@ Two settings on the decision config apply only to this paradigm:
 
 - **Decision Model Selection**: **Most Likely** (default) takes the top option every time. **Sample** draws one in proportion to its probability, so characters sharing a config and seeing the same thing do not all react identically.
 - **Min Choice Probability**: when the chosen option's probability is below this, the fallback runs instead. 0 turns it off. The probabilities are not calibrated for your game, so look at the telemetry before raising it.
-- **Describe Decision Options**: off by default, so options go out as bare names (`Patrol Route_North`). Every value of an action would otherwise repeat the action's description, and on the 16 labelled guard situations that repetition took LiquidAI d1-3B from 81% to 19% correct and made Kev-4B 30% slower at the same accuracy. Turn it on only when your action and value names say nothing on their own. The persona and the action config's guide are always sent, as the question's instructions.
+- **Describe Decision Options**: off by default, so options go out as bare names (`Patrol Route_North`). Every value of an action would otherwise repeat the action's description, and on the 16 labelled guard situations that repetition took LiquidAI d1-3B from 81% to 19% correct and made Kev-4B 30% slower at the same accuracy. Turn it on only when your action and value names say nothing on their own. The persona and the action config's guide are always sent, at the top of the situation the model reads; the question itself is only "Which action should you take now?".
 
 The profile, thinking budget, token ceiling, structured output and example toggles have no effect in this paradigm.
 

@@ -58,8 +58,9 @@ namespace BehaviorLLM.Tests.Runtime
             CollectionAssert.AreEqual(new[] { "Patrol Route_North", "Patrol Route_South", "Retreat SafeZone_A", "HoldPosition" },
                                       question.Options.ConvertAll(o => o.Key));
             Assert.IsNull(question.Options[0].Description, "descriptions are off by default");
-            StringAssert.Contains("You are a guard.", question.Instructions);
-            StringAssert.Contains(PromptBuilder.DecisionQuestionText, question.Instructions);
+            Assert.AreEqual(PromptBuilder.DecisionQuestionText, question.Instructions);
+            StringAssert.StartsWith("You are a guard.", f.Backend.Requests[0].State, "persona and guide lead the state");
+            StringAssert.Contains(PromptBuilder.StateHeader, f.Backend.Requests[0].State);
         }
 
         [Test]

@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BehaviorLLMServer` recognises the readiness line of llama-server builds from about b11300 on (`llama_server: listening on http://...`). With those builds `IsReady` never became true.
 
 ### Changed
+- A decision model now reads the persona and the guide at the top of the request's `state`, and the question's instructions are only "Which action should you take now?" (`PromptBuilder.BuildDecisionContext`, `BuildDecisionState`). With them in the instructions, Kev-4B chased a visible intruder 0 times in 39 situations recorded in StealthGuard and LiquidAI d1-3B 17 in 45; in the state, 20 and 43, at the same latency and with no loss elsewhere on the recorded situations.
 - `BehaviorLLMServer` leaves out `--cache-reuse` and `--jinja` when it launches a decision model, which llama-server runs in embedding mode where neither applies.
 - **`BasicMemory` records executed actions itself.** It subscribes to `DecisionTelemetryRecorded` on the `DecisionMaker` on its own object or a parent, instead of the decision maker writing into the first `BasicMemory` it found under it. Every memory module on a character now records, not only the first, and a custom memory module can record actions the same way. The entry is written just after the bound handler runs rather than just before it. A memory added in code before its decision maker subscribes at its first `Start`.
 

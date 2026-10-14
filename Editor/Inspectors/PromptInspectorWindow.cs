@@ -339,7 +339,7 @@ namespace BehaviorLLM.Editor.Inspectors
                     // what replays the decision is the request body rather than a schema.
                     Section("Probabilities (most likely first)", e.ResponseText, 120f);
                     Section("STATE (this decision)", e.StatePrompt, 150f);
-                    Section("Question instructions", e.SystemPrompt, 80f);
+                    Section("Persona and guide (sent at the top of the state)", e.SystemPrompt, 80f);
                     if (!string.IsNullOrWhiteSpace(e.Schema)) Section("Request body (POST /v1/systemone)", e.Schema, 150f);
                 }
                 else
