@@ -2289,7 +2289,11 @@ namespace BehaviorLLM.Editor.ModelManager
                 {
                     Undo.RecordObject(target, "Correct model paradigm");
                     target.paradigm = fromFile;
-                    if (header.IsDecisionModel) target.maxChoiceOptions = BehaviorLLMModelPresets.MaxChoiceOptionsFor(header.DecisionType);
+                    if (header.IsDecisionModel)
+                    {
+                        target.maxChoiceOptions = BehaviorLLMModelPresets.MaxChoiceOptionsFor(header.DecisionType);
+                        target.decisionBatchTokens = BehaviorLLMModelPresets.DecisionBatchTokensFor(header.DecisionType);
+                    }
                     EditorUtility.SetDirty(target);
                     AssetDatabase.SaveAssets();
                 }

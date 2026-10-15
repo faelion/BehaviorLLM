@@ -46,6 +46,15 @@ namespace BehaviorLLM.Core.Config
                  "action-and-value combinations than this offers the first ones and warns once.")]
         public int maxChoiceOptions = 255;
 
+        [Tooltip("Decision models only. How many tokens llama-server reads in one batch, passed as -b and " +
+                 "-ub. 0 keeps the server's default of 512, the leanest choice. A decision model reads a " +
+                 "question and all its options in one batch, so 512 refuses a menu of more than about " +
+                 "100 options; raising it also evens out latency when many characters ask at once. It " +
+                 "costs video memory, by model: measured with 4 slots and an 8192 context, 2048 cost " +
+                 "LiquidAI d1-3B 0.24 GB and cut its slowest 5% of decisions with eight characters from " +
+                 "2.9 s to 1.9 s, but cost Kev-4B 1.7 GB. The Model Manager sets 2048 for d1-type models.")]
+        public int decisionBatchTokens = 0;
+
         [Header("Server")]
         [Tooltip("How much text the server can hold at once, in tokens. It is split " +
                  "between the lanes set by Parallel Slots in the Server Config, so 8192 " +

@@ -43,12 +43,18 @@ namespace BehaviorLLM.Tests.Runtime
         [Test]
         public void DecisionModel_KeepsTheSlotsAndDropsWhatOnlyAWritingModelUses()
         {
-            string args = BehaviorLLMServer.BuildArgs("kev.gguf", 8192, 8080, 99, settings, decisionModel: true);
+            string args = BehaviorLLMServer.BuildArgs("kev.gguf", 8192, 8080, 99, settings, decisionModel: true, decisionBatchTokens: 2048);
 
             StringAssert.Contains("-np 4", args);
             StringAssert.DoesNotContain("--cache-reuse", args);
             StringAssert.DoesNotContain("--jinja", args);
             StringAssert.Contains("-b 2048 -ub 2048", args);
+        }
+
+        [Test]
+        public void DecisionModel_WithoutABatchSetting_KeepsTheServersDefault()
+        {
+            StringAssert.DoesNotContain("-ub", BehaviorLLMServer.BuildArgs("kev.gguf", 8192, 8080, 99, settings, decisionModel: true));
         }
 
         [Test]
@@ -63,7 +69,7 @@ namespace BehaviorLLM.Tests.Runtime
             string message = BehaviorLLMClient.DescribeDecisionFailure(400,
                 "{\"error\":{\"code\":400,\"message\":\"the question and its options (1115 tokens) are too large to process. increase the batch size (current batch size: 512)\"}}",
                 "http://x/v1/systemone", "400");
-            StringAssert.Contains("Decision Model Batch Tokens", message);
+            StringAssert.Contains("Decision Batch Tokens", message);
         }
 
         [Test]

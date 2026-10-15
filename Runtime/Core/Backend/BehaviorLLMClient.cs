@@ -370,7 +370,7 @@ namespace BehaviorLLM.Core.Backend
                 case 422:
                     if (serverMessage != null && serverMessage.IndexOf("batch size", StringComparison.OrdinalIgnoreCase) >= 0)
                         return "The action menu is too large for the server to read in one batch (" + serverMessage + "). " +
-                               "Raise Decision Model Batch Tokens on the server config and restart the server, or offer " +
+                               "Raise Decision Batch Tokens on the model config and restart the server, or offer " +
                                "fewer options with an Action Availability Provider.";
                     return "The server rejected the decision request: " + (serverMessage ?? raw);
                 default:

@@ -97,14 +97,6 @@ namespace BehaviorLLM.Core.Config
                  "Chat Completions. Leave on.")]
         public bool useJinja = true;
 
-        [Tooltip("Decision models only. How many tokens llama-server reads in one batch. A decision " +
-                 "model has to take a question and all its options in one batch, so a big action menu " +
-                 "needs room: at llama-server's default of 512, Kev-4B refused a 160-option question " +
-                 "(1,115 tokens). 2048 handled it, cost nothing measurable on a 10-option menu (489 ms " +
-                 "against 476) and about 250 MB of video memory on LiquidAI d1-3B. 0 leaves the server's " +
-                 "default.")]
-        public int decisionModelBatchTokens = 2048;
-
         [Tooltip("Advanced. Extra command-line options passed to llama-server exactly as " +
                  "typed, for anything not covered above, for example --flash-attn on.")]
         public string extraArguments = "";

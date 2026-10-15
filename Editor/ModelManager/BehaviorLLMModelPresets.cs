@@ -169,6 +169,7 @@ namespace BehaviorLLM.Editor.ModelManager
             {
                 asset.paradigm = BehaviorLLM.Core.Decisions.DecisionParadigm.DecisionModel;
                 asset.maxChoiceOptions = MaxChoiceOptionsFor(decisionType);
+                asset.decisionBatchTokens = DecisionBatchTokensFor(decisionType);
                 thinking = BehaviorLLMHuggingFace.ThinkingStyle.Unknown;
                 provenance += $" A decision model (type '{decisionType}' in the GGUF header): it scores options " +
                               "through /v1/systemone and needs the Decision Model paradigm.";
@@ -207,6 +208,14 @@ namespace BehaviorLLM.Editor.ModelManager
         /// </summary>
         internal static int MaxChoiceOptionsFor(string decisionType) =>
             string.Equals(decisionType, "openjev", StringComparison.OrdinalIgnoreCase) ? 52 : 255;
+
+        /// <summary>
+        /// The batch a decision model is launched with. Measured, not guessed: 2048 cost LiquidAI
+        /// d1-3B 0.24 GB of video memory and cut its p95 with eight characters from 2.9 s to 1.9 s,
+        /// while on Kev-4B the same setting cost 1.7 GB, so only the d1 types get it by default.
+        /// </summary>
+        internal static int DecisionBatchTokensFor(string decisionType) =>
+            string.Equals(decisionType, "lfm2-d1", StringComparison.OrdinalIgnoreCase) ? 2048 : 0;
 
         /// <summary>Creates <see cref="UserConfigFolder"/> one level at a time, as the AssetDatabase requires.</summary>
         internal static string EnsureUserConfigFolder()
