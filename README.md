@@ -100,8 +100,8 @@ https://github.com/faelion/BehaviorLLM.git#v0.6.0
 
 ### 1. Get a model and a server
 
-1. Open `BehaviorLLM > Model Manager`, pick one of the three models listed (Granite 4.1 3B is the best starting point for reactive characters; Qwen3.5 2B is faster, Qwen3.5 4B more accurate) and click **Download**. Then, in the **Installed** tab, click **Set active in current scene**: it assigns the model's config to the server and clients in the open scene and writes `StreamingAssets/behaviorllm_backend_config.json`. The Catalog also searches Hugging Face live, filtered to text-generation models whose architecture the bundled llama-server loads, with a size cap that keeps results runnable on one machine.
-2. Open `BehaviorLLM > Model Manager (Server tab)` and click **Download Server**, or install llama.cpp yourself (`winget install llama.cpp`, `brew install llama.cpp`); a `llama-server` on your `PATH` is picked up automatically.
+1. Open `BehaviorLLM > Model Manager` and download **LiquidAI d1 3B**, the default: a decision model that scores the legal actions instead of writing, 79% correct at a 191 ms median in the benchmark below (Kev 9B Artemis is more accurate and slower; the chat models are under the Generative LLM paradigm, one click away in the window's status strip). Then, in the **Installed** tab, click **Set active in current scene**: it assigns the model's config to the server and clients in the open scene and writes `StreamingAssets/behaviorllm_backend_config.json`. The Catalog also searches Hugging Face live, filtered to text-generation models whose architecture the bundled llama-server loads, with a size cap that keeps results runnable on one machine.
+2. Open `BehaviorLLM > Model Manager (Server tab)` and click **Download Server**. It installs build b11630, the one the package was measured on; d1 needs b11483 or newer, which the latest stable llama.cpp release (b11429) predates. A `llama-server` of your own on `PATH` is picked up automatically, and the Server tab says if it is too old for the active model.
 3. Add a `BehaviorLLMServer` component to the scene and tick *Auto Start On Awake* on its server config, or run `llama-server -m model.gguf --jinja -np 4` yourself.
 
 <p align="center"><img src=".github/model-catalog.png" width="720" alt="The Model Manager window"></p>
@@ -155,8 +155,8 @@ The package can decide in two ways, chosen once per project in the `BehaviorLLMS
 
 | Paradigm | Model | What happens per decision |
 |---|---|---|
-| `GenerativeLLM` (default) | A chat model (Qwen3.5, Granite...) | It writes a JSON decision, held to the legal actions by a grammar built from the action config. The only paradigm with a written `reason`. |
-| `DecisionModel` | A Jev-style decision model (Kev-4B, Laya, Julia-1) | Every legal action, with its values, becomes one option of a choice question sent to llama-server's `/v1/systemone`. The model returns a probability for each and writes nothing. |
+| `GenerativeLLM` | A chat model (Qwen3.5, Granite...) | It writes a JSON decision, held to the legal actions by a grammar built from the action config. The only paradigm with a written `reason`. |
+| `DecisionModel` (default) | A Jev-style decision model (LiquidAI d1, Kev) | Every legal action, with its values, becomes one option of a choice question sent to llama-server's `/v1/systemone`. The model returns a probability for each and writes nothing. |
 
 Nothing else changes between them: the same action config, bindings, observation modules, availability gating, argument checks and fallback apply, and telemetry records which paradigm decided along with the chosen option's probability. A decision model needs llama-server build b11361 or newer, and every action parameter needs a finite list of values (authored or from an argument provider), because a decision model can only choose among options it is shown. Measured on 262 situations recorded in the two sample scenes, graded against each scene's own guide, every model asked the identical situations (llama-server b11630, RX 6650 XT 8 GB, Vulkan):
 

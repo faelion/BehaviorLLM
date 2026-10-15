@@ -33,7 +33,7 @@ namespace Project.Samples.StealthGuard.Editor
 
         /// <summary>Shipped model preset this sample wires up, looked up by name rather than by
         /// path so it survives the package being installed anywhere.</summary>
-        private const string ModelConfigAsset = "Model_Granite-4.1-3B-Q4_K_M";
+        private const string ModelConfigAsset = "Model_LiquidAI-d1-3B-Q4_K_M";
         private const string OccluderLayerName = "StealthOccluder";
         private static string CharacterArt => StealthGuardPaths.CharacterArt;
 
@@ -124,6 +124,10 @@ namespace Project.Samples.StealthGuard.Editor
             cfg.profile = DecisionProfile.Reactive;
             cfg.useStructuredOutput = true;
             cfg.includeExamplesInPrompt = true;
+            // One memory entry: decision models repeat what their memory says they just did, and
+            // on 262 situations recorded in both samples LiquidAI d1-3B went from 72% to 79% with
+            // only the newest entry. The generative models did not mind either way (+0.5 points).
+            cfg.maxMemoryEntries = 1;
             cfg.logDecisions = true;
             cfg.logPrompts = false;
             EditorUtility.SetDirty(cfg);

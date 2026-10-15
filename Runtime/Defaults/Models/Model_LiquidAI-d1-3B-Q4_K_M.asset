@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91546ea0ba09f07428b3d5ff2d9d576e, type: 3}
+  m_Name: Model_LiquidAI-d1-3B-Q4_K_M
+  m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Config.BehaviorLLMModelConfig
+  displayName: LiquidAI d1 3B (Q4_K_M)
+  modelFileName: d1-3B-Q4_K_M.gguf
+  sourceUrl: https://huggingface.co/LiquidAI/d1-3B-GGUF
+  license: LFM Open License v1.0 (free below USD 10M annual revenue; read it before shipping)
+  parametersB: 3
+  quantisation: Q4_K_M
+  paradigm: 1
+  maxChoiceOptions: 255
+  decisionBatchTokens: 2048
+  contextSize: 8192
+  gpuLayers: 99
+  maxTokens: 256
+  temperature: 0.2
+  topP: 0.95
+  topK: 40
+  repeatPenalty: 1
+  recommendedProfile: 0
+  nativeThinkingUsable: 0
+  reasoningModel: 0
+  measuredValidActionRate: 1
+  measuredExpectedActionRate: 0.79
+  measuredP50LatencyMs: 191
+  measurementNotes: 'Measured 2026-10-15 on a Radeon RX 6650 XT (Vulkan) with llama.cpp
+    build 11630, over 262 situations recorded in the StealthGuard and PrisonYard samples
+    and graded against each scene''s guide, with Max Memory Entries 1 on the decision
+    maker config (72% with full memory). Every answer is a legal action by construction.
+
+
+    A decision model: it scores every legal action instead of writing, and needs the
+    Decision Model paradigm and llama-server b11483 or newer. The most accurate model per
+    millisecond tested: Qwen3.5 4B, the best generative model, scored 72% at 552 ms. With
+    eight characters in PrisonYard it made 160 decisions a minute at a 237 ms median.
+    Reproduce with the round-2 benchmark in Docs/Experiments/runs/2026-10-15-round2.'

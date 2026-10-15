@@ -85,7 +85,7 @@ The four assets above each tune one domain and are meant to exist in variants: a
 
 | Setting | Default | What it decides |
 |---|---|---|
-| `paradigm` | `GenerativeLLM` | Whether decision makers ask a chat model to write a decision or a decision model to score the legal ones (section H) |
+| `paradigm` | `DecisionModel` | Whether decision makers ask a chat model to write a decision or a decision model to score the legal ones (section H) |
 | `editorLogLevel` / `playerLogLevel` | `Warnings` / `ErrorsOnly` | How much the package prints, separately in the Editor and in a non-development build |
 | `telemetryEnabled` / `telemetryInBuilds` | on / off | Master switch for `DecisionTelemetryRecorder`, and whether it may record outside the Editor |
 | `dumpAppliedSchema` | on | Whether the Editor writes `_last_applied_schema.json` to StreamingAssets on every schema rebuild |

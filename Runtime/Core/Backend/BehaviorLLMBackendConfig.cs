@@ -9,7 +9,7 @@ namespace BehaviorLLM.Core.Backend
     public class BehaviorLLMBackendConfigData
     {
         [Tooltip("Relative path from StreamingAssets to active model file.")]
-        public string activeModelRelativePath = "models/my-model.gguf";
+        public string activeModelRelativePath = "models/d1-3B-Q4_K_M.gguf";
 
         [Tooltip("Relative path from StreamingAssets to llama-server executable (without extension).")]
         public string executableRelativePath = "llama-server";

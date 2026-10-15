@@ -13,15 +13,21 @@ MonoBehaviour:
   m_Name: StealthGuardDecisions
   m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Config.DecisionMakerConfig
   decisionInterval: 2
+  decisionIntervalJitter: 0.15
+  decisionModelSelection: 0
+  minChoiceProbability: 0
+  describeDecisionOptions: 0
   profile: 0
   reasonMaxChars: 120
   thinkingBudgetTokens: 0
   maxTokens: 0
   useStructuredOutput: 1
+  dynamicArgumentsInState: 1
   includeExamplesInPrompt: 1
   maxVisionEntries: 0
-  maxMemoryEntries: 0
+  maxMemoryEntries: 1
   maxPromptChars: 0
+  minStatePromptChars: 256
   logPrompts: 0
   logDecisions: 1
   logFallbackUsage: 1

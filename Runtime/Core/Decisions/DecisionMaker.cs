@@ -446,7 +446,7 @@ namespace BehaviorLLM.Core.Decisions
                 // A decision model writes nothing, so it has no reason to write and nothing to
                 // think with. The profile is not an error, only a setting with no effect.
                 if (Cfg.profile == DecisionProfile.Deliberative)
-                    BehaviorLLMLog.Warn(() => $"[DecisionMaker] '{gameObject.name}': profile is Deliberative, but a decision " +
+                    BehaviorLLMLog.Info(() => $"[DecisionMaker] '{gameObject.name}': profile is Deliberative, but a decision " +
                                               "model writes no reason and does not think; the profile has no effect in the " +
                                               "Decision Model paradigm.");
                 return;

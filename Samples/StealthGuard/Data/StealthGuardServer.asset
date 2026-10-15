@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Config.BehaviorLLMServerConfig
   baseUrl: http://localhost:8080
   transport: 0
+  autoSwitchTransportOnThinking: 1
   followManagedServerEndpoint: 1
   autoStartServerOnFirstRequest: 1
   autoStartOnAwake: 1

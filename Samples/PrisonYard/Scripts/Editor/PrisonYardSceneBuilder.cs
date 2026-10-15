@@ -44,7 +44,7 @@ namespace Project.Samples.PrisonYard.Editor
         private const string DecorLayerName = "PrisonDecor";
         /// <summary>Shipped model preset this sample wires up, looked up by name rather than by
         /// path so it survives the package being installed anywhere.</summary>
-        private const string ShippedModelAsset = "Model_Granite-4.1-3B-Q4_K_M";
+        private const string ShippedModelAsset = "Model_LiquidAI-d1-3B-Q4_K_M";
         private static string CharacterArt => PrisonYardPaths.CharacterArt;
         private static string DungeonArt => PrisonYardPaths.DungeonArt;
         /// <summary>The KayKit dungeon pieces are modelled on a four-unit grid.</summary>
@@ -1447,7 +1447,10 @@ namespace Project.Samples.PrisonYard.Editor
             cfg.useStructuredOutput = true;
             cfg.includeExamplesInPrompt = true;
             cfg.maxVisionEntries = 4;
-            cfg.maxMemoryEntries = 3;
+            // One memory entry: decision models repeat what their memory says they just did, and
+            // on 262 situations recorded in both samples LiquidAI d1-3B went from 72% to 79% with
+            // only the newest entry. The generative models did not mind either way (+0.5 points).
+            cfg.maxMemoryEntries = 1;
             // The cap covers the WHOLE prompt, system half included, and this sample's system
             // half is about 1,500 characters. A budget below that silently trimmed every
             // observation away and the model decided from an empty state block. Keep it well
@@ -1468,7 +1471,7 @@ namespace Project.Samples.PrisonYard.Editor
             cfg.useStructuredOutput = true;
             cfg.includeExamplesInPrompt = true;
             cfg.maxVisionEntries = 3;
-            cfg.maxMemoryEntries = 2;
+            cfg.maxMemoryEntries = 1;
             cfg.maxPromptChars = 2600;
             cfg.logDecisions = true;
             cfg.logPrompts = false;
@@ -1486,7 +1489,7 @@ namespace Project.Samples.PrisonYard.Editor
             cfg.useStructuredOutput = true;
             cfg.includeExamplesInPrompt = true;
             cfg.maxVisionEntries = 0;
-            cfg.maxMemoryEntries = 5;
+            cfg.maxMemoryEntries = 1;
             cfg.maxPromptChars = 3000;
             cfg.logDecisions = true;
             cfg.logPrompts = false;
@@ -1557,7 +1560,7 @@ namespace Project.Samples.PrisonYard.Editor
             {
                 EditorUtility.CopySerialized(shipped, cfg);
             }
-            cfg.displayName = "Granite 4.1 3B (PrisonYard, 8 slots)";
+            cfg.displayName = "LiquidAI d1 3B (PrisonYard, 8 slots)";
             // The context window is divided across the lanes, so eight of them need eight times
             // what one decision maker uses.
             cfg.contextSize = 16384;

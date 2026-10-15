@@ -33,10 +33,23 @@ namespace BehaviorLLM.Tests.Runtime
     public class DecisionMakerDispatchTests
     {
         private readonly List<GameObject> cleanup = new List<GameObject>();
+        private BehaviorLLMSettings generative;
+
+        // Everything here is the generative paradigm's dispatch path, so it is pinned whatever the
+        // package ships as its default; DecisionModelParadigmTests covers the other paradigm.
+        [SetUp]
+        public void SetUp()
+        {
+            generative = ScriptableObject.CreateInstance<BehaviorLLMSettings>();
+            generative.paradigm = DecisionParadigm.GenerativeLLM;
+            BehaviorLLMSettings.Use(generative);
+        }
 
         [TearDown]
         public void TearDown()
         {
+            BehaviorLLMSettings.Use(null);
+            if (generative != null) Object.DestroyImmediate(generative);
             for (int i = 0; i < cleanup.Count; i++)
             {
                 if (cleanup[i] != null) Object.DestroyImmediate(cleanup[i]);

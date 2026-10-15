@@ -19,10 +19,23 @@ namespace BehaviorLLM.Tests.Runtime
     public class DecisionLoopGuardTests
     {
         private readonly List<Object> cleanup = new List<Object>();
+        private BehaviorLLMSettings generative;
+
+        // These guards are about the generative prompt, so they run in that paradigm whatever the
+        // package ships as its default.
+        [SetUp]
+        public void SetUp()
+        {
+            generative = ScriptableObject.CreateInstance<BehaviorLLMSettings>();
+            generative.paradigm = DecisionParadigm.GenerativeLLM;
+            cleanup.Add(generative);
+            BehaviorLLMSettings.Use(generative);
+        }
 
         [TearDown]
         public void TearDown()
         {
+            BehaviorLLMSettings.Use(null);
             foreach (Object o in cleanup)
                 if (o != null) Object.DestroyImmediate(o);
             cleanup.Clear();
@@ -50,10 +63,11 @@ namespace BehaviorLLM.Tests.Runtime
             BehaviorLLMSettings quiet = ScriptableObject.CreateInstance<BehaviorLLMSettings>();
             quiet.editorLogLevel = BehaviorLLMLogLevel.Off;
             quiet.playerLogLevel = BehaviorLLMLogLevel.Off;
+            quiet.paradigm = DecisionParadigm.GenerativeLLM;
             cleanup.Add(quiet);
             BehaviorLLMSettings.Use(quiet);
             try { return MakeMaker(cfg); }
-            finally { BehaviorLLMSettings.Use(null); }
+            finally { BehaviorLLMSettings.Use(generative); }
         }
 
         /// <summary>
@@ -160,10 +174,11 @@ namespace BehaviorLLM.Tests.Runtime
             BehaviorLLMSettings quiet = ScriptableObject.CreateInstance<BehaviorLLMSettings>();
             quiet.editorLogLevel = BehaviorLLMLogLevel.Off;
             quiet.playerLogLevel = BehaviorLLMLogLevel.Off;
+            quiet.paradigm = DecisionParadigm.GenerativeLLM;
             cleanup.Add(quiet);
             BehaviorLLMSettings.Use(quiet);
             try { maker.ApplyConfig(bad); }
-            finally { BehaviorLLMSettings.Use(null); }
+            finally { BehaviorLLMSettings.Use(generative); }
 
             Assert.IsFalse(maker.enabled,
                 "Swapping in an impossible budget at runtime is the same silent failure as " +

@@ -66,7 +66,7 @@ namespace BehaviorLLM.Core.Config
                  "endpoint. The model the server loads must match: a decision model cannot write and " +
                  "a chat model cannot score. Change it from BehaviorLLM > Model Manager, which keeps " +
                  "the active model in step. A decision model needs llama-server build b11361 or newer.")]
-        public DecisionParadigm paradigm = DecisionParadigm.GenerativeLLM;
+        public DecisionParadigm paradigm = DecisionParadigm.DecisionModel;
 
         [Header("Logging")]
         [Tooltip("How much the package prints to the console in the Editor and in a development " +

@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ddae698649950cf46912be4d2229239f, type: 3}
   m_Name: Settings
   m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Config.BehaviorLLMSettings
+  paradigm: 1
   editorLogLevel: 2
   playerLogLevel: 1
   telemetryEnabled: 1

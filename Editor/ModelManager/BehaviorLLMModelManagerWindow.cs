@@ -391,6 +391,15 @@ namespace BehaviorLLM.Editor.ModelManager
         private const string ServerSubFolder = "llama-server";
         private const string LlamaReleaseApiPrimary = "https://api.github.com/repos/ggml-org/llama.cpp/releases/latest";
         private const string LlamaReleaseApiFallback = "https://api.github.com/repos/ggerganov/llama.cpp/releases/latest";
+
+        /// <summary>
+        /// The llama-server build installed by default: the one the package's benchmark ran on.
+        /// Pinned rather than "latest" for two reasons. llama.cpp's latest stable release (b11429 on
+        /// 2026-10-15) predates support for LiquidAI d1, the default model, which arrived in b11483;
+        /// and a build the package was measured on keeps the shipped figures meaningful.
+        /// </summary>
+        internal const string PinnedServerTag = "b11630";
+        private const string LlamaReleaseApiPinned = "https://api.github.com/repos/ggml-org/llama.cpp/releases/tags/" + PinnedServerTag;
         private const string PrefAutoInstallServer = "BehaviorLLM.ModelManager.AutoInstallServer";
         private const string PrefServerFlavor = "BehaviorLLM.ModelManager.ServerFlavor";
         private const string PrefKeepServerArchive = "BehaviorLLM.ModelManager.KeepServerArchive";
@@ -1637,11 +1646,19 @@ namespace BehaviorLLM.Editor.ModelManager
                 GUILayout.Label(serverFound ? serverPath : GetServerDirectoryAbsolute(), monoDimStyle);
                 int build = serverFound ? ServerBuildOf(serverPath) : -1;
                 if (build > 0) GUILayout.Label("Build b" + build, monoDimStyle);
-                if (build > 0 && build < MinDecisionModelBuild && BehaviorLLMParadigm.Current == DecisionParadigm.DecisionModel)
-                    EditorGUILayout.HelpBox(
-                        $"This build (b{build}) predates decision models: llama-server gained /v1/systemone in " +
-                        $"b{MinDecisionModelBuild}. Every decision will fail with a 404 until it is replaced. " +
-                        "Reinstall below to get the current release.", MessageType.Error);
+                if (build > 0 && BehaviorLLMParadigm.Current == DecisionParadigm.DecisionModel)
+                {
+                    string activeType = string.IsNullOrWhiteSpace(config.activeModelRelativePath)
+                        ? string.Empty
+                        : HeaderFor(Path.Combine(Application.streamingAssetsPath, config.activeModelRelativePath)).DecisionType;
+                    int required = MinBuildFor(activeType);
+                    if (build < required)
+                        EditorGUILayout.HelpBox(
+                            $"This build (b{build}) is too old for the active model: " +
+                            (activeType.Length > 0 ? $"'{activeType}' decision models load from b{required}" : $"decision models need b{required}") +
+                            $". Decisions will fail until it is replaced. Reinstall below to get b{PinnedServerTag.TrimStart('b')}, " +
+                            "the build the package was measured on.", MessageType.Error);
+                }
                 if (serverFound && !bundled)
                     EditorGUILayout.HelpBox(
                         "This is a system-wide install, found on " + serverSource + ". It works: the " +
@@ -1696,6 +1713,20 @@ namespace BehaviorLLM.Editor.ModelManager
 
         /// <summary>The first llama-server build with the <c>/v1/systemone</c> endpoint (llama.cpp PR #29818).</summary>
         internal const int MinDecisionModelBuild = 11361;
+
+        /// <summary>
+        /// The first build that loads a given decision type: d1 arrived later than the endpoint
+        /// (llama.cpp PR #30110, first in b11483), and a build in between fails to load it with
+        /// "unsupported decision model type".
+        /// </summary>
+        internal static int MinBuildFor(string decisionType)
+        {
+            switch ((decisionType ?? string.Empty).ToLowerInvariant())
+            {
+                case "lfm2-d1": return 11483;
+                default: return MinDecisionModelBuild;
+            }
+        }
 
         private string versionProbePath;
         private DateTime versionProbeStamp;
@@ -2155,11 +2186,20 @@ namespace BehaviorLLM.Editor.ModelManager
             string releaseJson;
             try
             {
-                releaseJson = await BehaviorLLMDownloadUtility.DownloadTextAsync(LlamaReleaseApiPrimary, token, headers);
+                releaseJson = await BehaviorLLMDownloadUtility.DownloadTextAsync(LlamaReleaseApiPinned, token, headers);
             }
             catch
             {
-                releaseJson = await BehaviorLLMDownloadUtility.DownloadTextAsync(LlamaReleaseApiFallback, token, headers);
+                // The pinned build is gone (llama.cpp prunes old pre-releases eventually): take the
+                // latest, and the Server tab says if it is too old for the active model.
+                try
+                {
+                    releaseJson = await BehaviorLLMDownloadUtility.DownloadTextAsync(LlamaReleaseApiPrimary, token, headers);
+                }
+                catch
+                {
+                    releaseJson = await BehaviorLLMDownloadUtility.DownloadTextAsync(LlamaReleaseApiFallback, token, headers);
+                }
             }
 
             LlamaCppReleaseInfo release = JsonUtility.FromJson<LlamaCppReleaseInfo>(releaseJson);

@@ -14,6 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Config.DecisionMakerConfig
   decisionInterval: 4
   decisionIntervalJitter: 0.15
+  decisionModelSelection: 0
+  minChoiceProbability: 0
+  describeDecisionOptions: 0
   profile: 0
   reasonMaxChars: 120
   thinkingBudgetTokens: 0
@@ -22,7 +25,7 @@ MonoBehaviour:
   dynamicArgumentsInState: 1
   includeExamplesInPrompt: 1
   maxVisionEntries: 3
-  maxMemoryEntries: 2
+  maxMemoryEntries: 1
   maxPromptChars: 2600
   minStatePromptChars: 256
   logPrompts: 0

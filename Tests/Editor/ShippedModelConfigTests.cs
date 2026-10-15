@@ -32,9 +32,21 @@ namespace BehaviorLLM.Tests.Editor
         }
 
         [Test]
-        public void ThreePresetsShip()
+        public void FourPresetsShip()
         {
-            Assert.AreEqual(3, LoadPresets().Length, $"expected the three measured presets in {PresetFolder}");
+            Assert.AreEqual(4, LoadPresets().Length, $"expected the four measured presets in {PresetFolder}");
+        }
+
+        [Test]
+        public void TheDecisionModelPresetIsD1WithItsMeasuredBatch()
+        {
+            // The package's default paradigm is Decision Model, so exactly one shipped preset must
+            // serve it, and with the batch it was measured at: 2048 cost d1 0.24 GB and evened out
+            // its latency under load.
+            BehaviorLLMModelConfig[] decision = LoadPresets().Where(c => c.paradigm == DecisionParadigm.DecisionModel).ToArray();
+            Assert.AreEqual(1, decision.Length, "one shipped decision-model preset");
+            StringAssert.StartsWith("d1-3B", decision[0].modelFileName);
+            Assert.AreEqual(2048, decision[0].decisionBatchTokens);
         }
 
         [Test]

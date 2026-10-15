@@ -15,26 +15,31 @@ MonoBehaviour:
   validActions:
   - actionName: HoldPosition
     description: Stand still and keep watching the area.
+    parameters: []
     parameterType: 0
     exampleArgument: 
     allowedArguments: []
   - actionName: Patrol
     description: Walk to a named patrol route point and keep watch there.
+    parameters: []
     parameterType: 1
     exampleArgument: Route_North
     allowedArguments: []
   - actionName: Investigate
     description: Go to a named location to check on something suspicious.
+    parameters: []
     parameterType: 1
     exampleArgument: Warehouse
     allowedArguments: []
   - actionName: Chase
     description: Pursue a visible intruder to catch them.
+    parameters: []
     parameterType: 1
     exampleArgument: Intruder
     allowedArguments: []
   - actionName: Retreat
     description: Fall back to a named safe zone to recover.
+    parameters: []
     parameterType: 1
     exampleArgument: SafeZone_A
     allowedArguments: []
