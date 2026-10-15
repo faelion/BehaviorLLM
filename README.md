@@ -91,7 +91,7 @@ These URLs stay the same across versions. Unity locks the installed commit; to u
 **Optional: pin a specific release.** Replace the branch suffix with a tag from [Releases](https://github.com/faelion/BehaviorLLM/releases), for example:
 
 ```text
-https://github.com/faelion/BehaviorLLM.git#v0.6.0
+https://github.com/faelion/BehaviorLLM.git#v0.7.0
 ```
 
 **Manual.** Download the [latest release](https://github.com/faelion/BehaviorLLM/releases/latest) and copy the folder into your project's `Packages/` or `Assets/` folder.

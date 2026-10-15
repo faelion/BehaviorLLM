@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-15
+
 ### Changed
 - **BREAKING -** **The default paradigm is now Decision Model, and the default model LiquidAI d1-3B.** On 262 situations recorded in the two samples it chose the expected action 79% of the time at a 191 ms median and 2.2 GB of video memory, against 72% at 552 ms for Qwen3.5-4B, the best generative model measured; with eight characters in PrisonYard it made 160 decisions a minute. `BehaviorLLMSettings.paradigm` defaults to `DecisionModel` in the shipped settings asset and in the declared default; a project that relied on the generative default sets Paradigm back to Generative LLM in its settings asset, or with the Model Manager's Switch button. A new shipped preset, `Model_LiquidAI-d1-3B-Q4_K_M`, carries the measurement and a 2048-token batch; the Model Manager's default active model is d1.
 - **The Model Manager installs a pinned llama-server, b11630,** instead of the latest stable release, which (b11429) predates d1 support (b11483). If the pinned build is gone it falls back to the latest, and the Server tab says when the installed build is too old for the active model's decision type.
