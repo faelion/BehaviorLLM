@@ -357,6 +357,12 @@ namespace BehaviorLLM.Core.Backend
         internal static string DescribeDecisionFailure(long code, string raw, string endpoint, string transportError)
         {
             string serverMessage = SystemOneProtocol.ReadErrorMessage(raw);
+            // llama-server reports an oversized prompt as 400 for the question and options, and as 500
+            // for the types that read the whole prompt in one batch; either way the fix is the batch.
+            if (serverMessage != null && serverMessage.IndexOf("batch size", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "The decision request is too large for the server to read in one batch (" + serverMessage + "). " +
+                       "Raise Decision Batch Tokens on the model config and restart the server, or offer fewer options " +
+                       "with an Action Availability Provider.";
             switch (code)
             {
                 case 404:
@@ -368,10 +374,6 @@ namespace BehaviorLLM.Core.Backend
                            "in BehaviorLLM > Model Manager, or set Paradigm back to Generative LLM in the BehaviorLLM Settings asset.";
                 case 400:
                 case 422:
-                    if (serverMessage != null && serverMessage.IndexOf("batch size", StringComparison.OrdinalIgnoreCase) >= 0)
-                        return "The action menu is too large for the server to read in one batch (" + serverMessage + "). " +
-                               "Raise Decision Batch Tokens on the model config and restart the server, or offer " +
-                               "fewer options with an Action Availability Provider.";
                     return "The server rejected the decision request: " + (serverMessage ?? raw);
                 default:
                     return $"Decision request failed at '{endpoint}': {transportError}" +

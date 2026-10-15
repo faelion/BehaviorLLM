@@ -210,12 +210,28 @@ namespace BehaviorLLM.Editor.ModelManager
             string.Equals(decisionType, "openjev", StringComparison.OrdinalIgnoreCase) ? 52 : 255;
 
         /// <summary>
-        /// The batch a decision model is launched with. Measured, not guessed: 2048 cost LiquidAI
-        /// d1-3B 0.24 GB of video memory and cut its p95 with eight characters from 2.9 s to 1.9 s,
-        /// while on Kev-4B the same setting cost 1.7 GB, so only the d1 types get it by default.
+        /// The batch a decision model is launched with. Two reasons to raise it from the server's 512.
+        /// Some types read the whole prompt in one batch (laya, clef, lfm2-d1-omni, vllm-d3, per the
+        /// llama-server README), so anything longer than the batch fails: Clef-Flash refused 72% of
+        /// StealthGuard decisions at 512, whose prompts run to about 550 tokens. And for d1 the larger
+        /// batch is cheap and smooths contention: 0.24 GB of video memory for a p95 with eight
+        /// characters of 1.9 s instead of 2.9 s. Kev-type models get neither reason and 2048 cost
+        /// Kev-4B 1.7 GB, so they keep the default.
         /// </summary>
-        internal static int DecisionBatchTokensFor(string decisionType) =>
-            string.Equals(decisionType, "lfm2-d1", StringComparison.OrdinalIgnoreCase) ? 2048 : 0;
+        internal static int DecisionBatchTokensFor(string decisionType)
+        {
+            switch ((decisionType ?? string.Empty).ToLowerInvariant())
+            {
+                case "laya":
+                case "clef":
+                case "lfm2-d1-omni":
+                case "vllm-d3":
+                case "lfm2-d1":
+                    return 2048;
+                default:
+                    return 0;
+            }
+        }
 
         /// <summary>Creates <see cref="UserConfigFolder"/> one level at a time, as the AssetDatabase requires.</summary>
         internal static string EnsureUserConfigFolder()

@@ -52,7 +52,9 @@ namespace BehaviorLLM.Core.Config
                  "100 options; raising it also evens out latency when many characters ask at once. It " +
                  "costs video memory, by model: measured with 4 slots and an 8192 context, 2048 cost " +
                  "LiquidAI d1-3B 0.24 GB and cut its slowest 5% of decisions with eight characters from " +
-                 "2.9 s to 1.9 s, but cost Kev-4B 1.7 GB. The Model Manager sets 2048 for d1-type models.")]
+                 "2.9 s to 1.9 s, but cost Kev-4B 1.7 GB. Some types (Laya, Julia-1, Clef, d1-omni) must " +
+                 "read the whole prompt in one batch and fail outright on a longer one: Clef-Flash refused " +
+                 "72% of StealthGuard decisions at 512. The Model Manager sets 2048 for those and for d1.")]
         public int decisionBatchTokens = 0;
 
         [Header("Server")]

@@ -70,6 +70,11 @@ namespace BehaviorLLM.Tests.Runtime
                 "{\"error\":{\"code\":400,\"message\":\"the question and its options (1115 tokens) are too large to process. increase the batch size (current batch size: 512)\"}}",
                 "http://x/v1/systemone", "400");
             StringAssert.Contains("Decision Batch Tokens", message);
+
+            string wholePrompt = BehaviorLLMClient.DescribeDecisionFailure(500,
+                "{\"error\":{\"code\":500,\"message\":\"input (524 tokens) is too large to process. increase the physical batch size (current batch size: 512)\"}}",
+                "http://x/v1/systemone", "500");
+            StringAssert.Contains("Decision Batch Tokens", wholePrompt);
         }
 
         [Test]
