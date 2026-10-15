@@ -158,17 +158,19 @@ The package can decide in two ways, chosen once per project in the `BehaviorLLMS
 | `GenerativeLLM` (default) | A chat model (Qwen3.5, Granite...) | It writes a JSON decision, held to the legal actions by a grammar built from the action config. The only paradigm with a written `reason`. |
 | `DecisionModel` | A Jev-style decision model (Kev-4B, Laya, Julia-1) | Every legal action, with its values, becomes one option of a choice question sent to llama-server's `/v1/systemone`. The model returns a probability for each and writes nothing. |
 
-Nothing else changes between them: the same action config, bindings, observation modules, availability gating, argument checks and fallback apply, and telemetry records which paradigm decided along with the chosen option's probability. A decision model needs llama-server build b11361 or newer, and every action parameter needs a finite list of values (authored or from an argument provider), because a decision model can only choose among options it is shown. On the 16 labelled guard situations (llama-server b11588, RX 6650 XT, Vulkan, three passes each):
+Nothing else changes between them: the same action config, bindings, observation modules, availability gating, argument checks and fallback apply, and telemetry records which paradigm decided along with the chosen option's probability. A decision model needs llama-server build b11361 or newer, and every action parameter needs a finite list of values (authored or from an argument provider), because a decision model can only choose among options it is shown. Measured on 262 situations recorded in the two sample scenes, graded against each scene's own guide, every model asked the identical situations (llama-server b11630, RX 6650 XT 8 GB, Vulkan):
 
-| Model | Paradigm | Expected action | Median latency |
-|---|---|---:|---:|
-| Granite 4.1 3B | Generative, Reactive | 81% | 233 ms |
-| Qwen3.5 4B | Generative, Deliberative | **98%** | 548 ms |
-| LiquidAI d1 3B | Decision model | 81% | **147 ms** |
-| Kev 4B | Decision model | 81% | 279 ms |
-| Laya 0.4B / Julia-1 0.14B | Decision model | 50% / 31% | 61 / 30 ms |
+| Model | Paradigm | Expected action [95% CI] | Median latency | Video memory |
+|---|---|---|---:|---:|
+| Kev 9B Artemis | Decision model | **86%** [82, 90] | 735 ms | 5.6 GB |
+| LiquidAI d1 3B, Max Memory Entries 1 | Decision model | 79% [74, 84] | **191 ms** | 2.2 GB |
+| Kev 4B | Decision model | 79% [73, 83] | 436 ms | 3.9 GB |
+| Qwen3.5 4B, Reactive | Generative | 72% [66, 77] | 552 ms | 3.8 GB |
+| Qwen3.5 4B, Deliberative | Generative | 72% [67, 78] | 779 ms | 3.8 GB |
+| Granite 4.1 3B | Generative | 66% [60, 71] | 377 ms | 3.5 GB |
+| Qwen3.5 2B | Generative | 49% [43, 55] | 247 ms | 1.7 GB |
 
-The good decision models match the best Reactive generative model and d1 is the fastest of them, but no Reactive model of either paradigm followed the guide's health rule (0 of 9), which only Deliberative Qwen3.5 4B did (8 of 9); gate such rules with an availability provider in either paradigm. In 90-second runs of the two sample scenes, every decision the decision models made was usable; Granite's were too, apart from 3 of 173 in PrisonYard that named a prisoner no longer allowed by the time it answered. llama-server does not reuse a decision model's prompt between requests, so it reads the whole situation every time, where a chat model reuses its cached system prompt; that is why the 4B decision model is not faster than a 3B chat model.
+On the same situations the decision models beat the best generative model: d1 by 7 points and Kev 9B by 15, both outside the 95% intervals of the paired difference. Every answer of every model was a legal action, by the grammar in one paradigm and by construction in the other. With eight characters on one server, d1 made 160 decisions a minute in PrisonYard at a 237 ms median, Kev 4B 114 a minute at 781 ms, while Qwen3.5 4B and Kev 9B fell to 2–3 s medians. Decision models repeat what their memory lists, which is why d1 does best with Max Memory Entries at 1. The full benchmark, its data and the scripts are in the repository's experiment notes.
 
 ## Samples
 

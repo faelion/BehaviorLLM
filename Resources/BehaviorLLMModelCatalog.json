@@ -36,7 +36,7 @@
     {
       "id": "lfm2-d1-3b-q4km",
       "displayName": "LiquidAI d1 3B (Q4_K_M) · decision model",
-      "description": "Measured here: 81% expected action on the 16 labelled guard situations, the same as Granite 4.1 3B and Kev-4B, at a 147 ms median against their 233 and 279 ms; 0 to 6% of answers moved when the option order was reversed. Needs a llama-server newer than b11429 (support merged 2026-10-07; b11588 tested). LFM Open License v1.0: free below USD 10M annual revenue, check it before shipping.",
+      "description": "Measured here on 262 situations recorded in the sample scenes: 79% expected action with Max Memory Entries set to 1 on the decision maker config (72% with full memory; it repeats what its memory lists), at a 191 ms median and 2.2 GB, against 72% and 552 ms for Qwen3.5 4B. The fastest accurate option for many characters: 160 decisions per minute with eight in PrisonYard. Needs a llama-server newer than b11429 (support merged 2026-10-07). LFM Open License v1.0: free below USD 10M annual revenue, check it before shipping.",
       "downloadUrl": "https://huggingface.co/LiquidAI/d1-3B-GGUF/resolve/main/d1-3B-Q4_K_M.gguf",
       "fileName": "d1-3B-Q4_K_M.gguf",
       "sha256": "",
@@ -48,7 +48,7 @@
     {
       "id": "kev-4b-q4km",
       "displayName": "Kev 4B (Q4_K_M) · decision model",
-      "description": "Measured here: 81% expected action on the 16 labelled guard situations at a 279 ms median, and no answer moved when the option order was reversed. Qwen3.5-4B-Base read once with a pointer head over the options. Apache-2.0. Same base as Qwen3.5 4B above, which makes it the like-for-like comparison. Causal, so the server shares the work of reading one situation between several questions.",
+      "description": "Measured here on 262 situations recorded in the sample scenes: 79% expected action at a 436 ms median, against 72% for Qwen3.5 4B. Qwen3.5-4B-Base read once with a pointer head over the options. Apache-2.0. Same base as Qwen3.5 4B above, which makes it the like-for-like comparison. Causal, so the server shares the work of reading one situation between several questions.",
       "downloadUrl": "https://huggingface.co/ggml-org/Kev-4B-GGUF/resolve/main/Kev-4B-Q4_K_M.gguf",
       "fileName": "Kev-4B-Q4_K_M.gguf",
       "sha256": "",
@@ -58,9 +58,21 @@
       "paradigm": "DecisionModel"
     },
     {
+      "id": "kev-9b-artemis-iq4xs",
+      "displayName": "Kev 9B Artemis (IQ4_XS) · decision model",
+      "description": "Measured here on 262 situations recorded in the sample scenes: 86% expected action, the most accurate model tested in either paradigm (Qwen3.5 4B: 72%), at a 735 ms median and 5.6 GB. Too slow for many characters on one 8 GB card (2.2 s median with eight in PrisonYard); suits a few important characters or a director. A community quantisation of jaredpalmer/kev-9b by turintech, Apache-2.0.",
+      "downloadUrl": "https://huggingface.co/turintech/Kev-9B-Artemis-GGUF/resolve/main/Kev-9B-Artemis-IQ4_XS.gguf",
+      "fileName": "Kev-9B-Artemis-IQ4_XS.gguf",
+      "sha256": "",
+      "sizeBytes": 4874369504,
+      "contextSize": 8192,
+      "gpuLayers": 99,
+      "paradigm": "DecisionModel"
+    },
+    {
       "id": "laya-q8",
       "displayName": "Laya 0.4B (Q8_0) · decision model",
-      "description": "Measured here: 50% expected action on the 16 labelled guard situations, at 61 ms. Too weak for character decisions in this project's tests. A small encoder decision model (ModernBERT, 0.42B), Apache-2.0. Its file sets a temperature of 0.1 for questions of 11 or more options, so it reports near-certain probabilities whether or not it is right. An encoder reads the whole prompt at once, so it shares no work between questions and long situations must fit one batch.",
+      "description": "Measured here: 54% expected action on 262 situations recorded in the sample scenes, at 73 ms. Too weak for character decisions in this project's tests. A small encoder decision model (ModernBERT, 0.42B), Apache-2.0. Its file sets a temperature of 0.1 for questions of 11 or more options, so it reports near-certain probabilities whether or not it is right. An encoder reads the whole prompt at once, so it shares no work between questions and long situations must fit one batch.",
       "downloadUrl": "https://huggingface.co/ggml-org/Laya-GGUF/resolve/main/Laya-Q8_0.gguf",
       "fileName": "Laya-Q8_0.gguf",
       "sha256": "",
@@ -72,7 +84,7 @@
     {
       "id": "julia-1-q8",
       "displayName": "Julia-1 0.14B (Q8_0) · decision model",
-      "description": "Measured here: 31% expected action on the 16 labelled guard situations, at 30 ms; too weak for character decisions. The smallest decision model listed here: a 0.14B ModernBERT encoder, Apache-2.0, 168 MB. llama-server loads it as the same decision type as Laya, with the same limits.",
+      "description": "Measured here: 45% expected action on 262 situations recorded in the sample scenes, at 30 ms; too weak for character decisions. The smallest decision model listed here: a 0.14B ModernBERT encoder, Apache-2.0, 168 MB. llama-server loads it as the same decision type as Laya, with the same limits.",
       "downloadUrl": "https://huggingface.co/ggml-org/Julia-1-GGUF/resolve/main/Julia-1-Q8_0.gguf",
       "fileName": "Julia-1-Q8_0.gguf",
       "sha256": "",
