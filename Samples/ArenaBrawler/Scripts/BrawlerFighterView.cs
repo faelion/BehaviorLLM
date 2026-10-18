@@ -38,6 +38,8 @@ namespace Project.Samples.ArenaBrawler
         public float hookClip = 1f;
         public float hookRecoveryClip = 0.7f;
         public float rollClip = 1.47f;
+        public float hitClip = 0.43f;
+        public float heavyHitClip = 0.33f;
 
         // Animator state names, matching the controller the builder makes.
         public const string Idle = "Idle", Run = "Run", Walk = "Walk", Jab = "Jab", Hook = "Hook", HookRecovery = "HookRecovery",
@@ -87,7 +89,11 @@ namespace Project.Samples.ArenaBrawler
                     speed = rollClip / (r.dashDuration + 0.25f);
                     look = f.DashDirection;
                     break;
-                case FighterState.HitStun: state = f.StateDuration >= 0.5f ? HitHeavy : Hit; break;
+                case FighterState.HitStun:
+                    bool heavy = f.StateDuration >= 0.5f;
+                    state = heavy ? HitHeavy : Hit;
+                    speed = (heavy ? heavyHitClip : hitClip) / Mathf.Max(0.05f, f.StateDuration);
+                    break;
                 case FighterState.GuardBroken: state = GuardBreak; break;
                 case FighterState.KO: state = KO; break;
                 default:

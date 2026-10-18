@@ -241,16 +241,20 @@ namespace Project.Samples.ArenaBrawler.Editor
                 if (isDefault) sm.defaultState = s;
             }
 
-            State(BrawlerFighterView.Idle, "Punch_Enter", true);
+            // The relaxed idle and the fists-up guard are told apart on purpose: a raised guard is
+            // the block, and it has to read as one from across the arena.
+            State(BrawlerFighterView.Idle, "Idle_Loop", true);
             State(BrawlerFighterView.Run, "Jog_Fwd_Loop");
             State(BrawlerFighterView.Walk, "Walk_Loop");
             State(BrawlerFighterView.Jab, "Punch_Jab");
             State(BrawlerFighterView.Hook, "Melee_Hook");
             State(BrawlerFighterView.HookRecovery, "Melee_Hook_Rec");
-            State(BrawlerFighterView.Block, "Idle_Shield_Loop");
+            State(BrawlerFighterView.Block, "Punch_Enter");
             State(BrawlerFighterView.Roll, "Roll");
             State(BrawlerFighterView.Hit, "Hit_Head");
-            State(BrawlerFighterView.HitHeavy, "Hit_Knockback");
+            // A heavy hit reels rather than knocks down: the stun is half a second, and a fighter
+            // who hit the floor would have to spring back up from it.
+            State(BrawlerFighterView.HitHeavy, "Hit_Chest");
             State(BrawlerFighterView.GuardBreak, "Idle_Shield_Break");
             State(BrawlerFighterView.KO, "Death01");
             State(BrawlerFighterView.Win, "Dance_Loop");
@@ -284,6 +288,8 @@ namespace Project.Samples.ArenaBrawler.Editor
                 view.hookClip = Length("Melee_Hook", view.hookClip);
                 view.hookRecoveryClip = Length("Melee_Hook_Rec", view.hookRecoveryClip);
                 view.rollClip = Length("Roll", view.rollClip);
+                view.hitClip = Length("Hit_Head", view.hitClip);
+                view.heavyHitClip = Length("Hit_Chest", view.heavyHitClip);
             }
             else
             {

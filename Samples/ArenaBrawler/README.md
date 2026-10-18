@@ -69,4 +69,4 @@ Together these took its share of choices that fit the situation from 0.55 to 0.7
 
 ## The art
 
-Quaternius' [Universal Animation Library](https://quaternius.itch.io/universal-animation-library) and [Universal Animation Library 2](https://quaternius.itch.io/universal-animation-library-2), both CC0: the female mannequin, and 18 of the libraries' clips copied out as Unity animation assets so the sample does not ship the 42 MB of source files. The licence is in `Art/LICENSES`. Delete `Art/` and the builder makes primitive stand-ins instead; the fight plays the same.
+Quaternius' [Universal Animation Library](https://quaternius.itch.io/universal-animation-library) and [Universal Animation Library 2](https://quaternius.itch.io/universal-animation-library-2), both CC0: the female mannequin, and 13 of the libraries' clips copied out as Unity animation assets so the sample does not ship the 42 MB of source files. The licence is in `Art/LICENSES`. Delete `Art/` and the builder makes primitive stand-ins instead; the fight plays the same.
