@@ -36,7 +36,7 @@
     {
       "id": "lfm2-d1-3b-q4km",
       "displayName": "LiquidAI d1 3B (Q4_K_M) · decision model",
-      "description": "Measured here on 262 situations recorded in the sample scenes: 79% expected action with Max Memory Entries set to 1 on the decision maker config (72% with full memory; it repeats what its memory lists), at a 191 ms median and 2.2 GB, against 72% and 552 ms for Qwen3.5 4B. The fastest accurate option for many characters: 160 decisions per minute with eight in PrisonYard. Needs a llama-server newer than b11429 (support merged 2026-10-07). LFM Open License v1.0: free below USD 10M annual revenue, check it before shipping.",
+      "description": "Measured here on 262 situations recorded in the sample scenes: 79% expected action with Max Memory Entries set to 1 on the decision maker config (72% with full memory; it repeats what its memory lists), at a 117 ms median and 2.2 GB, against 72% and 552 ms for Qwen3.5 4B. The fastest accurate option for many characters: 163 decisions per minute at a 183 ms median with eight in PrisonYard. Needs a llama-server newer than b11429 (support merged 2026-10-07). LFM Open License v1.0: free below USD 10M annual revenue, check it before shipping.",
       "downloadUrl": "https://huggingface.co/LiquidAI/d1-3B-GGUF/resolve/main/d1-3B-Q4_K_M.gguf",
       "fileName": "d1-3B-Q4_K_M.gguf",
       "sha256": "",

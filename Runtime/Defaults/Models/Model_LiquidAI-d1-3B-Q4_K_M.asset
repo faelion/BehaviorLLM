@@ -34,7 +34,7 @@ MonoBehaviour:
   reasoningModel: 0
   measuredValidActionRate: 1
   measuredExpectedActionRate: 0.79
-  measuredP50LatencyMs: 191
+  measuredP50LatencyMs: 117
   measurementNotes: 'Measured 2026-10-15 on a Radeon RX 6650 XT (Vulkan) with llama.cpp
     build 11630, over 262 situations recorded in the StealthGuard and PrisonYard samples
     and graded against each scene''s guide, with Max Memory Entries 1 on the decision
@@ -44,5 +44,5 @@ MonoBehaviour:
     A decision model: it scores every legal action instead of writing, and needs the
     Decision Model paradigm and llama-server b11483 or newer. The most accurate model per
     millisecond tested: Qwen3.5 4B, the best generative model, scored 72% at 552 ms. With
-    eight characters in PrisonYard it made 160 decisions a minute at a 237 ms median.
+    eight characters in PrisonYard it made 163 decisions a minute at a 183 ms median (2026-10-18). The median of 117 ms is with Decision Prefix Head set, so the server keeps the persona and the guide between decisions; 181 ms without it.
     Reproduce with the round-2 benchmark in Docs/Experiments/runs/2026-10-15-round2.'
