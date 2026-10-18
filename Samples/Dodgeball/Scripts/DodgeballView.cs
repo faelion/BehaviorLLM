@@ -37,17 +37,14 @@ namespace Project.Samples.Dodgeball
             [Tooltip("The throwing hand. A held ball sits in it.")]
             public Transform handRight;
 
-            [Tooltip("Moves with the player without turning: the shadow and the cooldown arcs.")]
+            [Tooltip("Moves with the player without turning: the shadow and the charge arc.")]
             public Transform ground;
 
             [Tooltip("Ring shown while a catch is open.")]
             public SpriteRenderer catchRing;
 
-            [Tooltip("Arc around the player that empties as the dodge recovers.")]
-            public LineRenderer dodgeArc;
-
-            [Tooltip("Arc around the player that empties as the catch recovers.")]
-            public LineRenderer catchArc;
+            [Tooltip("Arc around the player that fills while a throw charges.")]
+            public LineRenderer chargeArc;
 
             [Tooltip("The player's colour.")]
             public Color color = Color.white;
@@ -68,6 +65,9 @@ namespace Project.Samples.Dodgeball
 
             [Tooltip("Streak left behind a thrown ball.")]
             public TrailRenderer trail;
+
+            [Tooltip("Ring that fills around a dropped ball until it can be picked up again.")]
+            public LineRenderer lockArc;
         }
 
         [Header("Wiring")]
@@ -83,8 +83,15 @@ namespace Project.Samples.Dodgeball
         [Tooltip("One rig per ball, in the court's order.")]
         public BallRig[] balls;
 
-        [Tooltip("Dashed line from the human's hand to the pointer.")]
+        [Tooltip("Dashed path a throw from the human's hand would take, bounces included, as far as " +
+                 "the charge would carry it. It grows while the throw charges.")]
         public LineRenderer aimLine;
+
+        [Tooltip("The same path for the machine, shown while it charges a throw.")]
+        public LineRenderer machineAimLine;
+
+        [Tooltip("The human's no-throw zone, then the machine's: lit while its player holds a ball in it.")]
+        public SpriteRenderer[] noThrowZones = new SpriteRenderer[2];
 
         [Tooltip("Marker under the pointer.")]
         public SpriteRenderer reticle;
@@ -126,6 +133,8 @@ namespace Project.Samples.Dodgeball
         private readonly float[] stride = new float[2];
         private readonly float[] lineFlash = new float[2];
         private readonly float[] ghostTimer = new float[2];
+        private readonly float[] wasCharge = new float[2];
+        private readonly List<Vector2> path = new List<Vector2>();
         private float[] ballAge;
         private BallState[] ballWas;
         private Vector2[] ballVelocity;
@@ -149,7 +158,7 @@ namespace Project.Samples.Dodgeball
         private readonly List<Ghost> ghosts = new List<Ghost>();
 
         private AudioSource audioSource;
-        private AudioClip sThrow, sHit, sCatch, sPickup, sDodge, sWall, sBuzzer, sBeep, sGo, sPoint, sCrowd;
+        private AudioClip sThrow, sHit, sCatch, sPickup, sDodge, sWall, sBuzzer, sBeep, sGo, sPoint, sCrowd, sCharge, sFull, sClack;
 
         private struct Ghost
         {
@@ -174,6 +183,7 @@ namespace Project.Samples.Dodgeball
             sPickup = DodgeballSound.Pickup(); sDodge = DodgeballSound.Dodge(); sWall = DodgeballSound.Wall();
             sBuzzer = DodgeballSound.Buzzer(); sBeep = DodgeballSound.Beep(); sGo = DodgeballSound.GoBeep();
             sPoint = DodgeballSound.Point(); sCrowd = DodgeballSound.Crowd();
+            sCharge = DodgeballSound.Charge(); sFull = DodgeballSound.FullCharge(); sClack = DodgeballSound.Clack();
 
             if (crowd != null)
             {
@@ -226,6 +236,8 @@ namespace Project.Samples.Dodgeball
             for (int i = 0; i < 2; i++) DrawPlayer(court, i, dt, udt);
             DrawBalls(court, dt);
             DrawAim(court);
+            DrawMachineAim(court);
+            DrawZones(court);
             DrawThrowingLines(court, udt);
             DrawCrowd();
             UpdateGhosts();
@@ -310,6 +322,32 @@ namespace Project.Samples.Dodgeball
                         squash[e.Player] = -0.08f;
                         break;
 
+                    case CourtEventKind.ChargeStarted:
+                        squash[e.Player] = -0.1f;
+                        Play(sCharge, 0.45f, 1f);
+                        break;
+
+                    case CourtEventKind.Drop:
+                        Burst(court.Balls[e.Ball].Position, new Color(1f, 0.8f, 0.35f), 6, 2f, 0.1f);
+                        Play(sWall, 0.4f, 1.4f);
+                        break;
+
+                    case CourtEventKind.WallBounce:
+                        Burst(court.Balls[e.Ball].Position, Color.white, 8, 3f, 0.11f);
+                        Play(sWall, 0.55f, UnityEngine.Random.Range(1.05f, 1.25f));
+                        Shake(0.05f);
+                        break;
+
+                    case CourtEventKind.BallBounce:
+                        Burst(court.Balls[e.Ball].Position, new Color(1f, 0.9f, 0.5f), 10, 3.5f, 0.12f);
+                        Play(sClack, 0.7f, UnityEngine.Random.Range(0.9f, 1.15f));
+                        Shake(0.08f);
+                        break;
+
+                    case CourtEventKind.BallDied:
+                        Burst(court.Balls[e.Ball].Position, new Color(0.8f, 0.75f, 0.7f), 6, 1.5f, 0.1f);
+                        break;
+
                     case CourtEventKind.Dodge:
                         squash[e.Player] = 0.22f;
                         ghostTimer[e.Player] = 0.2f;
@@ -324,12 +362,6 @@ namespace Project.Samples.Dodgeball
             for (int i = 0; i < court.Balls.Count; i++)
             {
                 CourtBall b = court.Balls[i];
-                if (ballWas[i] == BallState.Flying && b.State == BallState.Free && court.PointWinner < 0)
-                {
-                    Burst(b.Position, new Color(0.85f, 0.8f, 0.75f), 10, 2.5f, 0.12f);
-                    Play(sWall, 0.6f, UnityEngine.Random.Range(0.9f, 1.1f));
-                    Shake(0.08f);
-                }
                 ballWas[i] = b.State;
                 if (b.State == BallState.Flying) ballVelocity[i] = b.Velocity;
             }
@@ -405,6 +437,17 @@ namespace Project.Samples.Dodgeball
             Vector3 left = new Vector3(-0.4f, 0.08f + swing, 0f);
             Vector3 right = new Vector3(0.4f, 0.08f - swing, 0f);
             if (p.Holding) right = new Vector3(0.36f, 0.36f, 0f);
+            if (p.HeldCount > 1) left = new Vector3(-0.38f, 0.3f, 0f);
+            if (p.Charging)
+            {
+                // Wound back further the longer it charges, trembling once it is full.
+                float charge = court.Charge(i);
+                float tremble = charge >= 1f ? Mathf.Sin(Time.time * 70f) * 0.025f : 0f;
+                right = new Vector3(0.48f + charge * 0.1f + tremble, 0.1f - charge * 0.35f, 0f);
+                if (charge >= 1f && wasCharge[i] < 1f) { Play(sFull, 0.5f, i == 0 ? 1f : 0.9f); squash[i] = 0.12f; }
+                wasCharge[i] = charge;
+            }
+            else wasCharge[i] = 0f;
             if (p.Catching)
             {
                 left = new Vector3(-0.24f, 0.5f, 0f);
@@ -442,9 +485,14 @@ namespace Project.Samples.Dodgeball
                 }
             }
 
-            DodgeballRules r = court.Rules;
-            Arc(rig.dodgeArc, 0.62f, p.CanDodge ? 0f : p.DodgeCooldown / (r.dodgeDuration + r.dodgeCooldown));
-            Arc(rig.catchArc, 0.72f, p.Holding || p.CanCatch ? 0f : p.CatchCooldown / (r.catchWindow + r.catchCooldown));
+            if (rig.chargeArc != null)
+            {
+                float charge = court.Charge(i);
+                Arc(rig.chargeArc, 0.7f, p.Charging ? Mathf.Max(0.02f, charge) : 0f);
+                Color cc = Color.Lerp(new Color(1f, 0.9f, 0.4f), new Color(1f, 0.35f, 0.15f), charge);
+                if (charge >= 1f) cc = Color.Lerp(cc, Color.white, 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 30f));
+                rig.chargeArc.startColor = rig.chargeArc.endColor = cc;
+            }
 
             if (ghostTimer[i] > 0f)
             {
@@ -487,7 +535,8 @@ namespace Project.Samples.Dodgeball
                 switch (b.State)
                 {
                     case BallState.Held:
-                        Transform hand = players[b.Holder].handRight;
+                        CourtPlayer holder = court.Players[b.Holder];
+                        Transform hand = holder.Held.IndexOf(i) == 0 ? players[b.Holder].handRight : players[b.Holder].handLeft;
                         if (hand != null) pos = new Vector3(hand.position.x, hand.position.y, 0f);
                         height = 0.12f;
                         break;
@@ -524,6 +573,11 @@ namespace Project.Samples.Dodgeball
                     rig.shadow.localScale = Vector3.one * (1.1f - height * 0.3f);
                 }
                 if (rig.trail != null) rig.trail.emitting = b.State == BallState.Flying;
+                if (rig.lockArc != null)
+                {
+                    float locked = b.State == BallState.Free && b.Locked ? 1f - b.LockTime / Mathf.Max(0.01f, court.Rules.pickupLock) : 0f;
+                    Arc(rig.lockArc, 1.0f, b.State == BallState.Free && b.Locked ? Mathf.Max(0.02f, locked) : 0f);
+                }
             }
         }
 
@@ -533,26 +587,26 @@ namespace Project.Samples.Dodgeball
         {
             CourtPlayer me = court.Players[DodgeballMatch.Human];
             bool show = match.HumanAimsWithPointer && match.CurrentPhase != DodgeballMatch.Phase.Over;
-            if (aimLine != null) aimLine.enabled = show;
             if (reticle != null) reticle.enabled = show;
+            if (aimLine != null) aimLine.enabled = show && me.Holding;
             if (!show) return;
 
             bool ready = court.CanThrow(DodgeballMatch.Human);
-            Transform hand = players[DodgeballMatch.Human].handRight;
-            Vector3 from = hand != null ? new Vector3(hand.position.x, hand.position.y, 0f) : new Vector3(me.Position.x, me.Position.y, 0f);
             Vector3 to = new Vector3(match.HumanAim.x, match.HumanAim.y, 0f);
-            // White when a click would throw, orange when holding a ball too close to throw it,
-            // faint when there is nothing to throw.
+            // White when a release would throw, red when holding a ball in the no-throw zone.
             Color c = ready ? new Color(1f, 1f, 1f, 0.95f)
-                    : me.Holding ? new Color(1f, 0.6f, 0.2f, 0.9f)
+                    : me.Holding ? new Color(1f, 0.3f, 0.2f, 0.9f)
                     : new Color(1f, 1f, 1f, 0.3f);
-            if (aimLine != null)
+            if (aimLine != null && me.Holding)
             {
-                aimLine.positionCount = 2;
-                aimLine.SetPosition(0, from);
-                aimLine.SetPosition(1, to);
-                aimLine.startColor = new Color(c.r, c.g, c.b, c.a * 0.25f);
-                aimLine.endColor = c;
+                // The path as far as the throw would go if released now: short before charging,
+                // growing with the charge.
+                float charge = court.Charge(DodgeballMatch.Human);
+                float range = me.Charging ? court.Rules.RangeFor(charge) : court.Rules.minRange * 0.5f;
+                Vector2 dir = DodgeballCourt.ThrowDirection(me, match.HumanAim);
+                DrawPath(aimLine, court, me.Position + dir * (court.Rules.playerRadius + court.Rules.ballRadius), dir, range,
+                         new Color(c.r, c.g, c.b, me.Charging ? c.a : c.a * 0.45f));
+                aimLine.widthMultiplier = me.Charging ? 0.07f + charge * 0.04f : 0.05f;
             }
             if (reticle != null)
             {
@@ -561,6 +615,49 @@ namespace Project.Samples.Dodgeball
                 reticle.color = c;
                 float size = ready ? 0.62f + Mathf.Sin(Time.unscaledTime * 8f) * 0.05f : 0.5f;
                 reticle.transform.localScale = Vector3.one * size;
+            }
+        }
+
+        private void DrawMachineAim(DodgeballCourt court)
+        {
+            if (machineAimLine == null) return;
+            CourtPlayer m = court.Players[DodgeballMatch.Machine];
+            DodgeballMachinePad pad = match.machinePad;
+            bool show = m.Charging && pad != null && pad.TryGetChargeAim(out Vector2 aim) && match.Playing;
+            machineAimLine.enabled = show;
+            if (!show) return;
+            pad.TryGetChargeAim(out Vector2 target);
+            float charge = court.Charge(DodgeballMatch.Machine);
+            Vector2 dir = DodgeballCourt.ThrowDirection(m, target);
+            Color c = players[DodgeballMatch.Machine].color;
+            DrawPath(machineAimLine, court, m.Position + dir * (court.Rules.playerRadius + court.Rules.ballRadius), dir,
+                     court.Rules.RangeFor(charge), new Color(c.r, c.g, c.b, 0.9f));
+            machineAimLine.widthMultiplier = 0.06f + charge * 0.04f;
+        }
+
+        /// <summary>Lays <paramref name="line"/> along the path a ball would take, fading toward its end.</summary>
+        private void DrawPath(LineRenderer line, DodgeballCourt court, Vector2 from, Vector2 dir, float range, Color c)
+        {
+            court.PredictPath(from, dir, range, path);
+            line.positionCount = path.Count;
+            for (int k = 0; k < path.Count; k++) line.SetPosition(k, new Vector3(path[k].x, path[k].y, 0f));
+            line.startColor = c;
+            line.endColor = new Color(c.r, c.g, c.b, c.a * 0.25f);
+        }
+
+        private void DrawZones(DodgeballCourt court)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                SpriteRenderer zone = noThrowZones[i];
+                if (zone == null) continue;
+                CourtPlayer p = court.Players[i];
+                bool warn = p.Holding && court.InNoThrowZone(i) && match.Playing;
+                float target = warn ? 0.16f + 0.1f * Mathf.Sin(Time.unscaledTime * 8f) : 0f;
+                target = Mathf.Max(target, lineFlash[i] * 0.35f);
+                Color c = zone.color;
+                c.a = Mathf.Lerp(c.a, target, 1f - Mathf.Exp(-14f * Time.unscaledDeltaTime));
+                zone.color = c;
             }
         }
 

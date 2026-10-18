@@ -39,22 +39,28 @@ MonoBehaviour:
     exampleArgument: 
     allowedArguments: []
   - actionName: Throw
-    description: 'Throw your ball: at the opponent, or ahead of them toward the top
-      or the bottom wall.'
+    description: 'Charge and throw the ball in your throwing hand: at the opponent,
+      ahead of where they run, a metre or two above or below them, or off the top
+      or bottom wall.'
     parameters:
     - name: aim
       type: 1
       exampleValue: AtOpponent
       allowedValues:
       - AtOpponent
-      - LeadUp
-      - LeadDown
+      - AheadOfOpponent
+      - OffsetUp1
+      - OffsetUp2
+      - OffsetDown1
+      - OffsetDown2
+      - BankTopWall
+      - BankBottomWall
     parameterType: 0
     exampleArgument: 
     allowedArguments: []
   - actionName: Catch
-    description: Open a catch for a moment. A ball that arrives while it is open
-      is caught and you score.
+    description: Open a catch for a moment, dropping any balls you hold. A ball that
+      arrives while it is open is caught and you score.
     parameters: []
     parameterType: 0
     exampleArgument: 

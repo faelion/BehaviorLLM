@@ -1,6 +1,6 @@
 # Arena Brawler
 
-A one-on-one bare-knuckle fight against the machine in a round arena, first to 3 rounds. You are blue; the machine is red. Both fighters are Quaternius' mannequin with motion-captured animations.
+A one-on-one bare-knuckle fight against the machine in a round arena under the lights, with stands full of spectators, first to 3 rounds. You are blue; the machine is red, and the interface calls it by its model's name. Both fighters are Quaternius' mannequin with motion-captured animations.
 
 Like Dodgeball, this sample gives a decision model **the controls rather than a list of behaviours**. The machine holds a direction, punches, blocks and rolls, about seven times a second, and the fight comes out of the timing. It is the harder test of the two: a jab lands 0.15 s after the button.
 
@@ -30,7 +30,13 @@ The ring under a fighter shows what it is doing: yellow while a jab winds up, re
 - **What it sees** (`FightObservationModule`): a punch coming at it first, with when it lands, when that is relative to its own next input, and whether it is inside the punch's reach; then the distance in terms of its own reach; then what each fighter is doing. Your punches are called a "quick strike" and a "slow swing", never "jab" and "hook", for a reason given below.
 - **An interrupt** the moment you start a punch or a roll, which cancels whatever decision is in flight and asks again with the wind-up in view.
 
-The caption above the machine shows its last input and the probability the model gave it; the panel at the bottom right shows its decision time, its reaction time to your hooks, and how many of your punches landed. Every match is written to `match_<time>.csv` under `Application.persistentDataPath/BehaviorLLM/ArenaBrawler`.
+Over the machine, a bubble shows the input it just pressed as an icon (a fist for a jab, a swung fist for a hook, a shield, a roll, an arrow for a step), ringed by the probability the model gave it, with its decision time beside it. The end-of-match panel adds its reaction time to your hooks and how many of your punches landed. Every match is written to `match_<time>.csv` under `Application.persistentDataPath/BehaviorLLM/ArenaBrawler`.
+
+## Look and feel
+
+Health bars drop at once and drain a pale trail behind them; damage numbers jump off whoever took the hit, gold for a counter. A punch that lands freezes the fight for a few hundredths of a second, shakes the camera, throws sparks and flashes the fighter it hit; a block sparks blue, a broken guard violet, a roll kicks up dust. A knockout plays in slow motion. The winner of a round then dances for 4.5 s (`Celebration Time` in the rules) under a spotlight, in a shower of confetti in their colour, while the camera circles them, the crowd jumps and the hall dims; at the end of the match the dance goes on until you restart. Every sound is synthesised by `BrawlerSound`; the interface's icons and the mat are painted by `BrawlerIcons` and the builder. Hit-stop, shake, slow motion and volume are on the Fx component.
+
+**Facing.** Quaternius' clips were recorded facing different ways, so the builder bakes each clip's rotation relative to the body rather than to the recording, and turns two clips back by hand: the jog ran 31° turned away from where the fighter faced, and the hook's recovery settled 30° off. Both were measured in play from the hip bones against the fighter's forward.
 
 ## Fairness
 
@@ -61,11 +67,15 @@ Together these took its share of choices that fit the situation from 0.55 to 0.7
 | | |
 |---|---|
 | `Scripts/BrawlerArena.cs` | The whole fight as plain C#: states, timings, reach, blocks, guard breaks, rolls, the input buffer. Unit-tested in `Tests/`. |
-| `Scripts/BrawlerMatch.cs` | Runs a match: your controls, the autopilot, rounds, the HUD and the report. |
+| `Scripts/BrawlerMatch.cs` | Runs a match: your controls, the autopilot, rounds, the events the effects and interface listen to, and the report. |
+| `Scripts/BrawlerFx.cs` | Hit-stop, shake, sparks, flashes, slow motion, the camera, the spotlight, confetti and the crowd. |
+| `Scripts/BrawlerHud.cs` | The interface, built in code at start. |
+| `Scripts/BrawlerSound.cs` | Synthesised sound effects. |
 | `Scripts/BrawlerFighterView.cs` | Draws a fighter: animation states and speeds matched to the move timings, the telegraph ring, and a primitive stand-in when the art is missing. |
 | `Scripts/BrawlerMachinePad.cs` | The machine's gamepad, its reaction delay, and when Evade is on the menu. |
 | `Scripts/FightObservationModule.cs` | What the machine is told. |
 | `Scripts/Editor/ArenaBrawlerSceneBuilder.cs` | Builds the scene, the animator controller and the config assets. The guide text and the reasons behind it are here. |
+| `Scripts/Editor/BrawlerIcons.cs` | Paints the interface's icons and plates. |
 
 ## The art
 

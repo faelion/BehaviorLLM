@@ -20,11 +20,19 @@ MonoBehaviour:
   dodgeDistance: 2.6
   dodgeDuration: 0.18
   dodgeCooldown: 1.2
+  maxHeld: 2
   ballRadius: 0.25
-  throwSpeed: 15
-  leadDistance: 1.8
-  catchWindow: 0.35
-  catchCooldown: 1
+  throwSpeed: 16.5
+  chargeTime: 0.8
+  minRange: 6
+  maxRange: 26
+  chargeMoveFactor: 0.45
+  wallBounce: 0.9
+  ballBounce: 0.9
+  rollFriction: 7
+  pickupLock: 1.2
+  catchWindow: 0.22
+  catchCooldown: 1.8
   catchMoveFactor: 0.4
   pointsToWin: 7
   pointPause: 1.2

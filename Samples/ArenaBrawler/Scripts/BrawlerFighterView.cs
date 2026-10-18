@@ -47,21 +47,42 @@ namespace Project.Samples.ArenaBrawler
 
         private string current;
         private MaterialPropertyBlock block;
+        private float flash;
+        private Color flashColor = Color.white;
         private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         private void Awake()
         {
             block = new MaterialPropertyBlock();
+            Tint(color);
+        }
+
+        /// <summary>Flashes the fighter <paramref name="to"/> for a moment, as when struck.</summary>
+        public void Flash(Color to)
+        {
+            flash = 1f;
+            flashColor = to;
+        }
+
+        private void Tint(Color c)
+        {
             if (tinted == null) return;
             for (int i = 0; i < tinted.Length; i++)
             {
                 if (tinted[i] == null) continue;
                 tinted[i].GetPropertyBlock(block);
-                block.SetColor(BaseColor, color);
-                block.SetColor(ColorId, color);
+                block.SetColor(BaseColor, c);
+                block.SetColor(ColorId, c);
                 tinted[i].SetPropertyBlock(block);
             }
+        }
+
+        private void Update()
+        {
+            if (flash <= 0f) return;
+            flash = Mathf.Max(0f, flash - Time.unscaledDeltaTime * 7f);
+            Tint(Color.Lerp(color, flashColor, flash));
         }
 
         /// <summary>Shows <paramref name="f"/>. <paramref name="won"/> plays the victory animation.</summary>
@@ -111,10 +132,13 @@ namespace Project.Samples.ArenaBrawler
                     }
                     else
                     {
-                        // Turn the body toward the run, but never fully away from the opponent.
+                        // Square to the opponent when closing in; turned partly into the run when
+                        // circling, but never more than about a third of the way, so a fighter
+                        // stepping round the other still reads as facing them.
                         state = Run;
                         speed = moving / r.moveSpeed;
-                        look = Vector3.Slerp(new Vector3(f.Facing.x, f.Facing.y), new Vector3(dir.x, dir.y), 0.7f);
+                        float turn = forward > 0.5f ? 0f : 0.35f;
+                        look = Vector3.Slerp(new Vector3(f.Facing.x, f.Facing.y), new Vector3(dir.x, dir.y), turn);
                     }
                     break;
             }

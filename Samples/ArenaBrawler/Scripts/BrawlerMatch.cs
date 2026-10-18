@@ -14,11 +14,12 @@ namespace Project.Samples.ArenaBrawler
     /// Runs a one-on-one fight between a human and the machine, first to
     /// <see cref="BrawlerRules.roundsToWin"/> rounds. Each frame it reads the human's controls,
     /// lets the machine's pad apply whatever the decision maker last chose, steps the arena and
-    /// draws both fighters.
+    /// poses both fighters. <see cref="BrawlerFx"/> adds the feedback and <see cref="BrawlerHud"/>
+    /// the interface; both listen to the events here.
     ///
     /// It also keeps the numbers the sample exists for: how long each machine decision took, how
     /// quickly the machine answered each of the human's punches, and what came of them. They are
-    /// on screen during play and written to a CSV when the match ends.
+    /// shown at the end of the match and written to a CSV.
     /// </summary>
     [AddComponentMenu("Arena Brawler/Brawler Match")]
     public class BrawlerMatch : MonoBehaviour
@@ -39,8 +40,13 @@ namespace Project.Samples.ArenaBrawler
         public BehaviorLLMClient client;
 
         [Header("Views")]
+        [Tooltip("The human fighter's view.")]
         public BrawlerFighterView humanView;
+
+        [Tooltip("The machine fighter's view.")]
         public BrawlerFighterView machineView;
+
+        [Tooltip("The camera the fight is seen through.")]
         public Camera view;
 
         [Header("Practice")]
@@ -58,14 +64,41 @@ namespace Project.Samples.ArenaBrawler
         public float RoundTimeLeft { get; private set; }
         public bool Fighting => phase == Phase.Fighting;
 
-        private enum Phase { Intro, Fighting, RoundOver, MatchOver }
+        public enum Phase { Intro, Fighting, RoundOver, MatchOver }
+        public Phase CurrentPhase => phase;
+
+        /// <summary>Who won the round just ended, or -1 while one is under way.</summary>
+        public int RoundWinner => roundWinner;
+
+        /// <summary>Seconds left of the current intro or celebration.</summary>
+        public float PhaseTimeLeft => phaseTimer;
+
         private Phase phase;
         private float phaseTimer;
         private int roundWinner = -1;
-        private string banner = "";
         private readonly bool[] alerts = new bool[2];
 
-        private const int Human = 0, Machine = 1;
+        public const int Human = 0, Machine = 1;
+
+        // ---------------------------------------------------------------- events
+
+        /// <summary>A round is about to start: its number. The fight starts after the intro.</summary>
+        public event Action<int> RoundIntro;
+
+        /// <summary>The fighters can move.</summary>
+        public event Action Fight;
+
+        /// <summary>A round was won: the winner, and whether by knockout rather than on time.</summary>
+        public event Action<int, bool> RoundWon;
+
+        /// <summary>The match was won.</summary>
+        public event Action<int> MatchWon;
+
+        /// <summary>The arena has just stepped; its events are this step's.</summary>
+        public event Action<BrawlerArena> Stepped;
+
+        /// <summary>A time-out with both fighters level: the round is replayed.</summary>
+        public event Action Draw;
 
         // ---------------------------------------------------------------- stats
 
@@ -83,7 +116,6 @@ namespace Project.Samples.ArenaBrawler
         private readonly List<float> decisionMs = new List<float>();
         private readonly List<float> hookReactionMs = new List<float>();
         private float matchStart;
-        private string lastDecisionCaption = "";
 
         // ---------------------------------------------------------------- lifecycle
 
@@ -136,7 +168,7 @@ namespace Project.Samples.ArenaBrawler
             roundWinner = -1;
             phase = Phase.Intro;
             phaseTimer = rules.roundPause;
-            banner = $"Round {Round}";
+            RoundIntro?.Invoke(Round);
         }
 
         private void Update()
@@ -149,13 +181,18 @@ namespace Project.Samples.ArenaBrawler
             {
                 case Phase.Intro:
                     phaseTimer -= Time.deltaTime;
-                    if (phaseTimer <= 0f) { phase = Phase.Fighting; banner = ""; }
+                    if (phaseTimer <= 0f)
+                    {
+                        phase = Phase.Fighting;
+                        Fight?.Invoke();
+                    }
                     break;
 
                 case Phase.Fighting:
                     if (humanAutopilot) Autopilot();
                     else ReadHuman();
                     Arena.Step(Time.deltaTime);
+                    Stepped?.Invoke(Arena);
                     HandleEvents();
                     RoundTimeLeft -= Time.deltaTime;
                     CheckRoundEnd();
@@ -163,8 +200,14 @@ namespace Project.Samples.ArenaBrawler
 
                 case Phase.RoundOver:
                     Arena.Step(Time.deltaTime);
+                    Stepped?.Invoke(Arena);
                     phaseTimer -= Time.deltaTime;
                     if (phaseTimer <= 0f) StartRound();
+                    break;
+
+                case Phase.MatchOver:
+                    Arena.Step(Time.deltaTime);
+                    Stepped?.Invoke(Arena);
                     break;
             }
 
@@ -180,27 +223,28 @@ namespace Project.Samples.ArenaBrawler
             else if (m.State == FighterState.KO) winner = Human;
             else if (RoundTimeLeft <= 0f)
             {
-                if (Mathf.Approximately(h.Health, m.Health)) { banner = "Time: a draw, the round is replayed"; StartRound(); return; }
+                if (Mathf.Approximately(h.Health, m.Health)) { Draw?.Invoke(); StartRound(); return; }
                 winner = h.Health > m.Health ? Human : Machine;
             }
             if (winner < 0) return;
 
             roundWinner = winner;
             RoundsWon[winner]++;
-            string who = winner == Human ? "You" : MachineName;
+            bool knockout = Arena.Fighters[1 - winner].State == FighterState.KO;
             Arena.Fighters[Human].Move = Arena.Fighters[Machine].Move = Vector2.zero;
             Arena.Fighters[Human].BlockHeld = Arena.Fighters[Machine].BlockHeld = false;
             if (RoundsWon[winner] >= rules.roundsToWin)
             {
                 phase = Phase.MatchOver;
-                banner = $"{who} {(winner == Human ? "win" : "wins")} the match {RoundsWon[winner]}-{RoundsWon[1 - winner]}. Press R to fight again.";
                 WriteReport();
+                RoundWon?.Invoke(winner, knockout);
+                MatchWon?.Invoke(winner);
             }
             else
             {
                 phase = Phase.RoundOver;
-                phaseTimer = rules.roundPause;
-                banner = $"{who} {(winner == Human ? "take" : "takes")} round {Round}";
+                phaseTimer = rules.celebrationTime;
+                RoundWon?.Invoke(winner, knockout);
                 Round++;
             }
         }
@@ -338,8 +382,6 @@ namespace Project.Samples.ArenaBrawler
         {
             if (t.resultType == DecisionResultType.ModelAction || t.resultType == DecisionResultType.FallbackAction)
                 decisionMs.Add(t.latencyMs);
-            lastDecisionCaption = t.actionName + (string.IsNullOrEmpty(t.argument) ? "" : " " + t.argument) +
-                                  (t.choiceProbability > 0f ? $"  p={t.choiceProbability.ToString("0.00", CultureInfo.InvariantCulture)}" : "");
         }
 
         private void OnMachineInput(string input)
@@ -354,70 +396,23 @@ namespace Project.Samples.ArenaBrawler
             }
         }
 
-        // ---------------------------------------------------------------- HUD
+        // ---------------------------------------------------------------- stats
 
-        private GUIStyle big, small, caption;
-        private Texture2D white;
+        public float MachineDecisionMedianMs => Median(decisionMs);
+        public float MachineHookReactionMedianMs => Median(hookReactionMs);
 
-        private void OnGUI()
+        /// <summary>How many of the human's hooks and jabs landed, of how many that were resolved.</summary>
+        public void HumanPunches(out int hooks, out int hooksLanded, out int jabs, out int jabsLanded)
         {
-            if (big == null)
-            {
-                big = new GUIStyle(GUI.skin.label) { fontSize = 28, alignment = TextAnchor.UpperCenter, fontStyle = FontStyle.Bold };
-                small = new GUIStyle(GUI.skin.label) { fontSize = 15, wordWrap = true };
-                caption = new GUIStyle(GUI.skin.label) { fontSize = 14, alignment = TextAnchor.LowerCenter };
-                white = Texture2D.whiteTexture;
-            }
-
-            HealthBar(new Rect(20, 16, Screen.width * 0.38f, 22), Arena.Fighters[Human].Health / rules.health, new Color(0.3f, 0.6f, 1f), false);
-            HealthBar(new Rect(Screen.width * 0.62f - 20, 16, Screen.width * 0.38f, 22), Arena.Fighters[Machine].Health / rules.health, new Color(1f, 0.35f, 0.3f), true);
-            GUI.Label(new Rect(0, 8, Screen.width, 40), $"{RoundsWon[Human]}  :  {RoundsWon[Machine]}", big);
-            GUI.Label(new Rect(0, 42, Screen.width, 24), $"Round {Round}   {Mathf.CeilToInt(Mathf.Max(0f, RoundTimeLeft))} s",
-                      new GUIStyle(small) { alignment = TextAnchor.UpperCenter });
-            GUI.Label(new Rect(20, 40, 200, 20), "YOU", small);
-            GUI.Label(new Rect(Screen.width - 320, 40, 300, 20), MachineName.ToUpperInvariant(), new GUIStyle(small) { alignment = TextAnchor.UpperRight });
-            if (!string.IsNullOrEmpty(banner))
-                GUI.Label(new Rect(0, Screen.height * 0.3f, Screen.width, 40), banner, big);
-
-            if (view != null && machineView != null)
-            {
-                Vector3 s = view.WorldToScreenPoint(machineView.transform.position + Vector3.up * 2.3f);
-                GUI.Label(new Rect(s.x - 160, Screen.height - s.y - 24, 320, 22), lastDecisionCaption, caption);
-            }
-
-            GUI.Label(new Rect(12, Screen.height - 100, 560, 95),
-                (humanAutopilot ? "AUTOPILOT is fighting for you (T to take over).\n" : "") +
-                "Move: WASD or left stick.  Jab: J, left click or X.  Hook: K, right click or Y.\n" +
-                "Block (hold): L, Shift, RB or LT.  Dash: Space or A, in the direction you are moving.\n" +
-                "The ring under a fighter shows a wind-up: yellow jab, red hook. R restarts, T toggles the autopilot.", small);
-            GUI.Label(new Rect(Screen.width - 380, Screen.height - 120, 370, 115), Stats(), small);
-        }
-
-        private void HealthBar(Rect r, float fraction, Color c, bool rightToLeft)
-        {
-            GUI.color = new Color(0f, 0f, 0f, 0.6f);
-            GUI.DrawTexture(r, white);
-            GUI.color = c;
-            float w = r.width * Mathf.Clamp01(fraction);
-            GUI.DrawTexture(new Rect(rightToLeft ? r.xMax - w : r.x, r.y, w, r.height), white);
-            GUI.color = Color.white;
-        }
-
-        private string Stats()
-        {
-            int hooks = 0, hookHit = 0, jabs = 0, jabHit = 0;
+            hooks = hooksLanded = jabs = jabsLanded = 0;
             for (int i = 0; i < attacks.Count; i++)
             {
                 AttackRecord a = attacks[i];
                 if (a.Attacker != Human || a.Outcome == null) continue;
                 bool landed = a.Outcome == "hit" || a.Outcome == "guard broken";
-                if (a.Heavy) { hooks++; if (landed) hookHit++; }
-                else { jabs++; if (landed) jabHit++; }
+                if (a.Heavy) { hooks++; if (landed) hooksLanded++; }
+                else { jabs++; if (landed) jabsLanded++; }
             }
-            return $"Machine decision: {Median(decisionMs):0} ms median ({decisionMs.Count})\n" +
-                   $"Machine reaction to your hooks: {Median(hookReactionMs):0} ms median\n" +
-                   $"Your hooks landed {hookHit}/{hooks}, jabs landed {jabHit}/{jabs}\n" +
-                   $"Machine reaction delay: {rules.machineReactionDelay:0.00} s";
         }
 
         private static float Median(List<float> values)

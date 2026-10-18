@@ -45,6 +45,15 @@ namespace Project.Samples.Dodgeball
         public static AudioClip Crowd() => Make("crowd", 1.4f, (t, n) =>
             Noise(n, 0.15f) * Env(t, 0.25f, 1.1f) * (0.7f + 0.3f * Mathf.Sin(t * 23f)) * 0.22f);
 
+        public static AudioClip Charge() => Make("charge", 0.5f, (t, n) =>
+            (Tone(t, Mathf.Lerp(180f, 520f, t / 0.5f)) * 0.25f + Noise(n, 0.2f) * 0.5f) * Env(t, 0.15f, 0.5f) * 0.3f);
+
+        public static AudioClip FullCharge() => Make("full", 0.18f, (t, n) =>
+            (Tone(t, 1175f) + Tone(t, 1760f) * 0.5f) * Env(t, 0.003f, 0.17f) * 0.22f);
+
+        public static AudioClip Clack() => Make("clack", 0.1f, (t, n) =>
+            (Tone(t, 1900f) * 0.6f + Noise(n, 0.9f)) * Env(t, 0.001f, 0.08f) * 0.4f);
+
         // ---------------------------------------------------------------- building blocks
 
         private delegate float Sample(float t, int n);

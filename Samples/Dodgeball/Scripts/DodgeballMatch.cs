@@ -111,6 +111,7 @@ namespace Project.Samples.Dodgeball
         private readonly bool[] alerts = new bool[2];
         private readonly System.Random autopilotRandom = new System.Random(7);
         private float autopilotReactAt = -1f;
+        private bool chargeAtMachine;
 
         public const int Human = 0, Machine = 1;
 
@@ -277,13 +278,24 @@ namespace Project.Samples.Dodgeball
             if (g != null && g.leftStick.ReadValue().sqrMagnitude > 0.04f) move = g.leftStick.ReadValue();
             me.Move = Vector2.ClampMagnitude(move, 1f);
 
-            bool throwAtPointer = (m != null && m.leftButton.wasPressedThisFrame) || (g != null && g.rightTrigger.wasPressedThisFrame);
-            bool throwAtMachine = (k != null && k.jKey.wasPressedThisFrame) || (g != null && g.buttonSouth.wasPressedThisFrame);
-            if (throwAtPointer || throwAtMachine)
+            // Throwing is hold to charge, release to throw: the pointer (or right stick) aims, and
+            // J or the A button throw straight at the machine.
+            bool pointerDown = (m != null && m.leftButton.wasPressedThisFrame) || (g != null && g.rightTrigger.wasPressedThisFrame);
+            bool machineDown = (k != null && k.jKey.wasPressedThisFrame) || (g != null && g.buttonSouth.wasPressedThisFrame);
+            if (pointerDown || machineDown)
             {
-                Vector2 target = throwAtPointer && HumanAimsWithPointer ? HumanAim : Court.Players[Machine].Position;
-                if (me.Holding && !Court.CanThrow(Human)) ThrowRefused?.Invoke(Human);
-                else Court.Throw(Human, target);
+                if (Court.BeginCharge(Human)) chargeAtMachine = machineDown && !pointerDown;
+            }
+            if (me.Charging)
+            {
+                bool held = chargeAtMachine
+                    ? (k != null && k.jKey.isPressed) || (g != null && g.buttonSouth.isPressed)
+                    : (m != null && m.leftButton.isPressed) || (g != null && g.rightTrigger.isPressed);
+                if (!held)
+                {
+                    Vector2 target = !chargeAtMachine && HumanAimsWithPointer ? HumanAim : Court.Players[Machine].Position;
+                    Court.ReleaseThrow(Human, target);
+                }
             }
 
             if ((m != null && m.rightButton.wasPressedThisFrame) || (k != null && k.kKey.wasPressedThisFrame) ||
@@ -309,7 +321,7 @@ namespace Project.Samples.Dodgeball
             {
                 CourtBall b = Court.Balls[i];
                 if (b.State != BallState.Flying || b.Thrower == Human) continue;
-                DodgeballCourt.ClosestApproach(b, me.Position, out float t, out float miss, out float side);
+                Court.ClosestApproach(b, me.Position, out float t, out float miss, out float side);
                 if (t <= 0f || miss > rules.playerRadius + rules.ballRadius) continue;
                 if (autopilotReactAt < 0f) autopilotReactAt = Time.time + 0.25f;
                 if (Time.time >= autopilotReactAt)
@@ -321,23 +333,37 @@ namespace Project.Samples.Dodgeball
             }
             autopilotReactAt = -1f;
 
-            if (me.Holding)
-            {
-                if (!Court.CanThrow(Human)) { me.Move = new Vector2(-me.Forward, 0f); return; }
-                me.Move = Vector2.zero;
-                if (autopilotRandom.NextDouble() < Time.deltaTime * 1.5) Court.Throw(Human, them.Position);
-                return;
-            }
-
             CourtBall nearest = null;
             float best = float.MaxValue;
             for (int i = 0; i < Court.Balls.Count; i++)
             {
                 CourtBall b = Court.Balls[i];
-                if (b.State != BallState.Free || b.Position.x > 0.5f) continue;
+                if (b.State != BallState.Free || b.Locked || b.Position.x > 0.5f) continue;
                 float d = (b.Position - me.Position).sqrMagnitude;
                 if (d < best) { best = d; nearest = b; }
             }
+
+            if (me.Holding)
+            {
+                // A second ball close by is worth the detour; otherwise back behind the line,
+                // charge for the distance and some, and throw.
+                if (!me.Charging && me.HeldCount < rules.maxHeld && nearest != null && best < 2.5f * 2.5f)
+                {
+                    me.Move = (nearest.Position - me.Position).normalized;
+                    return;
+                }
+                if (!Court.CanThrow(Human)) { me.Move = new Vector2(-me.Forward, 0f); return; }
+                me.Move = Vector2.zero;
+                if (!me.Charging)
+                {
+                    if (autopilotRandom.NextDouble() < Time.deltaTime * 2.0) Court.BeginCharge(Human);
+                    return;
+                }
+                float needed = rules.ChargeFor(Vector2.Distance(me.Position, them.Position) + DodgeballMachinePad.RangeMargin);
+                if (Court.Charge(Human) >= needed) Court.ReleaseThrow(Human, them.Position);
+                return;
+            }
+
             me.Move = nearest != null ? (nearest.Position - me.Position).normalized : new Vector2(0f, -me.Position.y * 0.3f);
         }
 
@@ -353,7 +379,7 @@ namespace Project.Samples.Dodgeball
                     case CourtEventKind.Throw:
                         alerts[1 - e.Player] = true;
                         CourtBall ball = Court.Balls[e.Ball];
-                        DodgeballCourt.ClosestApproach(ball, Court.Opponent(e.Player).Position, out float t, out float miss, out _);
+                        Court.ClosestApproach(ball, Court.Opponent(e.Player).Position, out float t, out float miss, out _);
                         throws.Add(new ThrowRecord
                         {
                             Ball = e.Ball,
@@ -362,6 +388,7 @@ namespace Project.Samples.Dodgeball
                             Threat = t > 0f && miss <= rules.playerRadius + rules.ballRadius
                         });
                         break;
+                    case CourtEventKind.ThrowRefused: ThrowRefused?.Invoke(e.Player); break;
                     case CourtEventKind.Hit: Close(e.Ball, "hit"); break;
                     case CourtEventKind.Catch: Close(e.Ball, "caught"); break;
                 }

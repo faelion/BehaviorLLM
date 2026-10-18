@@ -48,13 +48,17 @@ namespace Project.Samples.ArenaBrawler.Editor
             BehaviorLLMModelConfig model = BehaviorLLMDefaults.FindShipped<BehaviorLLMModelConfig>(ModelConfigAsset);
 
             GameObject character = PrepareCharacter();
+            if (character != null) FaceClipsForward();
             AnimatorController controller = character != null ? CreateController() : null;
+            BrawlerIcons.Set icons = BrawlerIcons.Build();
 
             UnityEngine.SceneManagement.Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = "ArenaBrawler";
 
-            Camera camera = CreateCameraAndLights();
-            CreateArena(rules);
+            Camera camera = CreateCameraAndLights(out Light keyLight, out Light spotlight);
+            Material floor = FloorMaterial(rules);
+            CreateArena(rules, floor);
+            Transform crowd = CreateCrowd(rules);
 
             BrawlerFighterView human = Fighter(BrawlerIds.HumanName, HumanColor, character, controller, new Vector3(-2.5f, 0f, 0f));
             BrawlerFighterView machine = Fighter(BrawlerIds.MachineName, MachineColor, character, controller, new Vector3(2.5f, 0f, 0f));
@@ -87,6 +91,54 @@ namespace Project.Samples.ArenaBrawler.Editor
             match.humanView = human;
             match.machineView = machine;
             match.view = camera;
+
+            GameObject fxGo = new GameObject("Fx");
+            BrawlerFx fx = fxGo.AddComponent<BrawlerFx>();
+            fx.match = match;
+            fx.view = camera;
+            fx.keyLight = keyLight;
+            fx.spotlight = spotlight;
+            fx.crowd = crowd;
+            fx.sparks = Particles("Sparks", fxGo.transform, icons.Particle, 0.9f, 0.18f, false);
+            fx.confetti = Particles("Confetti", fxGo.transform, ConfettiMaterial(), 0.06f, 0.05f, true);
+
+            GameObject hudGo = new GameObject("HUD");
+            BrawlerHud hud = hudGo.AddComponent<BrawlerHud>();
+            hud.match = match;
+            hud.view = camera;
+            hud.humanColor = HumanColor;
+            hud.machineColor = MachineColor;
+            hud.fist = icons.Fist;
+            hud.hook = icons.Hook;
+            hud.shield = icons.Shield;
+            hud.roll = icons.Roll;
+            hud.arrow = icons.Arrow;
+            hud.stand = icons.Stand;
+            hud.burst = icons.Burst;
+            hud.star = icons.Star;
+            hud.segment = icons.Segment;
+            hud.plate = icons.Plate;
+            hud.bar = icons.Bar;
+            hud.bubble = icons.Bubble;
+            hud.key = icons.Key;
+            hud.mouseLeft = icons.MouseLeft;
+            hud.mouseRight = icons.MouseRight;
+            hud.restart = icons.Restart;
+            hud.move = icons.Move;
+            hud.clock = icons.Clock;
+            hud.disc = icons.Disc;
+            hud.ring = icons.Ring;
+
+            // A vignette in front of the camera, framed with it.
+            GameObject vignette = new GameObject("Vignette", typeof(SpriteRenderer));
+            vignette.transform.SetParent(camera.transform, false);
+            vignette.transform.localPosition = new Vector3(0f, 0f, camera.nearClipPlane + 0.05f);
+            float h = 2f * (camera.nearClipPlane + 0.05f) * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            vignette.transform.localScale = new Vector3(h * 16f / 9f * 1.05f, h * 1.05f, 1f);
+            SpriteRenderer vr = vignette.GetComponent<SpriteRenderer>();
+            vr.sprite = icons.Vignette;
+            vr.sharedMaterial = icons.Particle;
+            vr.sortingOrder = 100;
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
@@ -217,6 +269,42 @@ namespace Project.Samples.ArenaBrawler.Editor
             return AssetDatabase.LoadAssetAtPath<GameObject>(CharacterPath);
         }
 
+        /// <summary>
+        /// Bakes every clip's root rotation relative to the body's orientation rather than to the
+        /// orientation the clip was recorded in. Quaternius' clips were recorded facing different
+        /// ways, so with "original" orientation a fighter turned away from the opponent in some
+        /// moves while the code had turned the fighter toward them.
+        /// </summary>
+        /// <summary>
+        /// Clips whose hips stay turned even relative to the body's orientation, and by how much
+        /// to turn them back, in degrees. Measured in play from the hip bones against the
+        /// fighter's forward: the jog ran 31 degrees turned away from where the fighter faced, and
+        /// the hook's recovery settled 30 degrees off before returning to guard.
+        /// </summary>
+        private static readonly Dictionary<string, float> ClipYawOffsets = new Dictionary<string, float>
+        {
+            { "Jog_Fwd_Loop", 31f },
+            { "Melee_Hook_Rec", 30f },
+        };
+
+        private static void FaceClipsForward()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:AnimationClip", new[] { ArenaBrawlerPaths.Animations });
+            for (int i = 0; i < guids.Length; i++)
+            {
+                AnimationClip clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(AssetDatabase.GUIDToAssetPath(guids[i]));
+                if (clip == null) continue;
+                AnimationClipSettings settings = AnimationUtility.GetAnimationClipSettings(clip);
+                float offset = ClipYawOffsets.TryGetValue(clip.name, out float o) ? o : 0f;
+                if (!settings.keepOriginalOrientation && settings.loopBlendOrientation && Mathf.Approximately(settings.orientationOffsetY, offset)) continue;
+                settings.keepOriginalOrientation = false;
+                settings.loopBlendOrientation = true;
+                settings.orientationOffsetY = offset;
+                AnimationUtility.SetAnimationClipSettings(clip, settings);
+                EditorUtility.SetDirty(clip);
+            }
+        }
+
         private static AnimationClip Clip(string name) =>
             AssetDatabase.LoadAssetAtPath<AnimationClip>(ArenaBrawlerPaths.Animations + "/" + name + ".anim");
 
@@ -317,7 +405,7 @@ namespace Project.Samples.ArenaBrawler.Editor
             return c != null ? c.length : fallback;
         }
 
-        private static Camera CreateCameraAndLights()
+        private static Camera CreateCameraAndLights(out Light keyLight, out Light spotlight)
         {
             GameObject cam = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
             cam.tag = "MainCamera";
@@ -326,31 +414,247 @@ namespace Project.Samples.ArenaBrawler.Editor
             Camera camera = cam.GetComponent<Camera>();
             camera.fieldOfView = 46f;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.07f, 0.08f, 0.1f);
+            camera.backgroundColor = new Color(0.025f, 0.03f, 0.05f);
+
+            // A dark hall: the light falls on the ring, and the stands fade into the fog.
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Exponential;
+            RenderSettings.fogDensity = 0.045f;
+            RenderSettings.fogColor = new Color(0.025f, 0.03f, 0.05f);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.16f, 0.17f, 0.22f);
 
             GameObject sun = new GameObject("Key Light", typeof(Light));
-            Light key = sun.GetComponent<Light>();
-            key.type = LightType.Directional;
-            key.intensity = 1.2f;
-            key.shadows = LightShadows.Soft;
-            sun.transform.rotation = Quaternion.Euler(55f, -30f, 0f);
+            keyLight = sun.GetComponent<Light>();
+            keyLight.type = LightType.Directional;
+            keyLight.intensity = 1.25f;
+            keyLight.color = new Color(1f, 0.95f, 0.86f);
+            keyLight.shadows = LightShadows.Soft;
+            sun.transform.rotation = Quaternion.Euler(62f, -24f, 0f);
 
-            GameObject fill = new GameObject("Fill Light", typeof(Light));
-            Light f = fill.GetComponent<Light>();
-            f.type = LightType.Directional;
-            f.intensity = 0.35f;
-            f.shadows = LightShadows.None;
-            fill.transform.rotation = Quaternion.Euler(35f, 150f, 0f);
+            // Each corner lit in its fighter's colour from behind, so the silhouettes separate.
+            Spot("Blue Rim", new Vector3(-7f, 6f, 5f), new Vector3(1.5f, 0f, -1f), HumanColor, 30f, 18f);
+            Spot("Red Rim", new Vector3(7f, 6f, 5f), new Vector3(-1.5f, 0f, -1f), MachineColor, 30f, 18f);
+
+            spotlight = Spot("Winner Spot", new Vector3(0f, 8f, -1f), Vector3.zero, Color.white, 0f, 24f);
+            spotlight.shadows = LightShadows.Soft;
             return camera;
         }
 
-        private static void CreateArena(BrawlerRules rules)
+        private static Light Spot(string name, Vector3 position, Vector3 target, Color color, float intensity, float angle)
+        {
+            GameObject go = new GameObject(name, typeof(Light));
+            go.transform.position = position;
+            go.transform.rotation = Quaternion.LookRotation(target - position);
+            Light l = go.GetComponent<Light>();
+            l.type = LightType.Spot;
+            l.color = color;
+            l.intensity = intensity;
+            l.range = 25f;
+            l.spotAngle = angle * 2f;
+            l.innerSpotAngle = angle;
+            l.shadows = LightShadows.None;
+            return l;
+        }
+
+        private static void CreateArena(BrawlerRules rules, Material floor)
         {
             GameObject arena = new GameObject("Arena");
             float d = rules.arenaRadius * 2f;
-            Shape(PrimitiveType.Cylinder, "Rim", arena.transform, new Vector3(0f, -0.12f, 0f), new Vector3(d + 0.5f, 0.1f, d + 0.5f), new Color(0.75f, 0.55f, 0.2f), true);
-            Shape(PrimitiveType.Cylinder, "Floor", arena.transform, new Vector3(0f, -0.05f, 0f), new Vector3(d, 0.1f, d), new Color(0.2f, 0.22f, 0.27f), true);
-            Shape(PrimitiveType.Cylinder, "CenterMark", arena.transform, new Vector3(0f, 0.005f, 0f), new Vector3(1.6f, 0.002f, 1.6f), new Color(0.28f, 0.3f, 0.36f), true);
+            Shape(PrimitiveType.Cylinder, "Base", arena.transform, new Vector3(0f, -0.45f, 0f), new Vector3(d + 1.6f, 0.4f, d + 1.6f), new Color(0.09f, 0.09f, 0.11f), true);
+            Shape(PrimitiveType.Cylinder, "Apron", arena.transform, new Vector3(0f, -0.14f, 0f), new Vector3(d + 0.9f, 0.1f, d + 0.9f), new Color(0.16f, 0.13f, 0.1f), true);
+            Renderer mat = Shape(PrimitiveType.Cylinder, "Floor", arena.transform, new Vector3(0f, -0.05f, 0f), new Vector3(d, 0.1f, d), Color.white, true);
+            mat.sharedMaterial = floor;
+            Shape(PrimitiveType.Cylinder, "Glow", arena.transform, new Vector3(0f, -0.08f, 0f), new Vector3(d + 0.35f, 0.08f, d + 0.35f), new Color(1f, 0.7f, 0.3f), false)
+                .sharedMaterial = Emissive(new Color(1f, 0.62f, 0.25f), 2.2f);
+
+            // Posts round the edge with lanterns on top.
+            const int Posts = 12;
+            Material lantern = Emissive(new Color(1f, 0.75f, 0.4f), 4f);
+            for (int i = 0; i < Posts; i++)
+            {
+                float a = (i + 0.5f) / Posts * Mathf.PI * 2f;
+                Vector3 at = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (rules.arenaRadius + 0.55f);
+                Shape(PrimitiveType.Cylinder, "Post", arena.transform, at + Vector3.up * 0.5f, new Vector3(0.14f, 0.6f, 0.14f), new Color(0.12f, 0.11f, 0.12f), true);
+                Shape(PrimitiveType.Sphere, "Lantern", arena.transform, at + Vector3.up * 1.18f, Vector3.one * 0.2f, Color.white, false).sharedMaterial = lantern;
+            }
+        }
+
+        /// <summary>Spectators on three tiers round the arena, in mixed colours, half lost in the dark.</summary>
+        private static Transform CreateCrowd(BrawlerRules rules)
+        {
+            Transform crowd = new GameObject("Crowd").transform;
+            Transform stands = new GameObject("Stands").transform;
+            System.Random random = new System.Random(5);
+            Material[] shirts = new Material[8];
+            for (int i = 0; i < shirts.Length; i++)
+            {
+                Color c = i < 3 ? Color.Lerp(HumanColor, Color.black, i * 0.25f)
+                        : i < 6 ? Color.Lerp(MachineColor, Color.black, (i - 3) * 0.25f)
+                        : Color.Lerp(new Color(0.75f, 0.72f, 0.66f), Color.black, (i - 6) * 0.4f);
+                shirts[i] = Material(c, true);
+            }
+            Material skin = Material(new Color(0.85f, 0.66f, 0.52f), true);
+            for (int tier = 0; tier < 3; tier++)
+            {
+                float radius = rules.arenaRadius + 2.6f + tier * 1.1f;
+                float height = tier * 0.55f;
+                // A ring of bench blocks, each tier a step higher than the one in front of it.
+                int benches = Mathf.RoundToInt(radius * Mathf.PI * 2f / 1.4f);
+                for (int b = 0; b < benches; b++)
+                {
+                    float ba = (b + 0.5f) / benches * Mathf.PI * 2f;
+                    if (Mathf.Sin(ba) < -0.6f) continue;
+                    Vector3 at = new Vector3(Mathf.Cos(ba), 0f, Mathf.Sin(ba)) * radius;
+                    Renderer bench = Shape(PrimitiveType.Cube, "Bench", stands, at + Vector3.up * ((height - 0.3f) * 0.5f),
+                                           new Vector3(1.45f, height + 0.3f, 1.05f), new Color(0.08f, 0.08f, 0.1f), true);
+                    bench.transform.rotation = Quaternion.LookRotation(-at);
+                    bench.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                }
+                int count = Mathf.RoundToInt(radius * Mathf.PI * 2f / 0.75f);
+                for (int i = 0; i < count; i++)
+                {
+                    float a = (i + (float)random.NextDouble() * 0.4f) / count * Mathf.PI * 2f;
+                    // Leave the camera's side open.
+                    if (Mathf.Sin(a) < -0.55f) continue;
+                    if (random.NextDouble() < 0.15) continue;
+                    Vector3 at = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius + Vector3.up * height;
+                    GameObject fan = new GameObject("Fan");
+                    fan.transform.SetParent(crowd, false);
+                    fan.transform.localPosition = at;
+                    fan.transform.rotation = Quaternion.LookRotation(-new Vector3(at.x, 0f, at.z));
+                    Renderer body = Shape(PrimitiveType.Capsule, "Body", fan.transform, new Vector3(0f, 0.55f, 0f), new Vector3(0.42f, 0.42f, 0.32f), Color.white, true);
+                    body.sharedMaterial = shirts[random.Next(shirts.Length)];
+                    Renderer head = Shape(PrimitiveType.Sphere, "Head", fan.transform, new Vector3(0f, 1.12f, 0f), Vector3.one * 0.26f, Color.white, true);
+                    head.sharedMaterial = skin;
+                    body.shadowCastingMode = head.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                }
+            }
+            return crowd;
+        }
+
+        /// <summary>
+        /// The arena's mat: dark canvas with a worn grain, two rings, a star in the middle and each
+        /// fighter's corner tinted in their colour, painted into a texture beside the sample's data.
+        /// </summary>
+        private static Material FloorMaterial(BrawlerRules rules)
+        {
+            const int N = 1024;
+            Texture2D t = new Texture2D(N, N, TextureFormat.RGBA32, true);
+            Color32[] px = new Color32[N * N];
+            Color canvas = new Color(0.2f, 0.21f, 0.25f);
+            for (int j = 0; j < N; j++)
+            for (int i = 0; i < N; i++)
+            {
+                float x = (i + 0.5f) / N * 2f - 1f, y = (j + 0.5f) / N * 2f - 1f;
+                float r = Mathf.Sqrt(x * x + y * y);
+                float grain = (Mathf.PerlinNoise(x * 40f, y * 40f) - 0.5f) * 0.06f + (Mathf.PerlinNoise(x * 6f + 3f, y * 6f) - 0.5f) * 0.08f;
+                Color c = canvas * (1f + grain);
+                // Corners in the fighters' colours: the human starts on the left (x < 0).
+                float side = Mathf.Clamp01((Mathf.Abs(x) - 0.35f) * 3f) * Mathf.Clamp01((0.95f - r) * 8f);
+                c = Color.Lerp(c, (x < 0f ? HumanColor : MachineColor) * 0.45f, side * 0.6f);
+                c *= 1.15f - 0.35f * r * r;
+                float line = Mathf.Max(Band(Mathf.Abs(r - 0.93f), 0.012f), Band(Mathf.Abs(r - 0.3f), 0.008f));
+                line = Mathf.Max(line, Band(Mathf.Abs(x), 0.004f) * (r < 0.3f ? 0f : r < 0.93f ? 0.35f : 0f));
+                float star = StarShape(x / 0.2f, y / 0.2f);
+                c = Color.Lerp(c, new Color(0.95f, 0.78f, 0.4f), Mathf.Max(line * 0.85f, star * 0.8f));
+                if (r > 1f) c = new Color(0.1f, 0.1f, 0.12f);
+                c.a = 1f;
+                px[j * N + i] = c;
+            }
+            t.SetPixels32(px);
+            t.Apply();
+            string folder = ArenaBrawlerPaths.Data + "/UI";
+            string texPath = folder + "/ArenaFloor.png";
+            File.WriteAllBytes(texPath, t.EncodeToPNG());
+            Object.DestroyImmediate(t);
+            AssetDatabase.ImportAsset(texPath, ImportAssetOptions.ForceSynchronousImport);
+            Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+
+            string matPath = folder + "/ArenaFloor.mat";
+            Material m = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (m == null)
+            {
+                m = Material(Color.white, true);
+                AssetDatabase.CreateAsset(m, matPath);
+            }
+            if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", tex);
+            m.mainTexture = tex;
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.35f);
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
+        private static float Band(float d, float half) => Mathf.Clamp01((half - d) * 400f + 0.5f);
+
+        private static float StarShape(float x, float y)
+        {
+            float a = Mathf.Atan2(y, x) + Mathf.PI * 0.5f;
+            float k = Mathf.Cos(a * 5f) * 0.5f + 0.5f;
+            float edge = Mathf.Lerp(0.45f, 1f, Mathf.Pow(k, 3f));
+            return Mathf.Clamp01((edge - Mathf.Sqrt(x * x + y * y)) * 60f);
+        }
+
+        private static Material Emissive(Color color, float intensity)
+        {
+            bool urp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
+            Shader shader = (urp ? Shader.Find("Universal Render Pipeline/Unlit") : null) ?? Shader.Find("Unlit/Color");
+            Material mat = new Material(shader);
+            Color c = color * intensity;
+            c.a = 1f;
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
+            if (mat.HasProperty("_Color")) mat.SetColor("_Color", c);
+            return mat;
+        }
+
+        private static Material ConfettiMaterial()
+        {
+            string path = ArenaBrawlerPaths.Data + "/UI/Brawler_Confetti.mat";
+            Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m != null) return m;
+            m = new Material(Shader.Find("Sprites/Default"));
+            AssetDatabase.CreateAsset(m, path);
+            return m;
+        }
+
+        /// <summary>A particle system driven from code: no emission of its own, slowing as it spreads.</summary>
+        private static ParticleSystem Particles(string name, Transform parent, Material material, float gravity, float dampen, bool tumbling)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            ParticleSystem ps = go.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = ps.main;
+            main.loop = true;
+            main.playOnAwake = true;
+            main.startSpeed = 0f;
+            main.gravityModifier = gravity;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 3000;
+            main.startRotation3D = tumbling;
+            ParticleSystem.EmissionModule emission = ps.emission;
+            emission.enabled = false;
+            ParticleSystem.ShapeModule shape = ps.shape;
+            shape.enabled = false;
+            ParticleSystem.LimitVelocityOverLifetimeModule drag = ps.limitVelocityOverLifetime;
+            drag.enabled = true;
+            drag.limit = 0f;
+            drag.dampen = dampen;
+            if (!tumbling)
+            {
+                ParticleSystem.SizeOverLifetimeModule size = ps.sizeOverLifetime;
+                size.enabled = true;
+                size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0f));
+            }
+            ParticleSystemRenderer r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = material;
+            if (tumbling)
+            {
+                r.renderMode = ParticleSystemRenderMode.Mesh;
+                r.mesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+                r.alignment = ParticleSystemRenderSpace.Local;
+            }
+            else r.renderMode = ParticleSystemRenderMode.Billboard;
+            return ps;
         }
 
         private static Renderer Shape(PrimitiveType type, string name, Transform parent, Vector3 localPosition, Vector3 scale, Color color, bool lit)

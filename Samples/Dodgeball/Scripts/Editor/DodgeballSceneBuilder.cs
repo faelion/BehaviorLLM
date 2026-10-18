@@ -100,6 +100,14 @@ namespace Project.Samples.Dodgeball.Editor
             view.aimLine.textureMode = LineTextureMode.Tile;
             view.aimLine.textureScale = new Vector2(3.5f, 1f);
             view.reticle = SpriteObject("Reticle", viewGo.transform, art.Reticle, Vector3.zero, 0.5f, Color.white, 9, art);
+            view.machineAimLine = Line("MachineAimLine", viewGo.transform, art.Dash, 0.06f, 8, true);
+            view.machineAimLine.textureMode = LineTextureMode.Tile;
+            view.machineAimLine.textureScale = new Vector2(3.5f, 1f);
+            view.noThrowZones = new[]
+            {
+                NoThrowZone("HumanNoThrowZone", -1f, rules, art),
+                NoThrowZone("MachineNoThrowZone", 1f, rules, art)
+            };
             view.crowd = crowd;
             view.sparks = CreateSparks(viewGo.transform, art);
             view.ghostSprite = art.Torso;
@@ -108,10 +116,30 @@ namespace Project.Samples.Dodgeball.Editor
             GameObject hudGo = new GameObject("HUD");
             DodgeballHud hud = hudGo.AddComponent<DodgeballHud>();
             hud.match = match;
-            hud.panel = art.Panel;
-            hud.ballIcon = art.Ball;
+            hud.view = camera;
             hud.humanColor = HumanColor;
             hud.machineColor = MachineColor;
+            DodgeballIcons.Set icons = art.Icons;
+            hud.ball = art.Ball;
+            hud.ring = art.Ring;
+            hud.disc = art.Disc;
+            hud.glove = icons.Glove;
+            hud.dash = icons.Dash;
+            hud.clock = icons.Clock;
+            hud.noThrow = icons.NoThrow;
+            hud.arrow = icons.Arrow;
+            hud.stand = icons.Stand;
+            hud.burst = icons.Burst;
+            hud.pip = icons.Pip;
+            hud.segment = icons.Segment;
+            hud.plate = icons.Plate;
+            hud.banner = icons.Banner;
+            hud.bubble = icons.Bubble;
+            hud.key = icons.Key;
+            hud.mouseLeft = icons.MouseLeft;
+            hud.mouseRight = icons.MouseRight;
+            hud.restart = icons.Restart;
+            hud.move = icons.Move;
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
@@ -143,9 +171,9 @@ namespace Project.Samples.Dodgeball.Editor
                 Action(DodgeballIds.Move, "Hold a direction until your next input. Forward is toward the center line, Up toward the top wall.",
                        DodgeballIds.DirectionParameter, DodgeballIds.MoveDirections),
                 Action(DodgeballIds.Stand, "Let go of the stick and stand still.", null, null),
-                Action(DodgeballIds.Throw, "Throw your ball: at the opponent, or ahead of them toward the top or the bottom wall.",
+                Action(DodgeballIds.Throw, "Charge and throw the ball in your throwing hand: at the opponent, ahead of where they run, a metre or two above or below them, or off the top or bottom wall.",
                        DodgeballIds.AimParameter, DodgeballIds.Aims),
-                Action(DodgeballIds.Catch, "Open a catch for a moment. A ball that arrives while it is open is caught and you score.",
+                Action(DodgeballIds.Catch, "Open a catch for a moment, dropping any balls you hold. A ball that arrives while it is open is caught and you score.",
                        null, null),
                 Action(DodgeballIds.Dodge, "A quick burst a couple of metres up, down or back.",
                        DodgeballIds.DirectionParameter, DodgeballIds.DodgeDirections)
@@ -384,10 +412,7 @@ namespace Project.Samples.Dodgeball.Editor
             rig.ground = ground;
             SpriteObject("Shadow", ground, art.Soft, new Vector3(0.14f, -0.16f, 0f), d * 1.45f, new Color(0f, 0f, 0f, 0.45f), OrderGround, art);
             SpriteObject("Base", ground, art.Ring, Vector3.zero, d * 1.25f, new Color(color.r, color.g, color.b, 0.55f), OrderGround + 1, art);
-            rig.dodgeArc = Line("DodgeCooldown", ground, art.Sprite, 0.07f, OrderGround + 2, false);
-            rig.dodgeArc.startColor = rig.dodgeArc.endColor = new Color(1f, 1f, 1f, 0.85f);
-            rig.catchArc = Line("CatchCooldown", ground, art.Sprite, 0.05f, OrderGround + 2, false);
-            rig.catchArc.startColor = rig.catchArc.endColor = new Color(1f, 0.85f, 0.3f, 0.85f);
+            rig.chargeArc = Line("Charge", ground, art.Sprite, 0.1f, OrderPlayer + 4, false);
 
             rig.catchRing = SpriteObject("CatchRing", root.transform, art.Ring, Vector3.zero, d * 1.2f, new Color(1f, 0.85f, 0.25f), OrderPlayer - 1, art);
             rig.catchRing.enabled = false;
@@ -426,6 +451,9 @@ namespace Project.Samples.Dodgeball.Editor
             trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             trail.receiveShadows = false;
             rig.trail = trail;
+
+            rig.lockArc = Line("PickupLock", root.transform, art.Sprite, 0.05f, OrderBall + 1, false);
+            rig.lockArc.startColor = rig.lockArc.endColor = new Color(1f, 0.85f, 0.3f, 0.95f);
             return rig;
         }
 
@@ -439,6 +467,14 @@ namespace Project.Samples.Dodgeball.Editor
             line.textureScale = new Vector2(2.5f, 1f);
             line.startColor = line.endColor = new Color(1f, 1f, 1f, 0.55f);
             return line;
+        }
+
+        /// <summary>The strip between the center line and a throwing line, lit red by the view as a warning.</summary>
+        private static SpriteRenderer NoThrowZone(string name, float side, DodgeballRules rules, DodgeballArt.Set art)
+        {
+            SpriteRenderer zone = Sliced(name, null, art, new Vector3(side * rules.throwingLine * 0.5f, 0f, 0f),
+                                         new Vector2(rules.throwingLine, rules.courtWidth), new Color(1f, 0.15f, 0.1f, 0f), OrderLines - 1);
+            return zone;
         }
 
         private static ParticleSystem CreateSparks(Transform parent, DodgeballArt.Set art)

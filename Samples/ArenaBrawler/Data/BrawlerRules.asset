@@ -45,5 +45,6 @@ MonoBehaviour:
   roundTime: 60
   roundsToWin: 3
   roundPause: 2
+  celebrationTime: 4.5
   inputBuffer: 0.2
   machineReactionDelay: 0

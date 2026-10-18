@@ -19,10 +19,10 @@ namespace Project.Samples.Dodgeball
         /// <summary>Let go of the stick.</summary>
         public const string Stand = "Stand";
 
-        /// <summary>Throw the ball being held. Offered only while holding one.</summary>
+        /// <summary>Charge and throw the ball in the throwing hand. Offered only while one can be thrown.</summary>
         public const string Throw = "Throw";
 
-        /// <summary>Open a short catch window. Offered only while empty-handed and ready.</summary>
+        /// <summary>Open a short catch window, dropping any balls in hand. Offered only while ready.</summary>
         public const string Catch = "Catch";
 
         /// <summary>A quick burst sideways or back. Offered only while ready.</summary>
@@ -54,17 +54,35 @@ namespace Project.Samples.Dodgeball
         public static readonly string[] DodgeDirections = { Up, Down, Back };
 
         // ---------------------------------------------------------------- aims
+        // Up and Down are across the court, as for Move. The pad charges each throw just enough to
+        // reach its aim point with some to spare, so the model chooses where, not how hard.
 
         /// <summary>At where the opponent is now.</summary>
         public const string AtOpponent = "AtOpponent";
 
-        /// <summary>Ahead of the opponent, toward the top wall: for an opponent moving up.</summary>
-        public const string LeadUp = "LeadUp";
+        /// <summary>At where the opponent will be when the ball arrives, if they keep running.</summary>
+        public const string AheadOfOpponent = "AheadOfOpponent";
 
-        /// <summary>Ahead of the opponent, toward the bottom wall: for an opponent moving down.</summary>
-        public const string LeadDown = "LeadDown";
+        /// <summary>One metre above the opponent.</summary>
+        public const string OffsetUp1 = "OffsetUp1";
 
-        public static readonly string[] Aims = { AtOpponent, LeadUp, LeadDown };
+        /// <summary>Two metres above the opponent.</summary>
+        public const string OffsetUp2 = "OffsetUp2";
+
+        /// <summary>One metre below the opponent.</summary>
+        public const string OffsetDown1 = "OffsetDown1";
+
+        /// <summary>Two metres below the opponent.</summary>
+        public const string OffsetDown2 = "OffsetDown2";
+
+        /// <summary>Off the top wall, so the bounce comes back at the opponent.</summary>
+        public const string BankTopWall = "BankTopWall";
+
+        /// <summary>Off the bottom wall, so the bounce comes back at the opponent.</summary>
+        public const string BankBottomWall = "BankBottomWall";
+
+        public static readonly string[] Aims =
+            { AtOpponent, AheadOfOpponent, OffsetUp1, OffsetUp2, OffsetDown1, OffsetDown2, BankTopWall, BankBottomWall };
 
         // ---------------------------------------------------------------- names
 

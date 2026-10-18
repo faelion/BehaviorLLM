@@ -17,6 +17,7 @@ namespace Project.Samples.Dodgeball.Editor
         {
             public Sprite Disc, Soft, Ring, Ball, Torso, Head, Hand, Reticle, Panel, Vignette, Floor;
             public Material Sprite, SoftParticle, Dash;
+            public DodgeballIcons.Set Icons;
         }
 
         public static readonly Color HumanColor = new Color(0.27f, 0.56f, 1f);
@@ -47,6 +48,7 @@ namespace Project.Samples.Dodgeball.Editor
                 Vignette = Save("Vignette", Vignette(256), 256),
                 Floor = Save("Floor", Floor(rules), FloorPpm)
             };
+            s.Icons = DodgeballIcons.Build();
             Texture2D dash = SaveTexture("Dash", Dash(64, 16));
 
             s.Sprite = SaveMaterial("Dodgeball_Sprite", null);
@@ -308,7 +310,7 @@ namespace Project.Samples.Dodgeball.Editor
 
         // ---------------------------------------------------------------- saving
 
-        private static Sprite Save(string name, Texture2D texture, float pixelsPerUnit, Vector4 border = default)
+        internal static Sprite Save(string name, Texture2D texture, float pixelsPerUnit, Vector4 border = default)
         {
             string path = Folder + "/" + name + ".png";
             File.WriteAllBytes(path, texture.EncodeToPNG());

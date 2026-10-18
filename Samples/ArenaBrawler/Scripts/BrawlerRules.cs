@@ -110,8 +110,12 @@ namespace Project.Samples.ArenaBrawler
         [Tooltip("Rounds needed to win the match.")]
         public int roundsToWin = 3;
 
-        [Tooltip("Seconds between rounds, with both fighters back in their corners.")]
+        [Tooltip("Seconds of the introduction before each round, with both fighters in their corners.")]
         public float roundPause = 2f;
+
+        [Tooltip("Seconds the winner of a round celebrates before the next one starts. The loser " +
+                 "stays down meanwhile. 4.5 is long enough for the dance to read as a celebration.")]
+        public float celebrationTime = 4.5f;
 
         [Tooltip("Seconds a pressed button waits for a busy fighter to become free, so a jab pressed " +
                  "near the end of a recovery still comes out.")]

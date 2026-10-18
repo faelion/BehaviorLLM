@@ -19,13 +19,19 @@
     "autoReferenced": false,
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS",
-        "ENABLE_INPUT_SYSTEM_PACKAGE"
+        "ENABLE_INPUT_SYSTEM_PACKAGE",
+        "BEHAVIORLLM_HAS_UGUI"
     ],
     "versionDefines": [
         {
             "name": "com.unity.inputsystem",
             "expression": "1.0.0",
             "define": "ENABLE_INPUT_SYSTEM_PACKAGE"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "1.0.0",
+            "define": "BEHAVIORLLM_HAS_UGUI"
         }
     ],
     "noEngineReferences": false
