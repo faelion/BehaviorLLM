@@ -121,7 +121,7 @@ The full benchmark, its data and the scripts are in the repository's experiment 
 
 ## Samples
 
-Two runnable samples ship inside the package under `Samples/`. Each is self-contained: scenes, scripts, config assets and art in its own folder, referencing nothing outside itself and the package.
+Four runnable samples ship inside the package under `Samples/`. Each is self-contained: scenes, scripts, config assets and art in its own folder, referencing nothing outside itself and the package.
 
 <p align="center">
   <img src=".github/stealthguard.png" width="400" alt="StealthGuard: three guards, vision fans, an intruder">
@@ -132,7 +132,15 @@ Two runnable samples ship inside the package under `Samples/`. Each is self-cont
 - **StealthGuard** (~5 MB). Three guards patrolling a compound, one action set and one model between them. Cone vision with real line of sight, reflex interrupts, and per-guard argument lists. Read this one first.
 - **PrisonYard** (~21 MB). Eight decision makers on one server: three guards, four prisoners and a warden with no body at all. Custom observation modules, and decision makers changing each other's world.
 
-Build them from **BehaviorLLM > Samples**. They need `com.unity.ai.navigation` and `com.unity.inputsystem`; the package core needs neither. When you are done, **BehaviorLLM > Readme** deletes the samples, the experiment data, or all of it.
+<p align="center">
+  <img src=".github/dodgeball.png" width="400" alt="Dodgeball: two discs and three balls on a court seen from above">
+  &nbsp;&nbsp;
+  <img src=".github/arenabrawler.png" width="400" alt="Arena Brawler: two mannequin fighters in a round arena">
+</p>
+
+- **Dodgeball** (under 1 MB) and **ArenaBrawler** (~7 MB). You against the machine, one on one. Instead of choosing behaviours, the machine presses a gamepad six to seven times a second: it moves, throws, catches and dodges, or punches, blocks and rolls, and reacts to your throw or wind-up as it starts. A slider adds a human-like reaction delay to the machine, and every match is written to a CSV with its decision and reaction times.
+
+Build them from **BehaviorLLM > Samples**. StealthGuard and PrisonYard need `com.unity.ai.navigation` and `com.unity.inputsystem`, Dodgeball and ArenaBrawler only the Input System; the package core needs neither. When you are done, **BehaviorLLM > Readme** deletes the samples, the experiment data, or all of it.
 
 ## How it works
 

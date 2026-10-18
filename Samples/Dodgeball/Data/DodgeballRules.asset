@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6adcab86397fa514fb798157dc205bb0, type: 3}
+  m_Name: DodgeballRules
+  m_EditorClassIdentifier: Project.Samples.Dodgeball::Project.Samples.Dodgeball.DodgeballRules
+  courtLength: 16
+  courtWidth: 9
+  ballCount: 3
+  playerRadius: 0.45
+  moveSpeed: 5
+  dodgeDistance: 2.6
+  dodgeDuration: 0.18
+  dodgeCooldown: 1.2
+  ballRadius: 0.25
+  throwSpeed: 15
+  leadDistance: 1.8
+  catchWindow: 0.35
+  catchCooldown: 1
+  catchMoveFactor: 0.4
+  pointsToWin: 7
+  pointPause: 1.2
+  machineReactionDelay: 0

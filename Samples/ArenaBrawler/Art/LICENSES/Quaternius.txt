@@ -1,0 +1,11 @@
+Character and animations: Quaternius (https://quaternius.com)
+  - Universal Animation Library (Standard), https://quaternius.itch.io/universal-animation-library
+  - Universal Animation Library 2 (Standard), https://quaternius.itch.io/universal-animation-library-2
+    (Female Mannequin, Mannequin_F.fbx)
+
+License: CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The clips in ../Animations are copies of 18 of the libraries' animations, saved as Unity
+animation assets so the sample does not have to ship the full 42 MB of source files. Nothing
+was changed in them except loop settings.

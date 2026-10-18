@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2f47925ec95516439d1f05e3b494ab5, type: 3}
+  m_Name: BrawlerRules
+  m_EditorClassIdentifier: Project.Samples.ArenaBrawler::Project.Samples.ArenaBrawler.BrawlerRules
+  arenaRadius: 6
+  fighterRadius: 0.4
+  moveSpeed: 3.4
+  blockMoveFactor: 0.35
+  jab:
+    windup: 0.15
+    active: 0.08
+    recovery: 0.22
+    range: 1.35
+    damage: 6
+    hitStun: 0.3
+    knockback: 0.3
+  hook:
+    windup: 0.45
+    active: 0.12
+    recovery: 0.5
+    range: 1.7
+    damage: 16
+    hitStun: 0.55
+    knockback: 1.2
+  attackArc: 50
+  counterBonus: 0.25
+  blockArc: 70
+  guardBreakStun: 0.7
+  guardBreakDamage: 4
+  dashDistance: 2.8
+  dashDuration: 0.3
+  dashInvulnerable: 0.22
+  dashCooldown: 1
+  health: 100
+  roundTime: 60
+  roundsToWin: 3
+  roundPause: 2
+  inputBuffer: 0.2
+  machineReactionDelay: 0

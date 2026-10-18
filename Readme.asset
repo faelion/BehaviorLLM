@@ -32,12 +32,14 @@ MonoBehaviour:
       configuring before a character can think.
     linkText: 
     linkTarget: 
-  - heading: The two samples
+  - heading: The four samples
     text: 'StealthGuard is the one to read first: three guards patrol a compound,
       each with its own persona and patrol beat, all sharing one action set and one
       model. PrisonYard is the larger one: eight decision makers of three kinds,
       custom senses, and a warden that has no body at all and decides for the prison
-      as a system.'
+      as a system. Dodgeball and ArenaBrawler put you against the machine one on
+      one, with the machine pressing a gamepad several times a second instead of
+      choosing behaviours.'
     linkText: Open the StealthGuard scene
     linkTarget: Samples/StealthGuard/Scenes/StealthGuard.unity
   - heading: Watching a decision happen
@@ -49,11 +51,11 @@ MonoBehaviour:
     linkText: 
     linkTarget: 
   - heading: What the samples need
-    text: 'The package core has no package dependencies at all. The two samples do:
-      AI Navigation for movement and the Input System for the player character. If
-      either is missing the sample assemblies are skipped rather than broken, so
-      the package still installs and works; install both from the Package Manager
-      if you want to play them.'
+    text: 'The package core has no package dependencies at all. The samples do:
+      the Input System for the player in all four, and AI Navigation for movement in
+      StealthGuard and PrisonYard. If one is missing the samples that need it are
+      skipped rather than broken, so the package still installs and works; install
+      both from the Package Manager if you want to play them.'
     linkText: 
     linkTarget: 
   - heading: Documentation
@@ -71,6 +73,14 @@ MonoBehaviour:
     folderPath: Samples/PrisonYard
     whatItCosts: The eight-character prison scene, its scripts, its art and its editor
       tests. Nothing else references it.
+  - displayName: Dodgeball sample
+    folderPath: Samples/Dodgeball
+    whatItCosts: The one-on-one dodgeball scene, its scripts and its editor tests.
+      Nothing else references it.
+  - displayName: ArenaBrawler sample
+    folderPath: Samples/ArenaBrawler
+    whatItCosts: The one-on-one fight scene, its scripts, its character and animation
+      art and its editor tests. Nothing else references it.
   - displayName: Experiment data
     folderPath: Experiments~
     whatItCosts: The measurement harness and the recorded runs behind the numbers in
