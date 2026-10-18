@@ -138,7 +138,7 @@ Four runnable samples ship inside the package under `Samples/`. Each is self-con
   <img src=".github/arenabrawler.png" width="400" alt="Arena Brawler: two mannequin fighters in a round arena">
 </p>
 
-- **Dodgeball** (under 1 MB) and **ArenaBrawler** (~7 MB). You against the machine, one on one. Instead of choosing behaviours, the machine presses a gamepad six to seven times a second: it moves, throws, catches and dodges, or punches, blocks and rolls, and reacts to your throw or wind-up as it starts. A slider adds a human-like reaction delay to the machine, and every match is written to a CSV with its decision and reaction times.
+- **Dodgeball** (under 1 MB) and **ArenaBrawler** (~6 MB). You against the machine, one on one. Instead of choosing behaviours, the machine presses a gamepad six to seven times a second: it moves, throws, catches and dodges, or punches, blocks and rolls, and reacts to your throw or wind-up as it starts. A slider adds a human-like reaction delay to the machine, and every match is written to a CSV with its decision and reaction times.
 
 Build them from **BehaviorLLM > Samples**. StealthGuard and PrisonYard need `com.unity.ai.navigation` and `com.unity.inputsystem`, Dodgeball and ArenaBrawler only the Input System; the package core needs neither. When you are done, **BehaviorLLM > Readme** deletes the samples, the experiment data, or all of it.
 
