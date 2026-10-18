@@ -93,8 +93,16 @@ namespace Project.Samples.Dodgeball
         public readonly CourtPlayer[] Players;
         public readonly List<CourtBall> Balls = new List<CourtBall>();
 
-        /// <summary>What happened during the last step, in order.</summary>
+        /// <summary>
+        /// What happened during the last step, in order, starting with the throws, catches and
+        /// dodges pressed since the step before it.
+        /// </summary>
         public readonly List<CourtEvent> Events = new List<CourtEvent>();
+
+        // How many of Events the last step reported. A press between steps adds its event after
+        // them, and the next step drops only these, so a throw is reported by the step that
+        // follows it instead of being cleared before anyone reads it.
+        private int reported;
 
         /// <summary>The player who won a point during the last step, or -1.</summary>
         public int PointWinner { get; private set; } = -1;
@@ -133,6 +141,7 @@ namespace Project.Samples.Dodgeball
             }
 
             Events.Clear();
+            reported = 0;
             PointWinner = -1;
         }
 
@@ -199,13 +208,15 @@ namespace Project.Samples.Dodgeball
         /// <summary>Advances the court by <paramref name="dt"/> seconds.</summary>
         public void Step(float dt)
         {
-            Events.Clear();
+            Events.RemoveRange(0, reported);
             PointWinner = -1;
-            if (dt <= 0f) return;
-
-            for (int i = 0; i < Players.Length; i++) StepPlayer(Players[i], dt);
-            for (int i = 0; i < Balls.Count && PointWinner < 0; i++) StepBall(Balls[i], dt);
-            for (int i = 0; i < Players.Length; i++) TryPickUp(Players[i]);
+            if (dt > 0f)
+            {
+                for (int i = 0; i < Players.Length; i++) StepPlayer(Players[i], dt);
+                for (int i = 0; i < Balls.Count && PointWinner < 0; i++) StepBall(Balls[i], dt);
+                for (int i = 0; i < Players.Length; i++) TryPickUp(Players[i]);
+            }
+            reported = Events.Count;
         }
 
         private void StepPlayer(CourtPlayer p, float dt)

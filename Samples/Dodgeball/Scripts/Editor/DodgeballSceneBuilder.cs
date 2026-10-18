@@ -14,8 +14,9 @@ using UnityEngine.Events;
 namespace Project.Samples.Dodgeball.Editor
 {
     /// <summary>
-    /// Builds the Dodgeball scene from flat shapes: a court seen from above, two discs and three
-    /// balls. Run it from BehaviorLLM > Samples > Build Dodgeball Scene.
+    /// Builds the Dodgeball scene: a wooden court seen from above, in stands full of supporters,
+    /// two players, three balls, and the view and interface that make a match read. Every sprite is
+    /// painted by <see cref="DodgeballArt"/>. Run it from BehaviorLLM > Samples > Build Dodgeball Scene.
     /// </summary>
     public static class DodgeballSceneBuilder
     {
@@ -29,8 +30,8 @@ namespace Project.Samples.Dodgeball.Editor
         /// package being installed anywhere.</summary>
         private const string ModelConfigAsset = "Model_LiquidAI-d1-3B-Q4_K_M";
 
-        private static readonly Color HumanColor = new Color(0.25f, 0.55f, 1f);
-        private static readonly Color MachineColor = new Color(1f, 0.32f, 0.28f);
+        private static Color HumanColor => DodgeballArt.HumanColor;
+        private static Color MachineColor => DodgeballArt.MachineColor;
 
         [MenuItem("BehaviorLLM/Samples/Build Dodgeball Scene")]
         public static void BuildScene()
@@ -42,23 +43,25 @@ namespace Project.Samples.Dodgeball.Editor
             DecisionMakerConfig decisions = CreateDecisionConfig();
             BehaviorLLMServerConfig server = CreateServerConfig();
             BehaviorLLMModelConfig model = BehaviorLLMDefaults.FindShipped<BehaviorLLMModelConfig>(ModelConfigAsset);
+            DodgeballArt.Set art = DodgeballArt.Build(rules);
 
             UnityEngine.SceneManagement.Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = "Dodgeball";
 
-            Camera camera = CreateCameraAndLight(rules);
-            CreateCourt(rules);
+            Camera camera = CreateCamera(rules, art);
+            CreateArena(rules, art);
+            Transform crowd = CreateCrowd(rules, art);
 
-            Transform human = Disc(DodgeballIds.HumanName, rules, HumanColor);
-            Transform machine = Disc(DodgeballIds.MachineName, rules, MachineColor);
-            Transform humanRing = Ring("HumanCatch", rules);
-            Transform machineRing = Ring("MachineCatch", rules);
-            List<Transform> balls = new List<Transform>();
-            for (int i = 0; i < rules.ballCount; i++) balls.Add(Ball(i, rules));
+            DodgeballView.PlayerRig humanRig = CreatePlayer(DodgeballIds.HumanName, rules, art, HumanColor, 0);
+            DodgeballView.PlayerRig machineRig = CreatePlayer(DodgeballIds.MachineName, rules, art, MachineColor, 1);
+            DodgeballView.BallRig[] balls = new DodgeballView.BallRig[rules.ballCount];
+            for (int i = 0; i < rules.ballCount; i++) balls[i] = CreateBall(i, rules, art);
 
             GameObject llm = new GameObject("LLM");
             BehaviorLLMServer llmServer = llm.AddComponent<BehaviorLLMServer>();
             BehaviorLLMClient client = llm.AddComponent<BehaviorLLMClient>();
+            // ApplyConfig rather than writing the serialized fields: written through a
+            // SerializedObject, the model reference was saved empty.
             llmServer.ApplyConfig(server, model);
             client.ApplyConfig(server, model);
             SetObject(client, "server", llmServer);
@@ -67,23 +70,48 @@ namespace Project.Samples.Dodgeball.Editor
             GameObject matchGo = new GameObject("Match");
             DodgeballMatch match = matchGo.AddComponent<DodgeballMatch>();
 
-            DodgeballMachinePad pad = machine.gameObject.AddComponent<DodgeballMachinePad>();
+            GameObject machine = machineRig.root.gameObject;
+            DodgeballMachinePad pad = machine.AddComponent<DodgeballMachinePad>();
             pad.match = match;
             pad.playerIndex = 1;
-            CourtObservationModule eyes = machine.gameObject.AddComponent<CourtObservationModule>();
+            CourtObservationModule eyes = machine.AddComponent<CourtObservationModule>();
             eyes.match = match;
             eyes.playerIndex = 1;
-            DecisionMaker maker = CreateMachineBrain(machine.gameObject, actions, decisions, pad, client);
+            DecisionMaker maker = CreateMachineBrain(machine, actions, decisions, pad, client);
 
             match.rules = rules;
             match.machine = maker;
             match.machinePad = pad;
-            match.humanView = human;
-            match.machineView = machine;
-            match.humanCatchRing = humanRing;
-            match.machineCatchRing = machineRing;
-            match.ballViews = balls.ToArray();
+            match.client = client;
             match.view = camera;
+
+            GameObject viewGo = new GameObject("View");
+            DodgeballView view = viewGo.AddComponent<DodgeballView>();
+            view.match = match;
+            view.view = camera;
+            view.players = new[] { humanRig, machineRig };
+            view.balls = balls;
+            view.throwingLines = new[]
+            {
+                ThrowingLine("HumanThrowingLine", -rules.throwingLine, rules, art),
+                ThrowingLine("MachineThrowingLine", rules.throwingLine, rules, art)
+            };
+            view.aimLine = Line("AimLine", viewGo.transform, art.Dash, 0.06f, 8, true);
+            view.aimLine.textureMode = LineTextureMode.Tile;
+            view.aimLine.textureScale = new Vector2(3.5f, 1f);
+            view.reticle = SpriteObject("Reticle", viewGo.transform, art.Reticle, Vector3.zero, 0.5f, Color.white, 9, art);
+            view.crowd = crowd;
+            view.sparks = CreateSparks(viewGo.transform, art);
+            view.ghostSprite = art.Torso;
+            view.ghostMaterial = art.Sprite;
+
+            GameObject hudGo = new GameObject("HUD");
+            DodgeballHud hud = hudGo.AddComponent<DodgeballHud>();
+            hud.match = match;
+            hud.panel = art.Panel;
+            hud.ballIcon = art.Ball;
+            hud.humanColor = HumanColor;
+            hud.machineColor = MachineColor;
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
@@ -241,99 +269,248 @@ namespace Project.Samples.Dodgeball.Editor
 
         // ---------------------------------------------------------------- scene pieces
 
-        private static Camera CreateCameraAndLight(DodgeballRules rules)
+        // Sorting orders, back to front.
+        private const int OrderBackdrop = -60, OrderStands = -50, OrderFans = -40, OrderFrame = -22, OrderFloor = -20,
+                          OrderLines = -15, OrderGround = -10, OrderPlayer = 2, OrderBall = 5, OrderOverlay = 50;
+
+        private static Camera CreateCamera(DodgeballRules rules, DodgeballArt.Set art)
         {
             GameObject cam = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
             cam.tag = "MainCamera";
-            cam.transform.position = new Vector3(0f, 20f, 0f);
-            cam.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            // Looking down +z at the court, which lies in the xy plane: court x is world x, court y
+            // is world y. Raised a little so the scoreboard sits over the top stand, not the court.
+            cam.transform.position = new Vector3(0f, 0.45f, -10f);
             Camera camera = cam.GetComponent<Camera>();
             camera.orthographic = true;
-            // The court's width plus room for the score above it and the captions below.
-            camera.orthographicSize = rules.HalfWidth + 1.4f;
+            camera.orthographicSize = rules.HalfWidth + 2.6f;
+            camera.nearClipPlane = 0.1f;
+            camera.farClipPlane = 50f;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.09f, 0.1f, 0.12f);
+            camera.backgroundColor = new Color(0.07f, 0.08f, 0.11f);
 
-            GameObject light = new GameObject("Light", typeof(Light));
-            light.GetComponent<Light>().type = LightType.Directional;
-            light.transform.rotation = Quaternion.Euler(70f, 30f, 0f);
+            // The vignette rides on the camera so it stays framed when the camera shakes.
+            float h = camera.orthographicSize * 2f;
+            SpriteRenderer vignette = SpriteObject("Vignette", cam.transform, art.Vignette, new Vector3(0f, 0f, 10f), 1f,
+                                                   Color.white, OrderOverlay, art);
+            vignette.transform.localScale = new Vector3(h * 16f / 9f * 1.05f, h * 1.05f, 1f);
             return camera;
         }
 
-        private static void CreateCourt(DodgeballRules rules)
+        private static void CreateArena(DodgeballRules rules, DodgeballArt.Set art)
         {
-            GameObject court = new GameObject("Court");
+            Transform arena = new GameObject("Arena").transform;
             float l = rules.courtLength, w = rules.courtWidth;
-            Block("HumanHalf", court.transform, new Vector3(-l / 4f, -0.06f, 0f), new Vector3(l / 2f, 0.1f, w), new Color(0.16f, 0.2f, 0.3f));
-            Block("MachineHalf", court.transform, new Vector3(l / 4f, -0.06f, 0f), new Vector3(l / 2f, 0.1f, w), new Color(0.3f, 0.17f, 0.17f));
-            Block("CenterLine", court.transform, new Vector3(0f, 0f, 0f), new Vector3(0.08f, 0.02f, w), Color.white);
-            // The throwing lines, dashed so they do not read as walls.
+
+            Sliced("Backdrop", arena, art, new Vector3(0f, 0f, 0f), new Vector2(l + 6f, w + 3.2f), new Color(0.12f, 0.14f, 0.19f), OrderBackdrop);
+
+            // Stands above and below the court, three tiers each, darker toward the back.
             for (int side = -1; side <= 1; side += 2)
             {
-                for (float z = -w / 2f + 0.3f; z < w / 2f; z += 0.6f)
-                    Block(side < 0 ? "HumanThrowingLine" : "MachineThrowingLine", court.transform,
-                          new Vector3(side * rules.throwingLine, 0f, z), new Vector3(0.06f, 0.02f, 0.3f), new Color(0.85f, 0.85f, 0.85f));
+                for (int tier = 0; tier < 3; tier++)
+                {
+                    float y = side * (w / 2f + 1.15f + tier * 0.72f);
+                    float shade = 0.2f - tier * 0.035f;
+                    Sliced("Stand" + (side < 0 ? "Bottom" : "Top") + tier, arena, art, new Vector3(0f, y, 0f),
+                           new Vector2(l + 5f - tier * 0.4f, 0.66f), new Color(shade, shade + 0.02f, shade + 0.06f), OrderStands + tier);
+                }
             }
-            Color wall = new Color(0.75f, 0.75f, 0.78f);
-            Block("TopWall", court.transform, new Vector3(0f, 0f, w / 2f + 0.06f), new Vector3(l + 0.24f, 0.1f, 0.12f), wall);
-            Block("BottomWall", court.transform, new Vector3(0f, 0f, -w / 2f - 0.06f), new Vector3(l + 0.24f, 0.1f, 0.12f), wall);
-            Block("HumanWall", court.transform, new Vector3(-l / 2f - 0.06f, 0f, 0f), new Vector3(0.12f, 0.1f, w), wall);
-            Block("MachineWall", court.transform, new Vector3(l / 2f + 0.06f, 0f, 0f), new Vector3(0.12f, 0.1f, w), wall);
+
+            // Each team's end: a coloured banner behind its back wall.
+            Sliced("HumanEnd", arena, art, new Vector3(-l / 2f - 1.15f, 0f, 0f), new Vector2(1.3f, w * 0.8f), HumanColor * 0.55f, OrderStands);
+            Sliced("MachineEnd", arena, art, new Vector3(l / 2f + 1.15f, 0f, 0f), new Vector2(1.3f, w * 0.8f), MachineColor * 0.55f, OrderStands);
+            SpriteObject("HumanEndBall", arena, art.Ball, new Vector3(-l / 2f - 1.15f, 0f, 0f), 0.8f, new Color(0.6f, 0.75f, 1f), OrderStands + 1, art);
+            SpriteObject("MachineEndBall", arena, art.Ball, new Vector3(l / 2f + 1.15f, 0f, 0f), 0.8f, new Color(1f, 0.7f, 0.65f), OrderStands + 1, art);
+
+            // Padded wall around the court, with a soft shadow inside it.
+            Sliced("Wall", arena, art, Vector3.zero, new Vector2(l + 0.56f, w + 0.56f), new Color(0.2f, 0.24f, 0.34f), OrderFrame);
+            Sliced("WallTrim", arena, art, Vector3.zero, new Vector2(l + 0.2f, w + 0.2f), new Color(0.09f, 0.1f, 0.14f), OrderFrame + 1);
+            SpriteObject("Floor", arena, art.Floor, Vector3.zero, 1f, Color.white, OrderFloor, art);
         }
 
-        private static Transform Disc(string name, DodgeballRules rules, Color color)
+        /// <summary>
+        /// Spectators on the stands, facing the court. Those at the human's end mostly wear blue,
+        /// those at the machine's end mostly red; a name ending in 0 or 1 tells the view whom each
+        /// one cheers for.
+        /// </summary>
+        private static Transform CreateCrowd(DodgeballRules rules, DodgeballArt.Set art)
         {
-            GameObject go = Shape(PrimitiveType.Cylinder, name, null, Vector3.zero,
-                                  new Vector3(rules.playerRadius * 2f, 0.05f, rules.playerRadius * 2f), color);
-            // A notch on the side that faces the center line, so each disc reads as a player.
-            float forward = name == DodgeballIds.HumanName ? 1f : -1f;
-            Shape(PrimitiveType.Cube, "Front", go.transform, new Vector3(forward * 0.32f, 1.2f, 0f),
-                  new Vector3(0.25f, 0.6f, 0.4f), Color.Lerp(color, Color.white, 0.6f));
-            return go.transform;
+            Transform crowd = new GameObject("Crowd").transform;
+            System.Random random = new System.Random(11);
+            float l = rules.courtLength, w = rules.courtWidth;
+            int count = 0;
+            for (int side = -1; side <= 1; side += 2)
+            {
+                for (int tier = 0; tier < 3; tier++)
+                {
+                    float y = side * (w / 2f + 1.15f + tier * 0.72f);
+                    float span = (l + 4.4f - tier * 0.4f) / 2f;
+                    for (float x = -span + 0.3f; x <= span - 0.3f; x += 0.62f)
+                    {
+                        if (random.NextDouble() < 0.12) continue;
+                        float jitter = (float)(random.NextDouble() - 0.5) * 0.18f;
+                        int team = x < 0f ? (random.NextDouble() < 0.85 ? 0 : 1) : (random.NextDouble() < 0.85 ? 1 : 0);
+                        Color shirt = team == 0 ? HumanColor : MachineColor;
+                        if (random.NextDouble() < 0.2) shirt = Color.Lerp(new Color(0.85f, 0.85f, 0.85f), new Color(0.3f, 0.3f, 0.32f), (float)random.NextDouble());
+                        shirt = Color.Lerp(shirt, Color.black, (float)random.NextDouble() * 0.3f);
+
+                        GameObject fan = new GameObject($"Fan_{count++}_{team}");
+                        fan.transform.SetParent(crowd, false);
+                        fan.transform.localPosition = new Vector3(x + jitter, y + jitter * 0.4f, 0f);
+                        // Faces the court: the top stand looks down, the bottom stand up.
+                        fan.transform.localRotation = Quaternion.Euler(0f, 0f, side > 0 ? 180f : 0f);
+                        fan.transform.localScale = Vector3.one * 0.58f;
+                        SpriteObject("Shirt", fan.transform, art.Torso, Vector3.zero, 0.95f, shirt, OrderFans + tier * 2, art);
+                        float hair = (float)random.NextDouble();
+                        SpriteObject("Head", fan.transform, art.Head, new Vector3(0f, 0.02f, 0f), 0.46f,
+                                     Color.Lerp(Color.white, new Color(1f, 0.85f, 0.6f), hair), OrderFans + tier * 2 + 1, art);
+                    }
+                }
+            }
+            return crowd;
         }
 
-        private static Transform Ring(string name, DodgeballRules rules)
+        private static DodgeballView.PlayerRig CreatePlayer(string name, DodgeballRules rules, DodgeballArt.Set art, Color color, int index)
         {
-            float d = (rules.playerRadius + rules.ballRadius) * 2.4f;
-            GameObject go = Shape(PrimitiveType.Cylinder, name, null, Vector3.zero, new Vector3(d, 0.01f, d), new Color(1f, 0.85f, 0.2f));
-            go.SetActive(false);
-            return go.transform;
+            float d = rules.playerRadius * 2f;
+            Vector3 start = new Vector3((index == 0 ? -1f : 1f) * rules.HalfLength * 0.6f, 0f, 0f);
+            DodgeballView.PlayerRig rig = new DodgeballView.PlayerRig { color = color };
+
+            GameObject root = new GameObject(name);
+            root.transform.position = start;
+            rig.root = root.transform;
+
+            Transform ground = new GameObject(name + "Ground").transform;
+            ground.position = start;
+            rig.ground = ground;
+            SpriteObject("Shadow", ground, art.Soft, new Vector3(0.14f, -0.16f, 0f), d * 1.45f, new Color(0f, 0f, 0f, 0.45f), OrderGround, art);
+            SpriteObject("Base", ground, art.Ring, Vector3.zero, d * 1.25f, new Color(color.r, color.g, color.b, 0.55f), OrderGround + 1, art);
+            rig.dodgeArc = Line("DodgeCooldown", ground, art.Sprite, 0.07f, OrderGround + 2, false);
+            rig.dodgeArc.startColor = rig.dodgeArc.endColor = new Color(1f, 1f, 1f, 0.85f);
+            rig.catchArc = Line("CatchCooldown", ground, art.Sprite, 0.05f, OrderGround + 2, false);
+            rig.catchArc.startColor = rig.catchArc.endColor = new Color(1f, 0.85f, 0.3f, 0.85f);
+
+            rig.catchRing = SpriteObject("CatchRing", root.transform, art.Ring, Vector3.zero, d * 1.2f, new Color(1f, 0.85f, 0.25f), OrderPlayer - 1, art);
+            rig.catchRing.enabled = false;
+
+            Transform body = new GameObject("Body").transform;
+            body.SetParent(root.transform, false);
+            rig.body = body;
+            rig.bodySprite = SpriteObject("Torso", body, art.Torso, Vector3.zero, d * 1.2f, color, OrderPlayer, art);
+            SpriteObject("Head", body, art.Head, new Vector3(0f, 0.03f, 0f), d * 0.56f, Color.white, OrderPlayer + 2, art);
+
+            rig.handLeft = SpriteObject("HandLeft", root.transform, art.Hand, new Vector3(-0.4f, 0.08f, 0f), 0.25f, Color.white, OrderPlayer + 1, art).transform;
+            rig.handRight = SpriteObject("HandRight", root.transform, art.Hand, new Vector3(0.4f, 0.08f, 0f), 0.25f, Color.white, OrderPlayer + 1, art).transform;
+            // Facing the other half at the start.
+            root.transform.rotation = Quaternion.Euler(0f, 0f, index == 0 ? -90f : 90f);
+            return rig;
         }
 
-        private static Transform Ball(int index, DodgeballRules rules)
+        private static DodgeballView.BallRig CreateBall(int index, DodgeballRules rules, DodgeballArt.Set art)
         {
-            float d = rules.ballRadius * 2f;
-            return Shape(PrimitiveType.Sphere, "Ball_" + (char)('A' + index), null, Vector3.up * 0.25f,
-                         new Vector3(d, d, d), new Color(1f, 0.95f, 0.75f)).transform;
+            DodgeballView.BallRig rig = new DodgeballView.BallRig();
+            GameObject root = new GameObject("Ball_" + (char)('A' + index));
+            root.transform.localScale = Vector3.one * rules.ballRadius * 2f;
+            rig.root = root.transform;
+            rig.shadow = SpriteObject("Shadow", root.transform, art.Soft, new Vector3(0.15f, -0.15f, 0f), 1.1f, new Color(0f, 0f, 0f, 0.5f), OrderBall - 2, art).transform;
+            rig.sprite = SpriteObject("Ball", root.transform, art.Ball, Vector3.zero, 1f, Color.white, OrderBall, art).transform;
+
+            TrailRenderer trail = root.AddComponent<TrailRenderer>();
+            trail.sharedMaterial = art.Sprite;
+            trail.time = 0.16f;
+            trail.minVertexDistance = 0.05f;
+            trail.widthMultiplier = rules.ballRadius * 1.7f;
+            trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+            trail.emitting = false;
+            trail.sortingOrder = OrderBall - 1;
+            trail.numCapVertices = 4;
+            trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            trail.receiveShadows = false;
+            rig.trail = trail;
+            return rig;
         }
 
-        private static void Block(string name, Transform parent, Vector3 position, Vector3 scale, Color color)
+        private static LineRenderer ThrowingLine(string name, float x, DodgeballRules rules, DodgeballArt.Set art)
         {
-            Shape(PrimitiveType.Cube, name, parent, position, scale, color);
+            LineRenderer line = Line(name, null, art.Dash, 0.07f, OrderLines, true);
+            line.positionCount = 2;
+            line.SetPosition(0, new Vector3(x, -rules.HalfWidth, 0f));
+            line.SetPosition(1, new Vector3(x, rules.HalfWidth, 0f));
+            line.textureMode = LineTextureMode.Tile;
+            line.textureScale = new Vector2(2.5f, 1f);
+            line.startColor = line.endColor = new Color(1f, 1f, 1f, 0.55f);
+            return line;
         }
 
-        private static GameObject Shape(PrimitiveType type, string name, Transform parent, Vector3 localPosition, Vector3 scale, Color color)
+        private static ParticleSystem CreateSparks(Transform parent, DodgeballArt.Set art)
         {
-            GameObject go = GameObject.CreatePrimitive(type);
-            go.name = name;
-            Object.DestroyImmediate(go.GetComponent<Collider>());
+            GameObject go = new GameObject("Sparks");
+            go.transform.SetParent(parent, false);
+            ParticleSystem ps = go.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = ps.main;
+            main.loop = true;
+            main.playOnAwake = true;
+            main.startSpeed = 0f;
+            main.startLifetime = 0.4f;
+            main.gravityModifier = 0f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 2000;
+            ParticleSystem.EmissionModule emission = ps.emission;
+            emission.enabled = false;
+            ParticleSystem.ShapeModule shape = ps.shape;
+            shape.enabled = false;
+            // Bursts slow down as they spread, and shrink away.
+            ParticleSystem.LimitVelocityOverLifetimeModule drag = ps.limitVelocityOverLifetime;
+            drag.enabled = true;
+            drag.limit = 0f;
+            drag.dampen = 0.12f;
+            ParticleSystem.SizeOverLifetimeModule size = ps.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0f));
+            ParticleSystemRenderer r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = art.SoftParticle;
+            r.sortingOrder = 7;
+            r.renderMode = ParticleSystemRenderMode.Billboard;
+            return ps;
+        }
+
+        private static SpriteRenderer SpriteObject(string name, Transform parent, Sprite sprite, Vector3 localPosition, float scale,
+                                                   Color color, int order, DodgeballArt.Set art)
+        {
+            GameObject go = new GameObject(name);
             if (parent != null) go.transform.SetParent(parent, false);
             go.transform.localPosition = localPosition;
-            go.transform.localScale = scale;
-            go.GetComponent<Renderer>().sharedMaterial = Flat(color);
-            return go;
+            go.transform.localScale = Vector3.one * scale;
+            SpriteRenderer r = go.AddComponent<SpriteRenderer>();
+            r.sprite = sprite;
+            r.sharedMaterial = art.Sprite;
+            r.color = color;
+            r.sortingOrder = order;
+            return r;
         }
 
-        // Unlit so the court reads as flat colour from above, whichever render pipeline the project uses.
-        private static Material Flat(Color color)
+        private static SpriteRenderer Sliced(string name, Transform parent, DodgeballArt.Set art, Vector3 position, Vector2 size, Color color, int order)
         {
-            Shader shader = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null
-                ? Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color")
-                : Shader.Find("Unlit/Color");
-            Material mat = new Material(shader);
-            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
-            if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);
-            return mat;
+            SpriteRenderer r = SpriteObject(name, parent, art.Panel, position, 1f, color, order, art);
+            r.drawMode = SpriteDrawMode.Sliced;
+            r.size = size;
+            return r;
+        }
+
+        private static LineRenderer Line(string name, Transform parent, Material material, float width, int order, bool worldSpace)
+        {
+            GameObject go = new GameObject(name);
+            if (parent != null) go.transform.SetParent(parent, false);
+            LineRenderer line = go.AddComponent<LineRenderer>();
+            line.sharedMaterial = material;
+            line.useWorldSpace = worldSpace;
+            line.widthMultiplier = width;
+            line.positionCount = 0;
+            line.numCapVertices = 3;
+            line.sortingOrder = order;
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            line.alignment = LineAlignment.TransformZ;
+            return line;
         }
 
         private static void SetObject(Object target, string property, Object value)

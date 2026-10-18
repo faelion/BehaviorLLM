@@ -678,6 +678,7 @@ MonoBehaviour:
   rules: {fileID: 11400000, guid: bf85ae2d989538048b817685fc46cdf7, type: 2}
   machine: {fileID: 149909900}
   machinePad: {fileID: 149909899}
+  client: {fileID: 610358574}
   humanView: {fileID: 884546688}
   machineView: {fileID: 149909897}
   view: {fileID: 15948220}

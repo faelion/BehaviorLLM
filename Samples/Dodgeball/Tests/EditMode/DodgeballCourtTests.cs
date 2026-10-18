@@ -123,6 +123,22 @@ namespace Project.Samples.Dodgeball.Tests
         }
 
         [Test]
+        public void AThrowBetweenSteps_IsReportedByTheNextStep_AndOnlyThatOne()
+        {
+            // The match presses buttons between steps and reads the events after one; a press
+            // cleared by the step that follows it never raised the machine's interrupt.
+            GiveBall(Human);
+            court.Players[Human].Position = new Vector2(-rules.throwingLine - 1f, 0f);
+            court.Throw(Human, court.Players[Machine].Position);
+
+            court.Step(1f / 60f);
+            Assert.IsTrue(court.Events.Exists(e => e.Kind == CourtEventKind.Throw && e.Player == Human));
+
+            court.Step(1f / 60f);
+            Assert.IsFalse(court.Events.Exists(e => e.Kind == CourtEventKind.Throw));
+        }
+
+        [Test]
         public void NoThrow_InFrontOfTheThrowingLine()
         {
             GiveBall(Machine);
@@ -227,6 +243,29 @@ namespace Project.Samples.Dodgeball.Tests
 
             StringAssert.Contains("Free ball on your side 2.0 m forward of you.", text);
             StringAssert.Contains("Score: you 2, opponent 3. First to 7.", text);
+        }
+
+        [Test]
+        public void Observation_HoldingABallTooClose_LeadsWithTheThrowingLine()
+        {
+            court.Reset();
+            court.Balls[0].State = BallState.Held;
+            court.Balls[0].Holder = 1;
+            court.Players[1].HeldBall = 0;
+            court.Players[1].Position = new Vector2(rules.throwingLine - 1f, 0f);
+
+            string text = CourtObservationModule.Describe(court, 1, 0, 0, 7);
+
+            StringAssert.StartsWith("THROWING LINE: ", text);
+            StringAssert.Contains("1.0 m back from where you stand. Move back to reach it.", text);
+            StringAssert.DoesNotContain("you can throw", text);
+
+            court.Players[1].Position = new Vector2(rules.throwingLine + 0.5f, 0f);
+            text = CourtObservationModule.Describe(court, 1, 0, 0, 7);
+
+            StringAssert.DoesNotContain("THROWING LINE", text);
+            StringAssert.DoesNotContain("back", text);
+            StringAssert.Contains("behind your throwing line: you can throw.", text);
         }
     }
 }

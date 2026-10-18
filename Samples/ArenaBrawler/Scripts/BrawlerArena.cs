@@ -90,8 +90,16 @@ namespace Project.Samples.ArenaBrawler
         public readonly BrawlerRules Rules;
         public readonly BrawlerFighter[] Fighters = { new BrawlerFighter(0), new BrawlerFighter(1) };
 
-        /// <summary>What happened during the last step, in order.</summary>
+        /// <summary>
+        /// What happened during the last step, in order, starting with the presses made since the
+        /// step before it.
+        /// </summary>
         public readonly List<ArenaEvent> Events = new List<ArenaEvent>();
+
+        // How many of Events the last step reported. A press between steps adds its event after
+        // them, and the next step drops only these, so a press is reported by the step that
+        // follows it instead of being cleared before anyone reads it.
+        private int reported;
 
         public BrawlerArena(BrawlerRules rules)
         {
@@ -119,6 +127,7 @@ namespace Project.Samples.ArenaBrawler
                 Enter(f, FighterState.Free, 0f);
             }
             Events.Clear();
+            reported = 0;
         }
 
         // ---------------------------------------------------------------- input
@@ -173,12 +182,14 @@ namespace Project.Samples.ArenaBrawler
         /// <summary>Advances the fight by <paramref name="dt"/> seconds.</summary>
         public void Step(float dt)
         {
-            Events.Clear();
-            if (dt <= 0f) return;
-
-            for (int i = 0; i < Fighters.Length; i++) StepFighter(Fighters[i], dt);
-            for (int i = 0; i < Fighters.Length; i++) ResolveAttack(Fighters[i], dt);
-            Separate();
+            Events.RemoveRange(0, reported);
+            if (dt > 0f)
+            {
+                for (int i = 0; i < Fighters.Length; i++) StepFighter(Fighters[i], dt);
+                for (int i = 0; i < Fighters.Length; i++) ResolveAttack(Fighters[i], dt);
+                Separate();
+            }
+            reported = Events.Count;
         }
 
         private void StepFighter(BrawlerFighter f, float dt)

@@ -72,7 +72,8 @@ namespace Project.Samples.Dodgeball
         [Tooltip("Points needed to win the match. A hit scores for the thrower, a catch for the catcher.")]
         public int pointsToWin = 7;
 
-        [Tooltip("Seconds between a point and the next serve, with both players back in place.")]
+        [Tooltip("Seconds of the serve countdown, with both players back in place and nobody able to " +
+                 "move, before the balls go live. It follows a short freeze on the play that won the point.")]
         public float pointPause = 1.2f;
 
         [Header("Machine")]

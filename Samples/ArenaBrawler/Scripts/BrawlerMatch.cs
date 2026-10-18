@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using BehaviorLLM.Core.Backend;
 using BehaviorLLM.Core.Decisions;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -33,6 +34,10 @@ namespace Project.Samples.ArenaBrawler
         [Tooltip("The machine fighter's pad, read for when its inputs land.")]
         public BrawlerMachinePad machinePad;
 
+        [Tooltip("The client the machine decides through. Its model's name is what the interface " +
+                 "calls the machine. Found in the scene when left empty.")]
+        public BehaviorLLMClient client;
+
         [Header("Views")]
         public BrawlerFighterView humanView;
         public BrawlerFighterView machineView;
@@ -44,6 +49,9 @@ namespace Project.Samples.ArenaBrawler
         public bool humanAutopilot = false;
 
         public BrawlerArena Arena { get; private set; }
+
+        /// <summary>What the interface calls the machine: its model's name, without the file details.</summary>
+        public string MachineName { get; private set; } = "Machine";
         public BrawlerRules Rules => rules;
         public readonly int[] RoundsWon = new int[2];
         public int Round { get; private set; } = 1;
@@ -82,6 +90,17 @@ namespace Project.Samples.ArenaBrawler
         private void Awake()
         {
             Arena = new BrawlerArena(rules);
+            if (client == null) client = FindFirstObjectByType<BehaviorLLMClient>();
+            MachineName = ShortName(client != null ? client.ModelConfig.displayName : null);
+        }
+
+        /// <summary>"LiquidAI d1 3B (Q4_K_M)" becomes "LiquidAI d1 3B"; nothing becomes "Machine".</summary>
+        public static string ShortName(string displayName)
+        {
+            if (string.IsNullOrWhiteSpace(displayName)) return "Machine";
+            int paren = displayName.IndexOf('(');
+            string name = (paren > 0 ? displayName.Substring(0, paren) : displayName).Trim();
+            return name.Length > 0 ? name : "Machine";
         }
 
         private void OnEnable()
@@ -168,20 +187,20 @@ namespace Project.Samples.ArenaBrawler
 
             roundWinner = winner;
             RoundsWon[winner]++;
-            string who = winner == Human ? "Human" : "Machine";
+            string who = winner == Human ? "You" : MachineName;
             Arena.Fighters[Human].Move = Arena.Fighters[Machine].Move = Vector2.zero;
             Arena.Fighters[Human].BlockHeld = Arena.Fighters[Machine].BlockHeld = false;
             if (RoundsWon[winner] >= rules.roundsToWin)
             {
                 phase = Phase.MatchOver;
-                banner = $"{who} wins the match {RoundsWon[winner]}-{RoundsWon[1 - winner]}. Press R to fight again.";
+                banner = $"{who} {(winner == Human ? "win" : "wins")} the match {RoundsWon[winner]}-{RoundsWon[1 - winner]}. Press R to fight again.";
                 WriteReport();
             }
             else
             {
                 phase = Phase.RoundOver;
                 phaseTimer = rules.roundPause;
-                banner = $"{who} takes round {Round}";
+                banner = $"{who} {(winner == Human ? "take" : "takes")} round {Round}";
                 Round++;
             }
         }
@@ -355,8 +374,8 @@ namespace Project.Samples.ArenaBrawler
             GUI.Label(new Rect(0, 8, Screen.width, 40), $"{RoundsWon[Human]}  :  {RoundsWon[Machine]}", big);
             GUI.Label(new Rect(0, 42, Screen.width, 24), $"Round {Round}   {Mathf.CeilToInt(Mathf.Max(0f, RoundTimeLeft))} s",
                       new GUIStyle(small) { alignment = TextAnchor.UpperCenter });
-            GUI.Label(new Rect(20, 40, 200, 20), "HUMAN", small);
-            GUI.Label(new Rect(Screen.width - 120, 40, 100, 20), "MACHINE", new GUIStyle(small) { alignment = TextAnchor.UpperRight });
+            GUI.Label(new Rect(20, 40, 200, 20), "YOU", small);
+            GUI.Label(new Rect(Screen.width - 320, 40, 300, 20), MachineName.ToUpperInvariant(), new GUIStyle(small) { alignment = TextAnchor.UpperRight });
             if (!string.IsNullOrEmpty(banner))
                 GUI.Label(new Rect(0, Screen.height * 0.3f, Screen.width, 40), banner, big);
 

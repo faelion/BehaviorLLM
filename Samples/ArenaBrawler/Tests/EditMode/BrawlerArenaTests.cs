@@ -43,6 +43,20 @@ namespace Project.Samples.ArenaBrawler.Tests
         }
 
         [Test]
+        public void APressBetweenSteps_IsReportedByTheNextStep_AndOnlyThatOne()
+        {
+            // The machine's interrupt on a wind-up comes from this event; cleared by the step that
+            // followed the press, it fired only for presses that had been buffered.
+            arena.Press(0, FighterPress.Hook);
+
+            arena.Step(Frame);
+            Assert.IsTrue(arena.Events.Exists(e => e.Kind == ArenaEventKind.AttackStarted && e.Fighter == 0));
+
+            arena.Step(Frame);
+            Assert.IsFalse(arena.Events.Exists(e => e.Kind == ArenaEventKind.AttackStarted));
+        }
+
+        [Test]
         public void AJabInReach_Hits()
         {
             PlaceApart(1.2f);

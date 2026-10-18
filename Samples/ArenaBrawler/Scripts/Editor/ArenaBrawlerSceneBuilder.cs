@@ -83,6 +83,7 @@ namespace Project.Samples.ArenaBrawler.Editor
             match.rules = rules;
             match.machine = maker;
             match.machinePad = pad;
+            match.client = client;
             match.humanView = human;
             match.machineView = machine;
             match.view = camera;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using BehaviorLLM.Core.Backend;
 using BehaviorLLM.Core.Decisions;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -10,15 +11,18 @@ using UnityEngine.InputSystem;
 namespace Project.Samples.Dodgeball
 {
     /// <summary>
-    /// Runs a one-on-one dodgeball match between a human (left half) and the machine (right half).
+    /// Runs a one-on-one dodgeball match between a human (left half) and the machine (right half):
+    /// reads the human's controls, lets the machine's pad apply whatever the decision maker last
+    /// chose, steps the court, and scores. A hit scores for the thrower, a catch for the catcher,
+    /// first to <see cref="DodgeballRules.pointsToWin"/>.
     ///
-    /// Each frame it reads the human's controls, lets the machine's pad apply whatever the decision
-    /// maker last chose, steps the court, and draws it. A hit scores for the thrower, a catch for
-    /// the catcher, first to <see cref="DodgeballRules.pointsToWin"/>.
+    /// It draws nothing. <see cref="DodgeballView"/> draws the court and does the feedback;
+    /// <see cref="DodgeballHud"/> draws the interface. Both read the court and listen to the events
+    /// here, so the rules never wait on the presentation.
     ///
     /// It also keeps the numbers the sample exists for: how long each machine decision took, how
     /// quickly the machine responded to each of the human's throws, and what came of those throws.
-    /// They are on screen during play and written to a CSV when the match ends.
+    /// They are written to a CSV when the match ends.
     /// </summary>
     [AddComponentMenu("Dodgeball/Dodgeball Match")]
     public class DodgeballMatch : MonoBehaviour
@@ -34,12 +38,12 @@ namespace Project.Samples.Dodgeball
         [Tooltip("The machine player's pad, read for when its inputs land.")]
         public DodgeballMachinePad machinePad;
 
-        [Header("Views")]
-        public Transform humanView;
-        public Transform machineView;
-        public Transform humanCatchRing;
-        public Transform machineCatchRing;
-        public Transform[] ballViews;
+        [Tooltip("The client the machine decides through. Its model's name is what the interface " +
+                 "calls the machine.")]
+        public BehaviorLLMClient client;
+
+        [Header("Input")]
+        [Tooltip("The camera the court is seen through, used to turn the mouse into a court position.")]
         public Camera view;
 
         [Header("Practice")]
@@ -47,20 +51,68 @@ namespace Project.Samples.Dodgeball
                  "the machine without a person at the keyboard. Toggle it in play with T.")]
         public bool humanAutopilot = false;
 
+        public enum Phase { Serve, Playing, Point, Over }
+
+        /// <summary>Seconds the court stays frozen on the play that won a point, before the next serve.</summary>
+        public const float PointReplaySeconds = 1.1f;
+
         public DodgeballCourt Court { get; private set; }
         public DodgeballRules Rules => rules;
         public readonly int[] Score = new int[2];
-        public bool Playing => phase == Phase.Playing;
+        public Phase CurrentPhase { get; private set; } = Phase.Serve;
+        public bool Playing => CurrentPhase == Phase.Playing;
 
-        private enum Phase { Serve, Playing, Over }
-        private Phase phase = Phase.Serve;
+        /// <summary>Seconds until the ball is live, during a serve.</summary>
+        public float ServeTimeLeft => CurrentPhase == Phase.Serve ? phaseTimer : 0f;
+
+        /// <summary>Where the human is aiming, in court coordinates.</summary>
+        public Vector2 HumanAim { get; private set; }
+
+        /// <summary>True while the aim follows a pointer, rather than defaulting to the machine.</summary>
+        public bool HumanAimsWithPointer { get; private set; }
+
+        /// <summary>What the interface calls the machine: its model's name, without the file details.</summary>
+        public string MachineName { get; private set; } = "Machine";
+
+        /// <summary>The machine's last decision as a short caption, with the probability the model gave it.</summary>
+        public string MachineCaption { get; private set; } = "";
+
+        // ---------------------------------------------------------------- events
+
+        /// <summary>A point was won: the winner, and whether by a catch.</summary>
+        public event Action<int, bool> PointWon;
+
+        /// <summary>A serve began; the ball is live after <see cref="DodgeballRules.pointPause"/>.</summary>
+        public event Action ServeStarted;
+
+        /// <summary>The ball went live.</summary>
+        public event Action Go;
+
+        /// <summary>The match ended, with its winner.</summary>
+        public event Action<int> MatchOver;
+
+        /// <summary>A player pressed throw while holding a ball in front of their throwing line.</summary>
+        public event Action<int> ThrowRefused;
+
+        /// <summary>
+        /// The court has just stepped and its <see cref="DodgeballCourt.Events"/> are this step's.
+        /// Raised before the point is scored, so a listener sees the hit while the players are still
+        /// where it happened.
+        /// </summary>
+        public event Action<DodgeballCourt> Stepped;
+
+        /// <summary>Who won the last point, or -1 before the first.</summary>
+        public int LastPointWinner { get; private set; } = -1;
+
+        /// <summary>True when the last point was won by a catch.</summary>
+        public bool LastPointByCatch { get; private set; }
+
         private float phaseTimer;
         private readonly bool[] alerts = new bool[2];
-        private string banner = "";
-        private System.Random autopilotRandom = new System.Random(7);
+        private readonly System.Random autopilotRandom = new System.Random(7);
         private float autopilotReactAt = -1f;
 
-        private const int Human = 0, Machine = 1;
+        public const int Human = 0, Machine = 1;
 
         // ---------------------------------------------------------------- stats
 
@@ -79,13 +131,40 @@ namespace Project.Samples.Dodgeball
         private readonly List<float> decisionMs = new List<float>();
         private readonly List<float> reactionMs = new List<float>();
         private float matchStart;
-        private string lastDecisionCaption = "";
+
+        public float MachineDecisionMedianMs => Median(decisionMs);
+        public float MachineReactionMedianMs => Median(reactionMs);
+
+        /// <summary>The human's throws that would have hit, and how many the machine caught, dodged, or took.</summary>
+        public void HumanThrowOutcomes(out int onTarget, out int caught, out int dodged, out int hit)
+        {
+            onTarget = caught = dodged = hit = 0;
+            for (int i = 0; i < throws.Count; i++)
+            {
+                ThrowRecord r = throws[i];
+                if (r.Thrower != Human || !r.Threat) continue;
+                onTarget++;
+                if (r.Outcome == "caught") caught++;
+                else if (r.Outcome == "hit") hit++;
+                else if (r.Outcome == "avoided") dodged++;
+            }
+        }
 
         // ---------------------------------------------------------------- lifecycle
 
         private void Awake()
         {
             Court = new DodgeballCourt(rules);
+            MachineName = ShortName(client != null ? client.ModelConfig.displayName : null);
+        }
+
+        /// <summary>"LiquidAI d1 3B (Q4_K_M)" becomes "LiquidAI d1 3B"; nothing becomes "Machine".</summary>
+        public static string ShortName(string displayName)
+        {
+            if (string.IsNullOrWhiteSpace(displayName)) return "Machine";
+            int paren = displayName.IndexOf('(');
+            string name = (paren > 0 ? displayName.Substring(0, paren) : displayName).Trim();
+            return name.Length > 0 ? name : "Machine";
         }
 
         private void OnEnable()
@@ -105,20 +184,21 @@ namespace Project.Samples.Dodgeball
         private void Restart()
         {
             Score[0] = Score[1] = 0;
+            LastPointWinner = -1;
             throws.Clear();
             decisionMs.Clear();
             reactionMs.Clear();
             matchStart = Time.time;
-            StartServe("First to " + rules.pointsToWin);
+            StartServe();
         }
 
-        private void StartServe(string message)
+        private void StartServe()
         {
             Court.Reset();
             if (machinePad != null) machinePad.Clear();
-            phase = Phase.Serve;
+            CurrentPhase = Phase.Serve;
             phaseTimer = rules.pointPause;
-            banner = message;
+            ServeStarted?.Invoke();
         }
 
         private void Update()
@@ -127,25 +207,57 @@ namespace Project.Samples.Dodgeball
             if (k != null && k.rKey.wasPressedThisFrame) Restart();
             if (k != null && k.tKey.wasPressedThisFrame) humanAutopilot = !humanAutopilot;
 
-            switch (phase)
+            ReadAim();
+            switch (CurrentPhase)
             {
                 case Phase.Serve:
                     phaseTimer -= Time.deltaTime;
-                    if (phaseTimer <= 0f) { phase = Phase.Playing; banner = ""; }
+                    if (phaseTimer <= 0f)
+                    {
+                        CurrentPhase = Phase.Playing;
+                        Go?.Invoke();
+                    }
                     break;
 
                 case Phase.Playing:
                     if (humanAutopilot) Autopilot();
                     else ReadHuman();
                     Court.Step(Time.deltaTime);
+                    Stepped?.Invoke(Court);
                     HandleEvents();
                     break;
-            }
 
-            Draw();
+                case Phase.Point:
+                    phaseTimer -= Time.deltaTime;
+                    if (phaseTimer <= 0f) StartServe();
+                    break;
+            }
         }
 
         // ---------------------------------------------------------------- human controls
+
+        private void ReadAim()
+        {
+            CourtPlayer me = Court.Players[Human];
+            Mouse m = Mouse.current;
+            Gamepad g = Gamepad.current;
+            if (g != null && g.rightStick.ReadValue().sqrMagnitude > 0.1f)
+            {
+                HumanAim = me.Position + g.rightStick.ReadValue().normalized * 4f;
+                HumanAimsWithPointer = true;
+            }
+            else if (m != null && view != null && !humanAutopilot)
+            {
+                Vector3 w = view.ScreenToWorldPoint(m.position.ReadValue());
+                HumanAim = new Vector2(w.x, w.y);
+                HumanAimsWithPointer = true;
+            }
+            else
+            {
+                HumanAim = Court.Players[Machine].Position;
+                HumanAimsWithPointer = false;
+            }
+        }
 
         private void ReadHuman()
         {
@@ -165,17 +277,14 @@ namespace Project.Samples.Dodgeball
             if (g != null && g.leftStick.ReadValue().sqrMagnitude > 0.04f) move = g.leftStick.ReadValue();
             me.Move = Vector2.ClampMagnitude(move, 1f);
 
-            bool throwAtOpponent = (k != null && k.jKey.wasPressedThisFrame) || (g != null && g.buttonSouth.wasPressedThisFrame);
-            if (m != null && m.leftButton.wasPressedThisFrame && view != null)
+            bool throwAtPointer = (m != null && m.leftButton.wasPressedThisFrame) || (g != null && g.rightTrigger.wasPressedThisFrame);
+            bool throwAtMachine = (k != null && k.jKey.wasPressedThisFrame) || (g != null && g.buttonSouth.wasPressedThisFrame);
+            if (throwAtPointer || throwAtMachine)
             {
-                Ray ray = view.ScreenPointToRay(m.position.ReadValue());
-                if (new Plane(Vector3.up, Vector3.zero).Raycast(ray, out float d))
-                {
-                    Vector3 hit = ray.GetPoint(d);
-                    Court.Throw(Human, new Vector2(hit.x, hit.z));
-                }
+                Vector2 target = throwAtPointer && HumanAimsWithPointer ? HumanAim : Court.Players[Machine].Position;
+                if (me.Holding && !Court.CanThrow(Human)) ThrowRefused?.Invoke(Human);
+                else Court.Throw(Human, target);
             }
-            else if (throwAtOpponent) Court.Throw(Human, Court.Players[Machine].Position);
 
             if ((m != null && m.rightButton.wasPressedThisFrame) || (k != null && k.kKey.wasPressedThisFrame) ||
                 (g != null && g.buttonEast.wasPressedThisFrame))
@@ -187,9 +296,9 @@ namespace Project.Samples.Dodgeball
         }
 
         /// <summary>
-        /// A deliberately plain opponent for practice: it fetches the nearest ball, throws straight
-        /// at the machine, and dodges a ball that will hit it a quarter of a second after it is
-        /// thrown, about as fast as a person reacts.
+        /// A deliberately plain opponent for practice: it fetches the nearest ball, backs behind its
+        /// line, throws straight at the machine, and dodges a ball that will hit it a quarter of a
+        /// second after it is thrown, about as fast as a person reacts.
         /// </summary>
         private void Autopilot()
         {
@@ -214,7 +323,6 @@ namespace Project.Samples.Dodgeball
 
             if (me.Holding)
             {
-                // Back behind the throwing line first, then throw after a short random wait.
                 if (!Court.CanThrow(Human)) { me.Move = new Vector2(-me.Forward, 0f); return; }
                 me.Move = Vector2.zero;
                 if (autopilotRandom.NextDouble() < Time.deltaTime * 1.5) Court.Throw(Human, them.Position);
@@ -254,12 +362,8 @@ namespace Project.Samples.Dodgeball
                             Threat = t > 0f && miss <= rules.playerRadius + rules.ballRadius
                         });
                         break;
-                    case CourtEventKind.Hit:
-                        Close(e.Ball, "hit");
-                        break;
-                    case CourtEventKind.Catch:
-                        Close(e.Ball, "caught");
-                        break;
+                    case CourtEventKind.Hit: Close(e.Ball, "hit"); break;
+                    case CourtEventKind.Catch: Close(e.Ball, "caught"); break;
                 }
             }
 
@@ -272,19 +376,24 @@ namespace Project.Samples.Dodgeball
                     r.Outcome = r.Threat ? "avoided" : "missed";
             }
 
-            if (Court.PointWinner >= 0)
+            if (Court.PointWinner < 0) return;
+
+            int winner = Court.PointWinner;
+            bool byCatch = Court.Events.Exists(e => e.Kind == CourtEventKind.Catch);
+            Score[winner]++;
+            LastPointWinner = winner;
+            LastPointByCatch = byCatch;
+            PointWon?.Invoke(winner, byCatch);
+            if (Score[winner] >= rules.pointsToWin)
             {
-                int winner = Court.PointWinner;
-                Score[winner]++;
-                string how = Court.Events.Exists(e => e.Kind == CourtEventKind.Catch) ? "catch" : "hit";
-                string who = winner == Human ? "Human" : "Machine";
-                if (Score[winner] >= rules.pointsToWin)
-                {
-                    phase = Phase.Over;
-                    banner = $"{who} wins {Score[winner]}-{Score[1 - winner]}. Press R to play again.";
-                    WriteReport();
-                }
-                else StartServe($"{who} scores by {how}");
+                CurrentPhase = Phase.Over;
+                WriteReport();
+                MatchOver?.Invoke(winner);
+            }
+            else
+            {
+                CurrentPhase = Phase.Point;
+                phaseTimer = PointReplaySeconds;
             }
         }
 
@@ -294,6 +403,14 @@ namespace Project.Samples.Dodgeball
             {
                 if (throws[i].Ball == ball && throws[i].Outcome == null) { throws[i].Outcome = outcome; return; }
             }
+        }
+
+        /// <summary>True once per throw at <paramref name="player"/>, then false until the next one.</summary>
+        public bool ConsumeAlert(int player)
+        {
+            if (!alerts[player]) return false;
+            alerts[player] = false;
+            return true;
         }
 
         /// <summary>
@@ -308,20 +425,12 @@ namespace Project.Samples.Dodgeball
             return Median(recent) / 1000f + rules.machineReactionDelay;
         }
 
-        /// <summary>True once per throw at <paramref name="player"/>, then false until the next one.</summary>
-        public bool ConsumeAlert(int player)
-        {
-            if (!alerts[player]) return false;
-            alerts[player] = false;
-            return true;
-        }
-
         private void OnMachineDecision(DecisionTelemetry t)
         {
             if (t.resultType == DecisionResultType.ModelAction || t.resultType == DecisionResultType.FallbackAction)
                 decisionMs.Add(t.latencyMs);
-            lastDecisionCaption = t.actionName + (string.IsNullOrEmpty(t.argument) ? "" : " " + t.argument) +
-                                  (t.choiceProbability > 0f ? $"  p={t.choiceProbability.ToString("0.00", CultureInfo.InvariantCulture)}" : "");
+            MachineCaption = t.actionName + (string.IsNullOrEmpty(t.argument) ? "" : " " + t.argument) +
+                             (t.choiceProbability > 0f ? $"  ·  p {t.choiceProbability.ToString("0.00", CultureInfo.InvariantCulture)}" : "");
         }
 
         private void OnMachineInput(string input)
@@ -334,83 +443,6 @@ namespace Project.Samples.Dodgeball
                 r.FirstInput = input;
                 reactionMs.Add(r.ReactionMs);
             }
-        }
-
-        // ---------------------------------------------------------------- drawing
-
-        private void Draw()
-        {
-            Place(humanView, Court.Players[Human].Position, 0f);
-            Place(machineView, Court.Players[Machine].Position, 0f);
-            Ring(humanCatchRing, Court.Players[Human]);
-            Ring(machineCatchRing, Court.Players[Machine]);
-            if (ballViews != null)
-            {
-                for (int i = 0; i < ballViews.Length && i < Court.Balls.Count; i++)
-                    Place(ballViews[i], Court.Balls[i].Position, Court.Balls[i].State == BallState.Held ? 0.6f : 0.25f);
-            }
-        }
-
-        private static void Place(Transform t, Vector2 p, float height)
-        {
-            if (t != null) t.position = new Vector3(p.x, height, p.y);
-        }
-
-        private static void Ring(Transform ring, CourtPlayer p)
-        {
-            if (ring == null) return;
-            ring.gameObject.SetActive(p.Catching);
-            ring.position = new Vector3(p.Position.x, 0.02f, p.Position.y);
-        }
-
-        // ---------------------------------------------------------------- HUD
-
-        private GUIStyle big, small, caption;
-
-        private void OnGUI()
-        {
-            if (big == null)
-            {
-                big = new GUIStyle(GUI.skin.label) { fontSize = 34, alignment = TextAnchor.UpperCenter, fontStyle = FontStyle.Bold };
-                small = new GUIStyle(GUI.skin.label) { fontSize = 15, wordWrap = true };
-                caption = new GUIStyle(GUI.skin.label) { fontSize = 14, alignment = TextAnchor.LowerCenter };
-            }
-
-            GUI.Label(new Rect(0, 8, Screen.width, 44), $"HUMAN  {Score[Human]} : {Score[Machine]}  MACHINE", big);
-            if (!string.IsNullOrEmpty(banner))
-                GUI.Label(new Rect(0, 52, Screen.width, 30), banner, new GUIStyle(small) { alignment = TextAnchor.UpperCenter, fontSize = 18 });
-
-            if (view != null && machineView != null)
-            {
-                Vector3 s = view.WorldToScreenPoint(machineView.position + Vector3.forward * 0.9f);
-                GUI.Label(new Rect(s.x - 160, Screen.height - s.y - 26, 320, 24), lastDecisionCaption, caption);
-            }
-
-            GUI.Label(new Rect(12, Screen.height - 96, 520, 90),
-                (humanAutopilot ? "AUTOPILOT is playing for you (T to take over).\n" : "") +
-                "Move: WASD or left stick.  Throw from behind your dashed line: left click at a spot, or J / A at the machine.\n" +
-                "Catch: right click, K or B (opens briefly: time it).  Dodge: Space, Shift or RB.\n" +
-                "R restarts.  T toggles the autopilot.", small);
-
-            GUI.Label(new Rect(Screen.width - 360, Screen.height - 120, 350, 115), Stats(), small);
-        }
-
-        private string Stats()
-        {
-            int caught = 0, avoided = 0, hit = 0, threats = 0;
-            for (int i = 0; i < throws.Count; i++)
-            {
-                ThrowRecord r = throws[i];
-                if (r.Thrower != Human || !r.Threat) continue;
-                threats++;
-                if (r.Outcome == "caught") caught++;
-                else if (r.Outcome == "hit") hit++;
-                else if (r.Outcome == "avoided") avoided++;
-            }
-            return $"Machine decision: {Median(decisionMs):0} ms median ({decisionMs.Count})\n" +
-                   $"Machine reaction to your throws: {Median(reactionMs):0} ms median\n" +
-                   $"Your on-target throws: {threats}  caught {caught}, dodged {avoided}, hit {hit}\n" +
-                   $"Machine reaction delay: {rules.machineReactionDelay:0.00} s";
         }
 
         private static float Median(List<float> values)
@@ -441,7 +473,7 @@ namespace Project.Samples.Dodgeball
                       .Append(r.ReactionMs >= 0f ? r.ReactionMs.ToString("0", CultureInfo.InvariantCulture) : "").Append(',')
                       .Append(r.FirstInput).Append('\n');
                 }
-                sb.Append($"# score human {Score[Human]} machine {Score[Machine]}, machine decision median {Median(decisionMs):0} ms over {decisionMs.Count}\n");
+                sb.Append($"# score human {Score[Human]} machine {Score[Machine]} ({MachineName}), machine decision median {Median(decisionMs):0} ms over {decisionMs.Count}\n");
                 File.WriteAllText(path, sb.ToString());
                 Debug.Log($"[Dodgeball] Match report written to {path}");
             }

@@ -72,14 +72,24 @@ namespace Project.Samples.Dodgeball
                 sb.Append('\n');
             }
 
+            // Stated on its own line, first after any incoming ball, and with the move it needs.
+            // Folded into the line about the player, it was read past: replayed on states where
+            // the machine held a ball too close to throw, LiquidAI d1 moved back in 5 of 40; with
+            // this line, in 34 of 40. The words "move back" appear only while they apply, so they
+            // do not pull the model toward Back the rest of the time (see the guide's comment).
+            if (me.Holding && !court.CanThrow(self))
+            {
+                sb.Append("THROWING LINE: you are holding a ball but can only throw from behind your throwing line, ")
+                  .Append(Metres(rules.throwingLine - me.Depth)).Append(" back from where you stand. Move back to reach it.\n");
+            }
+
             sb.Append("You: ").Append(Metres(me.Depth)).Append(" from the center line, ")
               .Append(WallDistance(rules, me.Position)).Append(". ");
             if (me.Holding)
             {
                 sb.Append(court.CanThrow(self)
                     ? "You are holding a ball, behind your throwing line: you can throw. "
-                    : "You are holding a ball, but " + Metres(rules.throwingLine - me.Depth) +
-                      " in front of your throwing line: too close to throw. ");
+                    : "You are holding a ball. ");
             }
             else sb.Append("You are empty-handed. ");
             if (me.Catching) sb.Append("Your catch is open for ").Append(Seconds(me.CatchTimeLeft)).Append(". ");
