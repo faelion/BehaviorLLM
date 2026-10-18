@@ -57,6 +57,17 @@ namespace BehaviorLLM.Core.Config
                  "72% of StealthGuard decisions at 512. The Model Manager sets 2048 for those and for d1.")]
         public int decisionBatchTokens = 0;
 
+        [Tooltip("Decision models only. The text this model's decision template writes before the " +
+                 "situation, such as '<|startoftext|><|im_start|>user' and a line break for LiquidAI d1. " +
+                 "When set, the client asks the server, once per character, to keep the part of the " +
+                 "situation that never changes (the persona and the guide) between decisions, so each " +
+                 "decision reads only what is new. Measured with d1: a decision in StealthGuard went from " +
+                 "174 ms to 110 ms, in PrisonYard from 204 ms to 172 ms, with the same choices. Leave it " +
+                 "empty to turn this off, and for models where it does not apply: the Model Manager fills " +
+                 "it in from the model file for the types it has been measured on. A wrong value costs " +
+                 "nothing but the saving.")]
+        public string decisionPrefixHead = "";
+
         [Header("Server")]
         [Tooltip("How much text the server can hold at once, in tokens. It is split " +
                  "between the lanes set by Parallel Slots in the Server Config, so 8192 " +

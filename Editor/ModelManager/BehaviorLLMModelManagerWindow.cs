@@ -2337,6 +2337,18 @@ namespace BehaviorLLM.Editor.ModelManager
                     EditorUtility.SetDirty(target);
                     AssetDatabase.SaveAssets();
                 }
+
+                // A d1 config made before Decision Prefix Head existed would otherwise never get the
+                // saving; one somebody cleared on purpose is a different model or a deliberate choice.
+                string head = header.IsDecisionModel ? BehaviorLLMModelPresets.DecisionPrefixHeadFor(header.DecisionType) : string.Empty;
+                if (!string.IsNullOrEmpty(head) && string.IsNullOrEmpty(target.decisionPrefixHead) &&
+                    AssetDatabase.GetAssetPath(target).StartsWith("Assets/", StringComparison.Ordinal))
+                {
+                    Undo.RecordObject(target, "Set decision prefix head");
+                    target.decisionPrefixHead = head;
+                    EditorUtility.SetDirty(target);
+                    AssetDatabase.SaveAssets();
+                }
             }
 
             RefreshSceneTargets(force: true);

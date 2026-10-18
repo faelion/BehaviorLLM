@@ -47,6 +47,13 @@ namespace BehaviorLLM.Tests.Editor
             Assert.AreEqual(1, decision.Length, "one shipped decision-model preset");
             StringAssert.StartsWith("d1-3B", decision[0].modelFileName);
             Assert.AreEqual(2048, decision[0].decisionBatchTokens);
+            // The head is what d1's template writes before the state: without it every decision
+            // rereads the persona and the guide, which cost StealthGuard 174 ms against 110 ms.
+            Assert.AreEqual("<|startoftext|><|im_start|>user\n", decision[0].decisionPrefixHead);
+            Assert.AreEqual(BehaviorLLM.Editor.ModelManager.BehaviorLLMModelPresets.DecisionPrefixHeadFor("lfm2-d1"), decision[0].decisionPrefixHead);
+            Assert.AreEqual(string.Empty, BehaviorLLM.Editor.ModelManager.BehaviorLLMModelPresets.DecisionPrefixHeadFor("kev"));
+            Assert.IsTrue(LoadPresets().Where(c => c.paradigm != DecisionParadigm.DecisionModel).All(c => string.IsNullOrEmpty(c.decisionPrefixHead)),
+                          "chat models never prime");
         }
 
         [Test]

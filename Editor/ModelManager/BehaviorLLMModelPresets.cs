@@ -170,6 +170,7 @@ namespace BehaviorLLM.Editor.ModelManager
                 asset.paradigm = BehaviorLLM.Core.Decisions.DecisionParadigm.DecisionModel;
                 asset.maxChoiceOptions = MaxChoiceOptionsFor(decisionType);
                 asset.decisionBatchTokens = DecisionBatchTokensFor(decisionType);
+                asset.decisionPrefixHead = DecisionPrefixHeadFor(decisionType);
                 thinking = BehaviorLLMHuggingFace.ThinkingStyle.Unknown;
                 provenance += $" A decision model (type '{decisionType}' in the GGUF header): it scores options " +
                               "through /v1/systemone and needs the Decision Model paradigm.";
@@ -230,6 +231,28 @@ namespace BehaviorLLM.Editor.ModelManager
                     return 2048;
                 default:
                     return 0;
+            }
+        }
+
+        /// <summary>
+        /// The text a decision type's template writes before the state, for the types where having
+        /// the server keep each character's constant prefix has been measured to work; empty for the
+        /// rest, which turns it off. LiquidAI d1's template opens the user turn and then writes the
+        /// state, and its memory cannot be rewound, so without this every decision rereads the
+        /// persona and the guide. Other types are left out until one is measured to work. Kev-4B
+        /// rereads its whole prompt as well, but a priming request built from its template
+        /// (<c>&lt;|fim_prefix|&gt;</c>, then the state) shares no token with its decisions, so the
+        /// point the server saves is never used; the types without a memory refuse the plain
+        /// completion the priming is sent as.
+        /// </summary>
+        internal static string DecisionPrefixHeadFor(string decisionType)
+        {
+            switch ((decisionType ?? string.Empty).ToLowerInvariant())
+            {
+                case "lfm2-d1":
+                    return "<|startoftext|><|im_start|>user\n";
+                default:
+                    return string.Empty;
             }
         }
 

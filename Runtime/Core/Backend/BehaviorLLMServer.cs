@@ -586,6 +586,12 @@ namespace BehaviorLLM.Core.Backend
             if (!decisionModel && settings.useJinja) sb.Append(" --jinja");
             if (decisionModel && decisionBatchTokens > 0)
                 sb.Append($" -b {decisionBatchTokens} -ub {decisionBatchTokens}");
+            // llama-server copies a slot into a host-memory prompt cache (up to 8 GB by default) when a
+            // request is about to replace most of it, which with a decision model is every request:
+            // each one shares only its character's opening with the slot. With a slot per character
+            // nothing is restored from that cache, so the copy is pure cost; without it a decision
+            // took 174 ms instead of 177 ms in StealthGuard and 204 ms instead of 208 ms in PrisonYard.
+            if (decisionModel) sb.Append(" --cache-ram 0");
             if (!string.IsNullOrWhiteSpace(settings.extraArguments)) sb.Append(' ').Append(settings.extraArguments.Trim());
             return sb.ToString();
         }

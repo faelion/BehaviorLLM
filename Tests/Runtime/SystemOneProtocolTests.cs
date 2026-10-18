@@ -56,6 +56,15 @@ namespace BehaviorLLM.Tests.Runtime
         }
 
         [Test]
+        public void PrimingRequest_IsAPromptOnlyCompletionOfTheHeadAndPrefix()
+        {
+            string body = SystemOneProtocol.WritePrimingRequest("<|startoftext|><|im_start|>user\n", "You are \"Guard_01\".\n");
+
+            Assert.AreEqual("{\"prompt\":\"<|startoftext|><|im_start|>user\\nYou are \\\"Guard_01\\\".\\n\",\"n_predict\":0,\"cache_prompt\":true}", body);
+            Assert.AreEqual("/completion", SystemOneProtocol.PrimingEndpointPath);
+        }
+
+        [Test]
         public void ModelField_IsOmittedWhenUnset()
         {
             DecisionRequest request = new DecisionRequest { State = "s" };

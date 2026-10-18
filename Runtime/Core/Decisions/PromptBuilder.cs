@@ -128,7 +128,17 @@ namespace BehaviorLLM.Core.Decisions
         /// <summary>The <c>state</c> a decision model is sent: the context, then the STATE block.</summary>
         public static string BuildDecisionState(string context, string statePrompt)
         {
-            return string.IsNullOrEmpty(context) ? statePrompt : context + NL + statePrompt;
+            return BuildDecisionPrefix(context) + statePrompt;
+        }
+
+        /// <summary>
+        /// The part of every <see cref="BuildDecisionState"/> result that depends only on the
+        /// context, and so is the same on every decision of one character: the context and its line
+        /// break, or empty when there is no context.
+        /// </summary>
+        public static string BuildDecisionPrefix(string context)
+        {
+            return string.IsNullOrEmpty(context) ? string.Empty : context + NL;
         }
 
         /// <summary>Dynamic half of the prompt.</summary>

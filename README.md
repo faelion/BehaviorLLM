@@ -113,6 +113,7 @@ Everything else is shared: the same action config, bindings, observation modules
 | Qwen3.5 2B | Generative | 49% [43, 55] | 247 ms | 1.7 GB |
 
 - **For many characters, use d1.** With eight characters on one server it made 160 decisions a minute in PrisonYard at a 237 ms median.
+- **d1 now reads each character's persona and guide only once.** The server keeps them between decisions, so in the scenes a d1 decision takes a median 117 ms in StealthGuard (was 167 ms) and 183 ms in PrisonYard (was 216 ms), with the same choices. The table above predates this.
 - **For a few characters or a director, Kev 9B Artemis** is the most accurate, at about 2 s per decision with eight characters.
 - **Every answer of every model was a legal action**, by the grammar in one paradigm and by construction in the other.
 

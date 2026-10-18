@@ -52,6 +52,13 @@ namespace BehaviorLLM.Tests.Runtime
         }
 
         [Test]
+        public void DecisionModel_SkipsTheHostPromptCache_AndAChatModelKeepsIt()
+        {
+            StringAssert.Contains("--cache-ram 0", BehaviorLLMServer.BuildArgs("d1.gguf", 8192, 8080, 99, settings, decisionModel: true));
+            StringAssert.DoesNotContain("--cache-ram", BehaviorLLMServer.BuildArgs("m.gguf", 8192, 8080, 99, settings, decisionModel: false));
+        }
+
+        [Test]
         public void DecisionModel_WithoutABatchSetting_KeepsTheServersDefault()
         {
             StringAssert.DoesNotContain("-ub", BehaviorLLMServer.BuildArgs("kev.gguf", 8192, 8080, 99, settings, decisionModel: true));

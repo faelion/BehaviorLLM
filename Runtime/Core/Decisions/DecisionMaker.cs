@@ -740,12 +740,14 @@ namespace BehaviorLLM.Core.Decisions
                 }
 
                 LLMRequest request = BuildRequest(statePrompt, schema);
-                #if UNITY_EDITOR
-                DumpToStreamingAssets("_last_applied_schema.json", request.JsonSchema ?? string.Empty);
-                #endif
                 int promptLength = cachedSystemPrompt.Length + statePrompt.Length;
 
+                // Started before the Editor-only bookkeeping below, which writes a file: the request
+                // is on its way by the time CompleteAsync returns its task.
+                System.Threading.Tasks.Task<LLMResponse> pending = backend.CompleteAsync(request, token);
+
                 #if UNITY_EDITOR
+                DumpToStreamingAssets("_last_applied_schema.json", request.JsonSchema ?? string.Empty);
                 if (CaptureExchanges)
                 {
                     LastSystemPrompt = cachedSystemPrompt;
@@ -760,7 +762,7 @@ namespace BehaviorLLM.Core.Decisions
                 if (Cfg.logPrompts) BehaviorLLMLog.Requested(() => $"[DecisionMaker] Prompt ({promptLength} chars):\n{cachedSystemPrompt}\n{statePrompt}");
                 #endif
 
-                LLMResponse response = await backend.CompleteAsync(request, token);
+                LLMResponse response = await pending;
                 token.ThrowIfCancellationRequested();
 
                 if (response == null || !response.Succeeded || string.IsNullOrWhiteSpace(response.Text))
@@ -881,26 +883,35 @@ namespace BehaviorLLM.Core.Decisions
                 DecisionCandidates.Candidate c = candidates.Candidates[i];
                 question.Options.Add(new DecisionOption(c.Key, Cfg.describeDecisionOptions ? c.Description : null));
             }
-            DecisionRequest request = new DecisionRequest { State = PromptBuilder.BuildDecisionState(cachedSystemPrompt, state) };
+            DecisionRequest request = new DecisionRequest
+            {
+                State = PromptBuilder.BuildDecisionState(cachedSystemPrompt, state),
+                ConstantPrefix = PromptBuilder.BuildDecisionPrefix(cachedSystemPrompt)
+            };
             request.Questions.Add(question);
             int promptLength = cachedSystemPrompt.Length + state.Length;
 
+            // Started before the Editor-only bookkeeping below, which writes a file: the request is
+            // on its way by the time DecideAsync returns its task.
+            System.Threading.Tasks.Task<DecisionResponse> pending = decisionBackend.DecideAsync(request, token);
+
             #if UNITY_EDITOR
-            DumpToStreamingAssets("_last_decision_request.json", SystemOneProtocol.WriteRequest(request));
+            string body = BehaviorLLMSettings.Current.dumpAppliedSchema || CaptureExchanges ? SystemOneProtocol.WriteRequest(request) : null;
+            DumpToStreamingAssets("_last_decision_request.json", body);
             if (CaptureExchanges)
             {
                 LastSystemPrompt = cachedSystemPrompt;
                 LastStatePrompt = state;
                 // The exact body, so it can be replayed against the server with curl, which is
                 // what the dumped schema is for in the other paradigm.
-                LastSchema = SystemOneProtocol.WriteRequest(request);
+                LastSchema = body;
                 LastResponseText = null;
                 LastReasoningText = null;
             }
             if (Cfg.logPrompts) BehaviorLLMLog.Requested(() => $"[DecisionMaker] Question ({promptLength} chars, {candidates.Candidates.Count} options):\n{cachedSystemPrompt}\n{state}");
             #endif
 
-            DecisionResponse response = await decisionBackend.DecideAsync(request, token);
+            DecisionResponse response = await pending;
             token.ThrowIfCancellationRequested();
 
             DecisionAnswer answer = response != null && response.Succeeded ? response.Find(ActionQuestionId) : null;

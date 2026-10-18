@@ -64,6 +64,23 @@ namespace BehaviorLLM.Tests.Runtime
         }
 
         [Test]
+        public void TheConstantPrefix_IsWhereTheStateStarts_AndTheSameEveryDecision()
+        {
+            Fixture f = CreateFixture();
+            f.Backend.Answer = Distribution(("HoldPosition", 1f));
+
+            Think(f.Maker);
+            Think(f.Maker);
+
+            string prefix = f.Backend.Requests[0].ConstantPrefix;
+            StringAssert.StartsWith("You are a guard.", prefix);
+            StringAssert.EndsWith("\n", prefix, "the line break before the STATE block belongs to the prefix");
+            StringAssert.StartsWith(prefix, f.Backend.Requests[0].State);
+            StringAssert.DoesNotContain(PromptBuilder.StateHeader, prefix, "nothing that changes per decision");
+            Assert.AreEqual(prefix, f.Backend.Requests[1].ConstantPrefix);
+        }
+
+        [Test]
         public void OptionDescriptions_AreSentOnlyWhenTheConfigAsks()
         {
             Fixture f = CreateFixture();

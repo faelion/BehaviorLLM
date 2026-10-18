@@ -159,6 +159,7 @@ namespace BehaviorLLM.Core.Backend
             cfg = BehaviorLLMDefaults.OrTransientDefault(newServerConfig);
             model = BehaviorLLMDefaults.OrTransientDefault(newModelConfig);
             transportOverride = null;   // a different model may honour the chat template
+            priming = new DecisionPrefixPriming();   // nor does a different server or model keep any prefix
             activeBaseUrl = NormalizeBaseUrl(cfg.baseUrl);
             RefreshEndpointFromServer();
         }
@@ -328,7 +329,9 @@ namespace BehaviorLLM.Core.Backend
                 if (http.Success)
                 {
                     ClearBackendFailure();
-                    return SystemOneProtocol.ParseResponse(http.Raw, http.LatencyMs);
+                    DecisionResponse decided = SystemOneProtocol.ParseResponse(http.Raw, http.LatencyMs);
+                    if (decided.Succeeded) PrimeAfterDecision(request.ConstantPrefix);
+                    return decided;
                 }
 
                 if (attempt < maxAttempts && http.Retryable)
@@ -337,6 +340,8 @@ namespace BehaviorLLM.Core.Backend
                     continue;
                 }
 
+                // A server that failed may have restarted and lost every saved prefix.
+                priming.Forget();
                 string message = http.LoadingModel
                     ? "Server is still loading the model. Wait a few seconds and retry."
                     : DescribeDecisionFailure(http, endpoint);
@@ -344,8 +349,53 @@ namespace BehaviorLLM.Core.Backend
                 return DecisionResponse.Failed(message, http.LatencyMs);
             }
 
+            priming.Forget();
             SetBackendFailure("Request failed: exhausted retries.");
             return DecisionResponse.Failed(LastBackendError);
+        }
+
+        // ------------------------------------------------------------------ prefix priming
+
+        private DecisionPrefixPriming priming = new DecisionPrefixPriming();
+
+        /// <summary>
+        /// Asks the server to keep this character's constant prefix, when the model config names its
+        /// template head and the bookkeeping says it is due. Not awaited: the decision has already
+        /// been answered, and the priming only has to arrive before the character's next one.
+        /// </summary>
+        private void PrimeAfterDecision(string constantPrefix)
+        {
+            string head = Model.decisionPrefixHead;
+            if (string.IsNullOrEmpty(head) || !priming.AfterDecision(constantPrefix)) return;
+            _ = PrimeAsync(head, constantPrefix);
+        }
+
+        private async Task PrimeAsync(string head, string constantPrefix)
+        {
+            DecisionPrefixPriming current = priming;
+            try
+            {
+                string endpoint = (activeBaseUrl ?? string.Empty).TrimEnd('/') + SystemOneProtocol.PrimingEndpointPath;
+                HttpResult http = await PostAsync(endpoint, SystemOneProtocol.WritePrimingRequest(head, constantPrefix), destroyCancellationToken);
+                if (http.Success || current.Disabled) return;
+
+                // Only this saving is lost, and decisions carry on as before, so it is said once and
+                // never retried.
+                current.Disable();
+                string reason = http.Error + (string.IsNullOrWhiteSpace(http.Raw) ? "" : $" | Body: {http.Raw}");
+                BehaviorLLMLog.Warn(() => "[BehaviorLLMClient] The server refused to keep the constant part of decision " +
+                                          $"requests ({reason}). Decisions still work, but each one rereads it. Clear " +
+                                          "Decision Prefix Head on the model config if this model does not support it.", this);
+            }
+            catch (OperationCanceledException)
+            {
+                // The client was destroyed while the request was in flight.
+            }
+            catch (Exception e)
+            {
+                current.Forget();
+                BehaviorLLMLog.Info(() => $"[BehaviorLLMClient] Priming a decision prefix failed: {e.Message}");
+            }
         }
 
         /// <summary>

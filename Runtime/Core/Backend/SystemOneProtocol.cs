@@ -124,6 +124,31 @@ namespace BehaviorLLM.Core.Backend
             sb.Append('}');
         }
 
+        /// <summary>Path of the plain completion endpoint the priming request goes to.</summary>
+        public const string PrimingEndpointPath = "/completion";
+
+        /// <summary>
+        /// The body that has llama-server read <paramref name="head"/> followed by
+        /// <paramref name="constantPrefix"/> and keep the result.
+        ///
+        /// Why a completion and not a decision: llama-server lets a later request resume from a
+        /// saved point only where it created one, and it creates them while reading the prompt of a
+        /// completion, never of a decision. A model like LiquidAI d1 keeps a running state that
+        /// cannot be rewound, so without a saved point every decision rereads its whole prompt.
+        /// This request is that prompt's opening, exactly as the decision template renders it (the
+        /// template's head, then the state's constant start); the server saves a point a few tokens
+        /// before its end, and each later decision of the same character, whose prompt starts the
+        /// same way, resumes there. Nothing is generated: the answer is not read.
+        /// </summary>
+        public static string WritePrimingRequest(string head, string constantPrefix)
+        {
+            StringBuilder sb = new StringBuilder(64 + (head?.Length ?? 0) + (constantPrefix?.Length ?? 0));
+            sb.Append("{\"prompt\":");
+            LlamaRequestWriter.AppendJsonString(sb, (head ?? string.Empty) + (constantPrefix ?? string.Empty));
+            sb.Append(",\"n_predict\":0,\"cache_prompt\":true}");
+            return sb.ToString();
+        }
+
         /// <summary>The name a question type has on the wire.</summary>
         public static string WireType(DecisionQuestionType type)
         {

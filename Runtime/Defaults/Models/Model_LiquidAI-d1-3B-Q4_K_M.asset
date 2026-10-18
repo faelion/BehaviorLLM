@@ -21,6 +21,7 @@ MonoBehaviour:
   paradigm: 1
   maxChoiceOptions: 255
   decisionBatchTokens: 2048
+  decisionPrefixHead: "<|startoftext|><|im_start|>user\n"
   contextSize: 8192
   gpuLayers: 99
   maxTokens: 256

@@ -65,6 +65,14 @@ namespace BehaviorLLM.Core.Interfaces
         /// <summary>The situation the questions are about, as text.</summary>
         public string State;
 
+        /// <summary>
+        /// Optional. The leading part of <see cref="State"/> that is identical on every request from
+        /// the same asker, such as a character's persona and guide. A backend may use it to have the
+        /// server keep that part between requests; one that ignores it answers exactly the same.
+        /// Null or empty when nothing is constant. When set, <see cref="State"/> starts with it.
+        /// </summary>
+        public string ConstantPrefix;
+
         /// <summary>Model name for servers that require one (TypeSafe's hosted API). llama-server
         /// ignores it. Null omits the field.</summary>
         public string Model;
