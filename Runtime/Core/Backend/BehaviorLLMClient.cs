@@ -330,7 +330,7 @@ namespace BehaviorLLM.Core.Backend
                 {
                     ClearBackendFailure();
                     DecisionResponse decided = SystemOneProtocol.ParseResponse(http.Raw, http.LatencyMs);
-                    if (decided.Succeeded) PrimeAfterDecision(request.ConstantPrefix);
+                    if (decided.Succeeded) await PrimeAfterDecision(request.ConstantPrefix);
                     return decided;
                 }
 
@@ -360,14 +360,20 @@ namespace BehaviorLLM.Core.Backend
 
         /// <summary>
         /// Asks the server to keep this character's constant prefix, when the model config names its
-        /// template head and the bookkeeping says it is due. Not awaited: the decision has already
-        /// been answered, and the priming only has to arrive before the character's next one.
+        /// template head and the bookkeeping says it is due.
+        ///
+        /// Awaited before the decision is handed back, which delays that one decision by the
+        /// priming's few tokens (once every <see cref="DecisionPrefixPriming.RefreshEvery"/>). Sent
+        /// alongside instead, it is still running when a decision maker that decides continuously
+        /// asks again, so that decision goes to a spare slot; the spare then holds a longer copy of
+        /// the character's prompt than the primed slot does, wins every later decision, and has no
+        /// saved point. Measured in the Dodgeball sample: every decision reread its whole prompt.
         /// </summary>
-        private void PrimeAfterDecision(string constantPrefix)
+        private Task PrimeAfterDecision(string constantPrefix)
         {
             string head = Model.decisionPrefixHead;
-            if (string.IsNullOrEmpty(head) || !priming.AfterDecision(constantPrefix)) return;
-            _ = PrimeAsync(head, constantPrefix);
+            if (string.IsNullOrEmpty(head) || !priming.AfterDecision(constantPrefix)) return Task.CompletedTask;
+            return PrimeAsync(head, constantPrefix);
         }
 
         private async Task PrimeAsync(string head, string constantPrefix)
