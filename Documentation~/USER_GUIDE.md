@@ -341,7 +341,7 @@ Together these took d1's choices that fit the situation from 0.55 to 0.70 in Are
 1. Press Play. The console shows `Server started`, then, with Log Decisions enabled, the model output (`[DecisionMaker] Answer: {...}`) and `[DecisionMaker] Executing Attack('Orc')`.
 2. Subscribe to `DecisionMaker.DecisionTelemetryRecorded` to log latency, token counts, parse failures and fallbacks.
 
-Enable Log Prompts to print the full prompt in the Editor. Interrupts cancel in-flight inference; a fresh decision follows cancellation, and the old answer is discarded. Backend failures use a configured fallback only while its action and argument are allowed. Cancelled requests do not run fallbacks or emit completed-decision telemetry.
+Enable Log Prompts to print the full prompt in the Editor. An interrupt makes the answer being prepared stale: a generated answer is cancelled, which stops its tokens; a decision model's is by default left to finish and discarded (Decision Model Interrupt: Discard Answer), because the server finishes reading it anyway and a cancelled one only makes the fresh decision wait behind it. Either way a fresh decision follows at once and the old answer never runs. Backend failures use a configured fallback only while its action and argument are allowed. Cancelled requests do not run fallbacks or emit completed-decision telemetry.
 
 ## Seeing what was actually sent
 

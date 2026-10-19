@@ -214,6 +214,9 @@ namespace Project.Samples.ArenaBrawler.Editor
             DecisionMakerConfig cfg = LoadOrCreate<DecisionMakerConfig>(DecisionConfigPath);
             // Continuous control: the next decision starts as soon as the last one has landed.
             cfg.decisionInterval = 0f;
+            // Against the autopilot the machine won 3 matches of 3 with Cancel Request and lost 2 of
+            // 2 with Discard Answer, although Discard answers a wind-up about 160 ms sooner.
+            cfg.decisionModelInterrupt = DecisionModelInterrupt.CancelRequest;
             cfg.decisionIntervalJitter = 0f;
             cfg.profile = DecisionProfile.Reactive;
             cfg.useStructuredOutput = true;

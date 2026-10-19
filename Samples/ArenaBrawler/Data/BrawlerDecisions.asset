@@ -17,6 +17,7 @@ MonoBehaviour:
   decisionModelSelection: 0
   minChoiceProbability: 0
   describeDecisionOptions: 0
+  decisionModelInterrupt: 1
   profile: 0
   reasonMaxChars: 120
   thinkingBudgetTokens: 0

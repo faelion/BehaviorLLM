@@ -242,6 +242,13 @@ namespace BehaviorLLM.Core.Decisions
         private CancellationTokenSource thinkCts;
         private CancellationTokenSource requestCts;
 
+        // Set when an interrupt arrives while a decision model is answering and the config says
+        // Discard Answer: that answer was made from the state before the interrupt and is dropped
+        // when it arrives. The request is not cancelled, because llama-server reads a decision's
+        // prompt in one batch and finishes it anyway; a fresh request sent at once would only queue
+        // behind it. See DecisionMakerConfig.decisionModelInterrupt for what was measured.
+        private bool decisionStale;
+
         // ------------------------------------------------------------------ lifecycle
 
         // Runs when the component is first added in the Editor: point the new component at the
@@ -318,6 +325,7 @@ namespace BehaviorLLM.Core.Decisions
             requestCts = null;
             // A Think() awaiting the backend would otherwise leave isThinking stuck on re-enable.
             isThinking = false;
+            decisionStale = false;
             timer = 0f;
         }
 
@@ -343,9 +351,13 @@ namespace BehaviorLLM.Core.Decisions
             {
                 if (interrupt)
                 {
-                    // Wait for cancellation to finish before reusing this object's server slot.
+                    // Decide again as soon as this decision is out of the way. A generated
+                    // answer is cancelled, which stops its tokens; a decision model's is by
+                    // default left to finish and then discarded (see decisionStale).
                     timer = Cfg.decisionInterval;
-                    requestCts?.Cancel();
+                    if (Paradigm == DecisionParadigm.DecisionModel && Cfg.decisionModelInterrupt == DecisionModelInterrupt.DiscardAnswer)
+                        decisionStale = true;
+                    else requestCts?.Cancel();
                 }
                 return;
             }
@@ -893,6 +905,7 @@ namespace BehaviorLLM.Core.Decisions
 
             // Started before the Editor-only bookkeeping below, which writes a file: the request is
             // on its way by the time DecideAsync returns its task.
+            decisionStale = false;
             System.Threading.Tasks.Task<DecisionResponse> pending = decisionBackend.DecideAsync(request, token);
 
             #if UNITY_EDITOR
@@ -913,6 +926,13 @@ namespace BehaviorLLM.Core.Decisions
 
             DecisionResponse response = await pending;
             token.ThrowIfCancellationRequested();
+            if (decisionStale)
+            {
+                // Like a cancelled decision: nothing runs and no telemetry is recorded.
+                decisionStale = false;
+                if (Cfg.logDecisions) BehaviorLLMLog.Requested(() => "[DecisionMaker] Answer discarded: an interrupt arrived while it was being made.");
+                return;
+            }
 
             DecisionAnswer answer = response != null && response.Succeeded ? response.Find(ActionQuestionId) : null;
             if (answer == null)

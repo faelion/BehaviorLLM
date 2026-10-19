@@ -231,6 +231,64 @@ namespace BehaviorLLM.Tests.Runtime
             return answer;
         }
 
+        [UnityEngine.TestTools.UnityTest]
+        public System.Collections.IEnumerator Interrupt_LetsTheDecisionInFlightFinish_DiscardsIt_AndAsksAgainWithFreshState()
+        {
+            Fixture f = CreateFixture();
+            FakeObservationModule observation = f.Maker.gameObject.AddComponent<FakeObservationModule>();
+            observation.topicName = "World";
+            observation.observation = "old state";
+            SetPrivate(f.Maker, "observations", new List<IObservationModule> { observation });
+            f.Backend.Answer = Distribution(("HoldPosition", 1f));
+            TaskCompletionSource<DecisionResponse> inFlight = new TaskCompletionSource<DecisionResponse>();
+            CancellationToken token = default;
+            f.Backend.Handler = (request, t) =>
+            {
+                if (f.Backend.Requests.Count != 1) return null;
+                token = t;
+                return inFlight.Task;
+            };
+
+            Think(f.Maker);
+            observation.observation = "new state";
+            observation.interrupt = true;
+            typeof(DecisionMaker).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(f.Maker, null);
+            Assert.IsFalse(token.IsCancellationRequested, "the server reads it anyway, so it is not cancelled");
+            Assert.AreEqual(1, f.Backend.Requests.Count, "and nothing is queued behind it");
+
+            DecisionResponse stale = new DecisionResponse { LatencyMs = 12f };
+            DecisionAnswer patrol = Distribution(("Patrol Route_North", 1f));
+            patrol.Id = DecisionMaker.ActionQuestionId;
+            stale.Answers.Add(patrol);
+            inFlight.SetResult(stale);
+            for (int frame = 0; frame < 30 && f.Backend.Requests.Count < 2; frame++) yield return null;
+            for (int frame = 0; frame < 30 && f.Capture.InvocationCount == 0; frame++) yield return null;
+
+            Assert.AreEqual(2, f.Backend.Requests.Count);
+            StringAssert.Contains("new state", f.Backend.Requests[1].State);
+            Assert.AreEqual(1, f.Capture.InvocationCount, "the stale answer never ran");
+            Assert.AreEqual("HoldPosition", f.Capture.LastActionName);
+        }
+
+        [Test]
+        public void Interrupt_WithCancelRequest_CancelsTheDecisionInFlight()
+        {
+            Fixture f = CreateFixture();
+            f.Maker.Config.decisionModelInterrupt = DecisionModelInterrupt.CancelRequest;
+            FakeObservationModule observation = f.Maker.gameObject.AddComponent<FakeObservationModule>();
+            observation.topicName = "World";
+            observation.observation = "state";
+            SetPrivate(f.Maker, "observations", new List<IObservationModule> { observation });
+            CancellationToken token = default;
+            f.Backend.Handler = (request, t) => { token = t; return new TaskCompletionSource<DecisionResponse>().Task; };
+
+            Think(f.Maker);
+            observation.interrupt = true;
+            typeof(DecisionMaker).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(f.Maker, null);
+
+            Assert.IsTrue(token.IsCancellationRequested);
+        }
+
         private Fixture CreateFixture()
         {
             GameObject go = new GameObject("DecisionModelFixture");
@@ -316,9 +374,14 @@ namespace BehaviorLLM.Tests.Runtime
 
         public readonly List<DecisionRequest> Requests = new List<DecisionRequest>();
 
+        /// <summary>When set and returning a task, answers instead of <see cref="Answer"/>.</summary>
+        public System.Func<DecisionRequest, CancellationToken, Task<DecisionResponse>> Handler;
+
         public Task<DecisionResponse> DecideAsync(DecisionRequest request, CancellationToken cancellationToken = default)
         {
             Requests.Add(request);
+            Task<DecisionResponse> handled = Handler?.Invoke(request, cancellationToken);
+            if (handled != null) return handled;
             if (Failure != null) return Task.FromResult(DecisionResponse.Failed(Failure, 12f));
 
             DecisionResponse response = new DecisionResponse { LatencyMs = 12f, InputTokens = 100 };
