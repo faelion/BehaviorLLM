@@ -34,6 +34,16 @@ namespace BehaviorLLM.Core.Decisions
         DecisionModel = 1
     }
 
+    /// <summary>What an interrupt does to a decision model's answer that is still being made.</summary>
+    public enum DecisionModelInterrupt
+    {
+        /// <summary>Let the request finish, throw its answer away, and ask again the moment it returns.</summary>
+        DiscardAnswer = 0,
+
+        /// <summary>Cancel the request and ask again once the cancellation has gone through.</summary>
+        CancelRequest = 1
+    }
+
     /// <summary>Which candidate a decision model's distribution is turned into.</summary>
     public enum DecisionModelSelection
     {

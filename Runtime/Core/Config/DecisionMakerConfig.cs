@@ -62,6 +62,17 @@ namespace BehaviorLLM.Core.Config
                  "always sent.")]
         public bool describeDecisionOptions = false;
 
+        [Tooltip("Decision Model paradigm only. What an interrupt does to the answer still being made. " +
+                 "Either way that answer, made from the situation before the interrupt, never runs. " +
+                 "Discard Answer lets the request finish and asks again the moment it returns; Cancel " +
+                 "Request cancels it first. llama-server reads a decision in one batch and finishes it " +
+                 "regardless, so cancelling only adds a wait: in the Dodgeball sample the fresh answer " +
+                 "to a throw took about 200-270 ms with Discard against about 370 ms with Cancel, and " +
+                 "the machine scored 3 and 5 points against the autopilot instead of 0. Arena Brawler " +
+                 "keeps Cancel, because there the later answer won 3 matches of 3 and the earlier one " +
+                 "lost 2 of 2: the model chose differently when the punch was closer to landing.")]
+        public DecisionModelInterrupt decisionModelInterrupt = DecisionModelInterrupt.DiscardAnswer;
+
         [Header("Decision Profile (Generative LLM paradigm)")]
         [Tooltip("Reactive: answer as fast as possible, with no thinking. Use it for " +
                  "enemies, allies and anything that must react within a beat. " +

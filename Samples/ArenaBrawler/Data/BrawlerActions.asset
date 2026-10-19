@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 502da20ed55950e4c9f51dedfc14f6b3, type: 3}
+  m_Name: BrawlerActions
+  m_EditorClassIdentifier: BehaviorLLM.Runtime::BehaviorLLM.Core.Actions.ActionConfig
+  validActions:
+  - actionName: Move
+    description: Hold a direction, relative to the opponent, until your next input.
+    parameters:
+    - name: direction
+      type: 1
+      exampleValue: Toward
+      allowedValues:
+      - Toward
+      - Away
+      - CircleLeft
+      - CircleRight
+    parameterType: 0
+    exampleArgument: 
+    allowedArguments: []
+  - actionName: Stand
+    description: Let go of everything.
+    parameters: []
+    parameterType: 0
+    exampleArgument: 
+    allowedArguments: []
+  - actionName: Jab
+    description: A fast, short punch.
+    parameters: []
+    parameterType: 0
+    exampleArgument: 
+    allowedArguments: []
+  - actionName: Hook
+    description: A slow, long punch that breaks a guard.
+    parameters: []
+    parameterType: 0
+    exampleArgument: 
+    allowedArguments: []
+  - actionName: Block
+    description: Hold a guard until your next input.
+    parameters: []
+    parameterType: 0
+    exampleArgument: 
+    allowedArguments: []
+  - actionName: Evade
+    description: Roll out of the line of a punch, untouchable for most of the roll.
+    parameters: []
+    parameterType: 0
+    exampleArgument: 
+    allowedArguments: []
+  modelInstructions: 'Evade when a slow swing is coming and you are inside its reach.
+
+    Block
+    when a quick strike is coming and you are inside its reach.
+
+    Hook when the
+    opponent is recovering or blocking.
+
+    Jab when your jab reaches and the opponent
+    is standing.
+
+    Move Toward when nothing reaches.'
