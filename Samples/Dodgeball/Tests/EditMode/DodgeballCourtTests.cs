@@ -387,19 +387,55 @@ namespace Project.Samples.Dodgeball.Tests
         }
 
         [Test]
-        public void Observation_MentionsCatchAndDodge_OnlyWithABallComing()
+        public void Observation_MentionsDodge_WhenABallWillHit_AndCatch_OnlyWhenItWouldBeInTime()
         {
             court.Reset();
+            court.Balls[1].Position = new Vector2(0f, 4f);
+            court.Balls[2].Position = new Vector2(0f, -4f);
             string text = CourtObservationModule.Describe(court, 1, 0, 0, 7);
             StringAssert.DoesNotContain("Catch", text);
-            StringAssert.DoesNotContain("Dodge", text);
+            StringAssert.DoesNotContain("Dodge ready", text);
 
             court.Balls[0].State = BallState.Held;
             court.Balls[0].Holder = 0;
             court.Players[0].Held.Add(0);
             court.Throw(0, court.Players[1].Position);
-            text = CourtObservationModule.Describe(court, 1, 0, 0, 7);
+            const float Delay = 0.17f;
+            text = CourtObservationModule.Describe(court, 1, 0, 0, 7, Delay);
+            StringAssert.Contains("Dodge ready.", text, "the ball will hit");
+            StringAssert.DoesNotContain("Catch", text, "still too far off for a catch pressed now");
+
+            // Bring it close enough that a catch pressed now would be open as it arrives.
+            for (int i = 0; i < 200 && court.SoonestHit(1) > Delay + rules.catchWindow * 0.5f; i++) court.Step(1f / 120f);
+            Assert.IsTrue(court.CatchInTime(1, Delay));
+            text = CourtObservationModule.Describe(court, 1, 0, 0, 7, Delay);
             StringAssert.Contains("Catch ready. Dodge ready.", text);
+        }
+
+        [Test]
+        public void Observation_ABallThatWillMiss_OffersNeitherCatchNorDodge()
+        {
+            court.Reset();
+            court.Balls[1].Position = new Vector2(0f, 4f);
+            court.Balls[2].Position = new Vector2(0f, -4f);
+            court.Balls[0].State = BallState.Held;
+            court.Balls[0].Holder = 0;
+            court.Players[0].Held.Add(0);
+            court.Throw(0, court.Players[1].Position + new Vector2(0f, 2.5f), rules.ChargeFor(11f));
+
+            string text = CourtObservationModule.Describe(court, 1, 0, 0, 7, 0.17f);
+            StringAssert.Contains("will miss", text);
+            StringAssert.DoesNotContain("Catch", text);
+            StringAssert.DoesNotContain("Dodge ready", text);
+        }
+
+        [Test]
+        public void Observation_GivesTheOpponentsCooldowns()
+        {
+            court.Reset();
+            court.Players[0].DodgeCooldown = 0.8f;
+            string text = CourtObservationModule.Describe(court, 1, 0, 0, 7);
+            StringAssert.Contains("Their dodge is recovering for 0.80 s, their catch is ready.", text);
         }
 
         [Test]

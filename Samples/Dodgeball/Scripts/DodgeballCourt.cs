@@ -195,6 +195,34 @@ namespace Project.Samples.Dodgeball
             return false;
         }
 
+        /// <summary>
+        /// Seconds until the soonest live ball thrown at <paramref name="player"/> hits them if they
+        /// stand still, following its bounces; -1 when none will.
+        /// </summary>
+        public float SoonestHit(int player)
+        {
+            float soonest = -1f;
+            float reach = Rules.playerRadius + Rules.ballRadius;
+            for (int i = 0; i < Balls.Count; i++)
+            {
+                CourtBall b = Balls[i];
+                if (b.State != BallState.Flying || b.Thrower != 1 - player) continue;
+                ClosestApproach(b, Players[player].Position, out float t, out float miss, out _);
+                if (t > 0f && miss <= reach && (soonest < 0f || t < soonest)) soonest = t;
+            }
+            return soonest;
+        }
+
+        /// <summary>
+        /// True when a catch pressed now, landing <paramref name="inputDelay"/> seconds from now,
+        /// would be open when the soonest ball that will hit <paramref name="player"/> arrives.
+        /// </summary>
+        public bool CatchInTime(int player, float inputDelay)
+        {
+            float t = SoonestHit(player);
+            return t >= 0f && t >= inputDelay && t <= inputDelay + Rules.catchWindow;
+        }
+
         /// <summary>The charge of <paramref name="player"/>'s throw so far, 0 to 1.</summary>
         public float Charge(int player)
         {

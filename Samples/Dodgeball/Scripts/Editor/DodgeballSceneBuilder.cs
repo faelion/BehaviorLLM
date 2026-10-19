@@ -190,10 +190,10 @@ namespace Project.Samples.Dodgeball.Editor
             // 26 of 27, and went for the nearest free ball 83% of the time instead of 41%.
             config.modelInstructions =
                 "Each turn you press one input. A direction stays held until your next input.\n" +
-                "If a ball will hit you, dodge up or down out of its line, or catch it if it arrives very soon.\n" +
+                "If a ball will hit you, dodge up or down out of its line, or catch it if it is already close and coming at you.\n" +
                 "If you have no ball, run to the nearest free ball on your side.\n" +
                 "Throws only count from behind your throwing line, away from the center.\n" +
-                "If you can throw, throw.";
+                "Be smart about when to throw, and take advantage of your opponent's cooldowns.";
 
             if (isNew) AssetDatabase.CreateAsset(config, ActionConfigPath);
             EditorUtility.SetDirty(config);

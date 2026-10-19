@@ -203,6 +203,7 @@ namespace Project.Samples.ArenaBrawler.Tests
             StringAssert.StartsWith("INCOMING: the opponent's slow swing lands in 0.35 s, 0.20 s after your next input lands. You are inside its reach.", text);
             StringAssert.Contains("Your hook reaches, your jab does not.", text);
             StringAssert.Contains("Opponent: winding up a slow swing", text);
+            StringAssert.Contains("Their roll is ready.", text);
         }
     }
 }
