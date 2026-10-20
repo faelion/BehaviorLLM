@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-20
+
 ### Changed
 - **Decisions with LiquidAI d1 are faster: the server keeps each character's persona and guide between decisions.** d1's memory cannot be rewound, and llama-server only saves a point to resume from while reading a plain completion, never a decision, so every decision used to reread the whole prompt, a third of which is the same each time. After a character's first decision `BehaviorLLMClient` now sends one prompt-only `/completion` of the template's head and that constant part, the server saves a point just before its end, and the character's later decisions resume there. Measured with llama-server b11630 on an RX 6650 XT: a decision in StealthGuard went from 174 ms to 110 ms and in PrisonYard from 204 ms to 172 ms; eight PrisonYard characters at once went from 1,034 ms to 854 ms and from 5.2 to 6.5 decisions a second. The answers are unchanged: the same choice in 423 of 424 recorded situations (one near-tie flipped; probabilities moved by at most 0.019) and the same 79.0% strict accuracy on the 262 graded ones. Playing the samples as saved for 90 seconds each, priming off then on: StealthGuard's median went from 167 ms to 117 ms (slowest tenth 266 to 199 ms), PrisonYard's from 216 ms to 183 ms (584 to 433 ms) with 160 decisions a minute instead of 152. Over all 424 recorded situations replayed one at a time, the median went from 181 ms to 117 ms. It also works on b11716. It is driven by the new `decisionPrefixHead` on the model config, set on the shipped d1 preset and filled in by the Model Manager for d1 models; empty turns it off. The priming is re-sent every 20 decisions in case the server lost it, and a server that refuses it is warned about once and not asked again.
 - `BehaviorLLMServer` starts a decision model with `--cache-ram 0`: llama-server otherwise copies the slot into a host-memory prompt cache on every decision, since each one replaces most of the slot, and nothing is restored from it while each character keeps its own slot (174 ms against 177 ms in StealthGuard).
@@ -21,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The user guide has a section on writing the guide for a decision model: the three biases the new samples measured in LiquidAI d1 (toward options the text names, toward the first of near-identical options, and descriptions replacing option names) and how each sample works around them.
 - `DecisionRequest.ConstantPrefix`: the start of `State` that is the same on every request from one asker. `DecisionMaker` fills it with the persona and the guide; a backend may use it, and one that ignores it answers the same. `PromptBuilder.BuildDecisionPrefix` builds it.
 - `BehaviorLLMModelConfig.decisionPrefixHead` and `SystemOneProtocol.WritePrimingRequest`.
+- A **Try it** section in the README: from an installed package to playing a sample in four steps, with a screenshot of each.
 
 ## [0.7.0] - 2026-10-15
 
