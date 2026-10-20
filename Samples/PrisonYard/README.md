@@ -23,7 +23,7 @@ The yard has four doorways, one per wall; every other section has one. A gate si
 
 1. **Download a model.** `BehaviorLLM > Model Manager`, or drop a GGUF into `Assets/StreamingAssets/models/`. The scene uses LiquidAI d1 3B (`d1-3B-Q4_K_M.gguf`, the default since 0.7.0) under the Decision Model paradigm; to use another, edit `Data/Model_PrisonYard.asset`.
 2. **Make `llama-server` reachable.** Install it with `BehaviorLLM > Model Manager (Server tab)`, or install llama.cpp yourself (`winget install llama.cpp`) and put it on your `PATH`.
-3. **Open `Scenes/PrisonYard.unity` and press Play.** The server starts on its own and takes a few seconds to load the model. Eight decision makers then begin deciding on their own schedules.
+3. **Run `BehaviorLLM > Samples > Build PrisonYard Scene`, open the scene and press Play.** When the package lives under `Packages/`, the scene goes to `Assets/BehaviorLLMSamples/PrisonYard/`. The server starts on its own and takes a few seconds to load the model. Eight decision makers then begin deciding on their own schedules.
 
 To rebuild the scene from scratch: `BehaviorLLM > Samples > Build PrisonYard Scene`.
 

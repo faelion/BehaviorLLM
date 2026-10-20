@@ -7,8 +7,8 @@ Like Dodgeball, this sample gives a decision model **the controls rather than a 
 ## Running it
 
 1. In `BehaviorLLM > Model Manager`, download **LiquidAI d1 3B** and install the server. The scene uses d1; at about 0.12 s a decision it is the only model fast enough to box.
-2. Open `Scenes/ArenaBrawler.unity` and press Play. The server starts on its own.
-3. To rebuild the scene: `BehaviorLLM > Samples > Build Arena Brawler Scene`.
+2. Run `BehaviorLLM > Samples > Build Arena Brawler Scene`. It writes the scene to `Assets/BehaviorLLMSamples/ArenaBrawler/` when the package lives under `Packages/`, and rebuilds `Scenes/ArenaBrawler.unity` in place when the package sits in your `Assets` folder.
+3. Open the scene and press Play. The server starts on its own.
 
 | | Keyboard and mouse | Gamepad |
 |---|---|---|

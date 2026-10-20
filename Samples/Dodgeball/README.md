@@ -7,8 +7,8 @@ This sample asks what a decision model can do when it is given **the controls ra
 ## Running it
 
 1. In `BehaviorLLM > Model Manager`, download **LiquidAI d1 3B** and install the server. The scene uses d1; it is the only model fast enough to play this at about 0.15 s a decision.
-2. Open `Scenes/Dodgeball.unity` and press Play. The server starts on its own.
-3. To rebuild the scene: `BehaviorLLM > Samples > Build Dodgeball Scene`.
+2. Run `BehaviorLLM > Samples > Build Dodgeball Scene`. It writes the scene to `Assets/BehaviorLLMSamples/Dodgeball/` when the package lives under `Packages/`, and rebuilds `Scenes/Dodgeball.unity` in place when the package sits in your `Assets` folder.
+3. Open the scene and press Play. The server starts on its own.
 
 | | Keyboard and mouse | Gamepad |
 |---|---|---|

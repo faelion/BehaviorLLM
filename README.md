@@ -38,7 +38,7 @@ It is not only for characters. The same component drives an enemy, a companion, 
 - 🏠 **Local only.** Talks to a local [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` over HTTP. No cloud, no API keys, no data leaving the machine.
 - ✅ **Always a legal action.** The model can only choose one of your actions, and one of the values you list for its arguments.
 - 🧠 **Two kinds of model.** A decision model that scores your actions (the default), or a chat model that writes its choice and, if you want, a reason.
-- 📦 **No dependencies.** The package references no third-party Unity package. Only the samples need AI Navigation and the Input System, and they gate themselves on those.
+- 📦 **No dependencies.** The package references no third-party Unity package. Only the samples need AI Navigation, the Input System and uGUI, and they gate themselves on those.
 - 👀 **Reflexes.** An observation module can interrupt the timer the moment something new enters view or a radio call names the character.
 - 🎛️ **Configured by assets.** Every tuning value lives in a ScriptableObject, shared by as many objects as you like; components stay readable.
 - 🔍 **See what it sent.** The Prompt Inspector lists every decision live with the exact request and reply behind it.
@@ -53,7 +53,7 @@ https://github.com/faelion/BehaviorLLM.git#release
 
 This is the stable channel: it moves when a release is published, and to update you add the same URL again. Use `#main` for the latest development version (it may include breaking changes), or a tag such as `#v0.7.0` to pin a release. You can also download the [latest release](https://github.com/faelion/BehaviorLLM/releases/latest) and copy it into your project's `Packages/` or `Assets/` folder.
 
-**Requirements:** Unity **6000.0** or newer, a local `llama-server` and a GGUF model (the package downloads both), and for the samples only `com.unity.ai.navigation` and `com.unity.inputsystem`.
+**Requirements:** Unity **6000.0** or newer, a local `llama-server` and a GGUF model (the package downloads both), and for the samples only `com.unity.ai.navigation`, `com.unity.inputsystem` and `com.unity.ugui`.
 
 ## Quick start
 
@@ -140,7 +140,7 @@ Four runnable samples ship inside the package under `Samples/`. Each is self-con
 
 - **Dodgeball** (under 1 MB) and **ArenaBrawler** (~6 MB). You against the machine, one on one. Instead of choosing behaviours, the machine presses a gamepad six to seven times a second: it moves, throws, catches and dodges, or punches, blocks and rolls, and reacts to your throw or wind-up as it starts. A slider adds a human-like reaction delay to the machine, and every match is written to a CSV with its decision and reaction times.
 
-Build them from **BehaviorLLM > Samples**. StealthGuard and PrisonYard need `com.unity.ai.navigation` and `com.unity.inputsystem`, Dodgeball and ArenaBrawler only the Input System; the package core needs neither. When you are done, **BehaviorLLM > Readme** deletes the samples, the experiment data, or all of it.
+Build them from **BehaviorLLM > Samples**. StealthGuard and PrisonYard need `com.unity.ai.navigation` and `com.unity.inputsystem`, Dodgeball and ArenaBrawler the Input System and `com.unity.ugui`; the package core needs none of them. A sample whose packages are missing is not compiled and its menu item does not appear. When you are done, **BehaviorLLM > Readme** deletes the samples, the experiment data, or all of it.
 
 ## How it works
 

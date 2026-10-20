@@ -16,14 +16,19 @@ controllers and dressing from source.
 
 ## Requirements
 
-The package core has no package dependencies. The samples have two:
+The package core has no package dependencies. The samples have three:
 
 - `com.unity.ai.navigation` for movement, in StealthGuard and PrisonYard
 - `com.unity.inputsystem` for the player, in all four
+- `com.unity.ugui` for the interface, in Dodgeball and ArenaBrawler
 
 Every sample assembly is gated on the packages it needs being present, so a project without them still
-installs and uses BehaviorLLM normally; those samples are simply not compiled. Dodgeball and
-ArenaBrawler need only the Input System.
+installs and uses BehaviorLLM normally; those samples are simply not compiled, and their menu items do
+not appear. The Input System also has to be the active input handler (`Project Settings > Player > Active Input Handling`, *Input System Package* or *Both*): Unity offers to switch it when the package is added, and if that is declined the samples compile but ignore your keyboard and gamepad.
+
+Installed from the git URL, the package is read-only, so the scenes it ships cannot be opened from
+`Packages/`. Run the sample's `Build ... Scene` menu item instead: it writes the scene and everything it
+generates to `Assets/BehaviorLLMSamples/<Sample>/`, and the scene opens from there.
 
 ## Removing them
 
