@@ -82,7 +82,7 @@ MonoBehaviour:
     your next input.
 
     If a ball will hit you, dodge up or down out of its line,
-    or catch it if it arrives very soon.
+    or catch it if it is already close and coming at you.
 
     If you have no ball, run to the nearest
     free ball on your side.
@@ -90,4 +90,4 @@ MonoBehaviour:
     Throws only count from behind your throwing line,
     away from the center.
 
-    If you can throw, throw.'
+    Be smart about when to throw, and take advantage of your opponent''s cooldowns.'

@@ -98,15 +98,20 @@ namespace Project.Samples.Dodgeball
                 sb.Append(court.CanThrow(self) ? ", behind your throwing line: you can throw. " : ". ");
             }
             else sb.Append("You are empty-handed. ");
-            // The catch and the dodge are mentioned, and offered, only while a ball is coming:
-            // named with nothing to answer, "Catch ready" drew a catch in 36 of 40 states, which
-            // drops whatever the machine holds.
+            // The catch is mentioned, and offered, only while a catch pressed now would be open as
+            // the ball arrives, and the dodge only while a ball will hit. Named whenever a ball was in
+            // the air, "Catch ready" drew a catch in 57 of 60 states with a ball coming, however far
+            // off, and in 20 of 20 with a ball that would miss; gated this way, the machine caught or
+            // dodged 55 of 60 and wasted nothing on the misses (Logs/Bench/coords_tune.py).
             if (me.Catching) sb.Append("Your catch is open for ").Append(Seconds(me.CatchTimeLeft)).Append(". ");
-            else if (court.IncomingFor(self))
+            else
             {
-                if (me.CanCatch) sb.Append(me.Holding ? "Catch ready (it drops your balls). " : "Catch ready. ");
-                else sb.Append("Catch recovering. ");
-                sb.Append(me.CanDodge ? "Dodge ready." : "Dodge recovering.");
+                if (court.CatchInTime(self, inputDelay))
+                {
+                    if (me.CanCatch) sb.Append(me.Holding ? "Catch ready (it drops your balls). " : "Catch ready. ");
+                    else sb.Append("Catch recovering. ");
+                }
+                if (court.SoonestHit(self) >= 0f) sb.Append(me.CanDodge ? "Dodge ready." : "Dodge recovering.");
             }
             sb.Append('\n');
 
@@ -131,7 +136,11 @@ namespace Project.Samples.Dodgeball
                 }
                 else sb.Append(", standing still");
             }
-            sb.Append(".\n");
+            // Everything the human can see on the opponent's chip, the machine is told: when the
+            // opponent can next dodge and catch. Neither is possible while they charge a throw.
+            sb.Append(". Their dodge ").Append(Readiness(them.CanDodge, them.Charging, them.DodgeCooldown))
+              .Append(", their catch ").Append(Readiness(them.CanCatch, them.Charging || them.Dodging, them.CatchCooldown))
+              .Append(".\n");
 
             // While holding a ball the free ones are left out: they pulled the machine forward
             // toward the center line when it should have been backing off to throw.
@@ -163,6 +172,13 @@ namespace Project.Samples.Dodgeball
         }
 
         private static string Balls(int n) => n == 1 ? "1 ball" : n + " balls";
+
+        private static string Readiness(bool ready, bool blocked, float cooldown)
+        {
+            if (ready) return "is ready";
+            if (cooldown > 0f) return "is recovering for " + Seconds(cooldown);
+            return blocked ? "is not possible right now" : "is not ready";
+        }
 
         /// <summary>"forward-up", "back", "down" and so on, in the frame of a player whose forward is <paramref name="forward"/> on x.</summary>
         public static string Direction(Vector2 delta, float forward)

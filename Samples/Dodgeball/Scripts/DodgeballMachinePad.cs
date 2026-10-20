@@ -163,10 +163,11 @@ namespace Project.Samples.Dodgeball
             switch (actionName)
             {
                 case DodgeballIds.Throw: return match.Court.CanThrow(playerIndex) && !me.Charging && !me.Dodging && !me.Catching;
-                // Only against a live ball: offered with nothing coming, d1 caught in 36 of 40
-                // states where it held balls, dropping them, and dodged instead of backing off.
-                case DodgeballIds.Catch: return me.CanCatch && match.Court.IncomingFor(playerIndex);
-                case DodgeballIds.Dodge: return me.CanDodge && match.Court.IncomingFor(playerIndex);
+                // Catch only while a press now would be open as the ball arrives, Dodge only while a
+                // ball will hit: offered more widely, d1 caught balls that were far off or would miss
+                // (see CourtObservationModule.Describe for the numbers).
+                case DodgeballIds.Catch: return me.CanCatch && match.Court.CatchInTime(playerIndex, match.InputDelaySeconds(playerIndex));
+                case DodgeballIds.Dodge: return me.CanDodge && match.Court.SoonestHit(playerIndex) >= 0f;
                 default: return true;
             }
         }

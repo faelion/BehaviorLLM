@@ -66,8 +66,12 @@ namespace Project.Samples.ArenaBrawler
             else if (distance <= r.hook.range) sb.Append("Your hook reaches, your jab does not.\n");
             else sb.Append("Out of reach of either punch.\n");
 
+            // The opponent's roll readiness, as the human can judge the machine's. Called a roll,
+            // not an evade, so the word does not match the machine's own Evade button; replayed on
+            // the recorded fight states it left the choices where they were (0.59 against 0.61).
             sb.Append("Opponent: ").Append(StateOf(arena, them, me, true)).Append(", health ")
-              .Append(Mathf.CeilToInt(them.Health)).Append(" of ").Append(Mathf.RoundToInt(r.health)).Append(".\n");
+              .Append(Mathf.CeilToInt(them.Health)).Append(" of ").Append(Mathf.RoundToInt(r.health)).Append(". ")
+              .Append(them.CanDash ? "Their roll is ready." : "Their roll is recovering for " + Seconds(them.DashCooldown) + ".").Append('\n');
             sb.Append("You: ").Append(StateOf(arena, me, them, false)).Append(", health ")
               .Append(Mathf.CeilToInt(me.Health)).Append(" of ").Append(Mathf.RoundToInt(r.health)).Append(". ")
               .Append(me.CanDash ? "Evade ready." : "Evade recovering.").Append('\n');
