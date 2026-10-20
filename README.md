@@ -18,6 +18,7 @@
 <p align="center">
   <a href="https://youtu.be/eMRL88Fxa88">Watch the demo (69 seconds)</a> ·
   <a href="#installation">Install</a> ·
+  <a href="#try-it">Try it</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#samples">Samples</a> ·
   <a href="Documentation~/USER_GUIDE.md">User guide</a> ·
@@ -51,9 +52,40 @@ In Unity, open **Window > Package Manager > + > Add package from git URL…** an
 https://github.com/faelion/BehaviorLLM.git#release
 ```
 
-This is the stable channel: it moves when a release is published, and to update you add the same URL again. Use `#main` for the latest development version (it may include breaking changes), or a tag such as `#v0.7.0` to pin a release. You can also download the [latest release](https://github.com/faelion/BehaviorLLM/releases/latest) and copy it into your project's `Packages/` or `Assets/` folder.
+This is the stable channel: it moves when a release is published, and to update you add the same URL again. Use `#main` for the latest development version (it may include breaking changes), or a tag such as `#v0.7.1` to pin a release. You can also download the [latest release](https://github.com/faelion/BehaviorLLM/releases/latest) and copy it into your project's `Packages/` or `Assets/` folder.
 
 **Requirements:** Unity **6000.0** or newer, a local `llama-server` and a GGUF model (the package downloads both), and for the samples only `com.unity.ai.navigation`, `com.unity.inputsystem` and `com.unity.ugui`.
+
+## Try it
+
+From an installed package to playing dodgeball against a language model, in four steps. Nothing here needs code.
+
+**1. Add what the samples use.** In **Window > Package Manager > Unity Registry**, install **AI Navigation**, **Input System** and **uGUI** if the project does not have them. When the Input System asks to enable its backends, answer **Yes** and let the Editor restart; the samples read the keyboard and gamepad through it. The package itself needs none of these, so a sample whose packages are missing simply does not appear.
+
+**2. Download the model.** Open **BehaviorLLM > Model Manager**. In the **Catalog** tab, press **Download** on **LiquidAI d1 3B** (1.6 GB). The first download also installs `llama-server`, the program that runs the model; nothing else is needed, and the samples are already set up to use d1.
+
+<p align="center"><img src=".github/try-catalog.png" width="720" alt="The Model Manager's Catalog tab, with LiquidAI d1 3B installed and active and a Download button on another model"></p>
+
+The **Server** tab shows the installed server and lets you pick the build for your GPU: Vulkan works on most cards, CUDA is faster on NVIDIA. With the wrong one the model still runs, on the CPU, and only looks slow.
+
+<p align="center"><img src=".github/try-server.png" width="720" alt="The Model Manager's Server tab: llama-server build b11630 found, Vulkan selected as the build to download"></p>
+
+**3. Build a sample.** Open **BehaviorLLM > Samples** and pick one. Each menu item generates its scene, with its art, animations and configs, under `Assets/BehaviorLLMSamples/<Sample>/`.
+
+<p align="center"><img src=".github/try-build-menu.png" width="560" alt="The BehaviorLLM menu open on Samples, with Build Arena Brawler, Dodgeball, PrisonYard and StealthGuard Scene"></p>
+
+**4. Open the scene and press Play.** The server starts on its own and loads the model in a few seconds. In Dodgeball you are blue: **WASD** to move, the mouse to aim, hold **left click** to charge a throw, **right click** to catch, **Space** to dodge. The bubble over the red player is the machine's latest choice and how long it took to make.
+
+<p align="center"><img src=".github/try-play.png" width="800" alt="Dodgeball playing in the Editor: the machine's choice and its 188 ms decision time shown above the red player"></p>
+
+| Sample | What you do | What to watch |
+|---|---|---|
+| **Dodgeball** | Play against the machine, first to 7. | It fetches balls, backs off behind its line, throws ahead of you, catches and dodges. **T** hands your side to an autopilot. |
+| **ArenaBrawler** | Box against it, first to 3 rounds: WASD, left click to jab, right click to hook, Shift to block, Space to roll. | It sees your hook wind up and blocks, rolls away or punishes the miss. |
+| **StealthGuard** | Steal three crates past three guards and get out: WASD to move, hold Space near a guard to attack it. | Each guard walks its own beat and reacts the moment you enter its field of view. |
+| **PrisonYard** | Direct: keys 1 to 5 start a fight, plant contraband, injure a guard, cut the lights or open the gates. | Eight characters answer on their own: guards break up the fight, and a warden with no body sends them and locks sections down. |
+
+While it runs, **BehaviorLLM > Prompt Inspector** shows every decision: what the character was told, what it chose, and how sure it was. When you are done with the samples, **BehaviorLLM > Readme** removes them.
 
 ## Quick start
 
@@ -67,7 +99,7 @@ The Catalog also searches Hugging Face live, filtered to models the bundled serv
 
 <p align="center"><img src=".github/model-catalog.png" width="720" alt="The Model Manager window"></p>
 
-To see it working before building anything, run **BehaviorLLM > Samples > Build StealthGuard Scene** and press Play.
+To see it working before building anything, follow [Try it](#try-it).
 
 ### 2. Create a decision maker
 
